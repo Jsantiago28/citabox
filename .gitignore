@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.env.local
+.DS_Store
+*.log
+
+# Respaldos manuales previos a git (se conservan en disco)
+_backups/

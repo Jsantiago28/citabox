@@ -1,0 +1,207 @@
+# Migraciones de Supabase
+
+## 001_initial_schema.sql
+
+Esquema inicial multi-negocio de Barbería PRO. Pensado para ejecutarse
+desde cero sobre una instancia limpia de Supabase (proyecto nuevo).
+
+### Tablas creadas
+
+| Tabla       | Descripción                                                        |
+|-------------|---------------------------------------------------------------------|
+| `negocios`  | Cada barbería/salón. Raíz del modelo multi-negocio (`slug` único). |
+| `perfiles`  | 1:1 con `auth.users`. Guarda `negocio_id` y `rol` (OWNER/EMPLOYEE). |
+| `empleados` | Barberos/estilistas de un negocio. Puede o no tener `perfil_id`.   |
+| `servicios` | Catálogo de servicios de un negocio (precio, duración).            |
+| `clientes`  | Clientes de un negocio.                                             |
+| `citas`     | Citas: negocio + cliente + empleado + servicio + horario + estado. |
+| `apartados` | Pago/adelanto asociado a una cita.                                  |
+
+### Relaciones
+
+- `negocios (1) → (N) perfiles / empleados / servicios / clientes / citas / apartados`
+- `citas.cliente_id → clientes.id`
+- `citas.empleado_id → empleados.id`
+- `citas.servicio_id → servicios.id`
+- `apartados.cita_id → citas.id` (una cita tiene como máximo un apartado
+  "activo": se permite un apartado nuevo solo si el anterior quedó
+  `CANCELADO`, gracias al índice único parcial `uq_apartados_cita_activo`)
+- `perfiles.id → auth.users.id` (uno a uno)
+- `empleados.perfil_id → perfiles.id` (opcional: un empleado puede no tener
+  cuenta de usuario todavía)
+
+### Roles
+
+- **OWNER**: acceso administrativo completo dentro de su propio negocio
+  (puede gestionar perfiles, empleados, servicios y borrar registros).
+- **EMPLOYEE**: puede ver y operar (crear/editar) clientes, citas y
+  apartados de su propio negocio, pero no puede borrar registros ni
+  administrar perfiles/empleados/servicios. El detalle fino de permisos
+  por función se ajustará en una fase posterior; por ahora la base ya
+  distingue ambos roles a nivel de políticas.
+
+### Estrategia de RLS (seguridad multi-negocio)
+
+- RLS está **habilitado en las 7 tablas**.
+- Se agregaron dos funciones `security definer`:
+  - `auth_negocio_id()`: devuelve el `negocio_id` del perfil del usuario
+    autenticado actual.
+  - `auth_es_owner()`: indica si el usuario autenticado actual es OWNER
+    activo.
+- Todas las políticas comparan `negocio_id = auth_negocio_id()`. Un
+  usuario nunca puede leer, insertar, actualizar o borrar filas de un
+  `negocio_id` distinto al suyo, sin importar lo que envíe el frontend.
+- Las operaciones de borrado (`DELETE`) y la gestión de `perfiles` /
+  `empleados` / `servicios` (crear/editar/borrar) están restringidas a
+  OWNER. `clientes`, `citas` y `apartados` permiten insert/update a
+  cualquier miembro del negocio (OWNER o EMPLOYEE); el borrado sigue
+  reservado a OWNER.
+- La tabla `negocios` no tiene política pública de `INSERT`: la creación
+  de un negocio nuevo se maneja fuera de estas políticas (flujo de
+  registro controlado, típicamente con `service_role` desde un backend
+  o función, no desde el cliente autenticado directo).
+- **No se crearon políticas públicas (anon)** sobre ninguna tabla. La
+  reserva pública, cuando se implemente, deberá exponer solo lo mínimo
+  necesario (idealmente vistas o funciones RPC acotadas), nunca acceso
+  directo a las tablas completas.
+
+### Índices principales
+
+`negocio_id` en todas las tablas hijas, `slug` único en `negocios`,
+`cliente_id`/`empleado_id`/`servicio_id` en `citas`, `cita_id` en
+`apartados`, `fecha` y `(negocio_id, fecha)` en `citas`.
+
+### Constraints principales
+
+- `negocios.slug` único y con formato `kebab-case`.
+- `servicios.precio >= 0`, `servicios.duracion_minutos > 0`.
+- `citas.precio >= 0`, `citas.hora_fin > citas.hora_inicio`.
+- `apartados.monto >= 0`.
+- Índice único parcial `uq_citas_empleado_horario` sobre
+  `(empleado_id, fecha, hora_inicio)` excluyendo citas `CANCELADA`/
+  `NO_VINO`, como primera barrera contra doble reserva del mismo
+  empleado en el mismo horario exacto. Reglas de solapamiento de rangos
+  más finas (ej. una cita de 45 min que choca a la mitad con otra) se
+  dejan para la fase de reservas/disponibilidad.
+- Índice único parcial `uq_apartados_cita_activo` para evitar más de un
+  apartado activo por cita.
+
+### Cómo ejecutar la migración
+
+1. Desde el SQL Editor del panel de Supabase: pegar y ejecutar el
+   contenido completo de `001_initial_schema.sql`, y luego
+   `002_hardening_multitenant.sql`, en ese orden, sobre un proyecto
+   nuevo/limpio.
+2. O bien, con la CLI de Supabase (`supabase db push` /
+   `supabase migration up`), colocando ambos archivos en la carpeta de
+   migraciones del proyecto vinculado (el prefijo numérico garantiza el
+   orden de aplicación).
+3. Las migraciones están pensadas para una base limpia; no incluyen
+   `drop table` ni lógica de "si no existe", para evitar aplicarlas dos
+   veces por error sobre datos reales.
+4. Requisito: PostgreSQL 15 o superior (la versión actual de Supabase lo
+   cumple), porque `002_hardening_multitenant.sql` usa la sintaxis
+   `ON DELETE SET NULL (columna)` de una foreign key compuesta.
+
+## 002_hardening_multitenant.sql (Fase 1.1)
+
+Refuerza, a nivel de base de datos, que ninguna relación pueda cruzar
+negocios — sin depender del frontend.
+
+### Cómo se garantiza el aislamiento entre negocios
+
+Se reemplazaron las foreign keys simples por **foreign keys compuestas**
+que incluyen `negocio_id` en ambos lados de la relación:
+
+- `citas (cliente_id, negocio_id) → clientes (id, negocio_id)`
+- `citas (empleado_id, negocio_id) → empleados (id, negocio_id)`
+- `citas (servicio_id, negocio_id) → servicios (id, negocio_id)`
+- `apartados (cita_id, negocio_id) → citas (id, negocio_id)`
+- `empleados (perfil_id, negocio_id) → perfiles (id, negocio_id)`
+  (si `perfil_id` es `NULL`, la FK compuesta simplemente no se evalúa,
+  que es el comportamiento esperado para un empleado sin cuenta)
+
+Para que estas FKs compuestas sean posibles, se agregaron restricciones
+`UNIQUE (id, negocio_id)` en `clientes`, `empleados`, `servicios`,
+`perfiles` y `citas` (el `id` seguía siendo único por sí solo; esto no
+lo cambia, solo habilita la referencia compuesta).
+
+Con esto, es **físicamente imposible** en PostgreSQL crear, por ejemplo,
+una cita del negocio A que apunte a un cliente del negocio B: la base de
+datos rechaza el `INSERT`/`UPDATE` con un error de foreign key,
+independientemente de lo que envíe el frontend.
+
+### Cómo se evita el cruce de negocio_id vía RLS
+
+Además de la integridad referencial de arriba, las políticas de
+`UPDATE` ahora tienen `WITH CHECK` explícito (antes solo tenían
+`USING`). Esto impide que un usuario autenticado "mueva" un registro
+de su negocio hacia otro negocio cambiando su `negocio_id`, incluso si
+en teoría pudiera ver la fila antes del cambio.
+
+### Primer OWNER / bootstrap
+
+En Fase 1.1 se dejó pendiente deliberadamente. Se resolvió en Fase 2
+con `003_auth_bootstrap.sql` — ver esa sección más abajo.
+
+## 003_auth_bootstrap.sql (Fase 2)
+
+Resuelve, de forma controlada, el problema de "huevo y gallina": un
+usuario recién creado en `auth.users` no tiene todavía perfil, así que
+`auth_negocio_id()` y `auth_es_owner()` no le dan ningún acceso, y no
+existe ninguna política de `INSERT` pública sobre `negocios`/`perfiles`
+(esto es correcto y se mantiene sin cambios).
+
+### Función `bootstrap_negocio_owner(...)`
+
+- `SECURITY DEFINER`: corre con los privilegios del rol que la creó
+  (dueño de las tablas en Supabase), por lo que puede insertar en
+  `negocios` y `perfiles` aunque el usuario que la invoca no tenga
+  ninguna política de INSERT a su favor.
+- Exige `auth.uid()` no nulo (usuario ya autenticado); revocada de
+  `anon`, solo `authenticated` puede ejecutarla.
+- Rechaza la llamada si el usuario ya tiene un perfil — impide que la
+  misma cuenta cree negocios adicionales reutilizando la función.
+- Fuerza `id = auth.uid()` y `rol = 'OWNER'` al crear el perfil: el
+  usuario nunca puede elegir su propio rol ni suplantar otro id.
+- Valida formato de slug y nombre antes de intentar el `INSERT`; el
+  `UNIQUE` de `negocios.slug` sigue siendo la autoridad final ante
+  condiciones de carrera (se captura `unique_violation` y se devuelve
+  un mensaje claro).
+- No expone ninguna otra operación (no hay forma de actualizar o
+  borrar negocios/perfiles arbitrarios a través de esta función).
+
+### Función `negocio_slug_disponible(slug)`
+
+Función de solo lectura (`SECURITY DEFINER`, `stable`) para que el
+formulario de registro pueda sugerir si un slug está libre antes de
+enviarlo. Solo devuelve `true`/`false`, no expone filas de `negocios`.
+Concedida a `anon` y `authenticated` porque se usa antes de iniciar
+sesión, durante el registro.
+
+### Limitación conocida (pendiente de decisión del arquitecto)
+
+Si el proyecto de Supabase exige **confirmación de correo obligatoria**,
+`signUp()` no entrega una sesión inmediata, y por lo tanto
+`bootstrap_negocio_owner()` no puede ejecutarse hasta que el usuario
+confirme su correo e inicie sesión por separado. El frontend de esta
+fase detecta ese caso (`data.session` ausente tras `signUp`) y le pide
+al usuario confirmar su correo e iniciar sesión, pero **no** persiste
+en ningún lado los datos del negocio que ya había escrito en el
+formulario (nombre, slug, teléfono) — tendría que volver a escribirlos
+tras confirmar. Resolver esto (por ejemplo, guardando temporalmente esos
+datos, o deshabilitando la confirmación de correo para este flujo)
+requiere una decisión de producto del arquitecto y no se implementó
+para no improvisar una solución de datos no solicitada.
+
+### Qué queda pendiente para fases posteriores
+
+- Resolver la limitación de confirmación de correo descrita arriba.
+- Invitaciones de empleados y administración avanzada de empleados
+  (por ahora Fase 2 solo lee el rol existente, no gestiona invitaciones).
+- Permisos más finos de `EMPLOYEE` por módulo (más allá de la
+  separación por negocio ya garantizada).
+- Reglas de disponibilidad/solapamiento de horarios más allá del
+  choque exacto (mismo empleado + misma fecha + misma hora_inicio).
+- Políticas públicas acotadas para la reserva pública (vistas o RPC,
+  nunca acceso directo a las tablas privadas completas).
