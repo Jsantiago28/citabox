@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/registro_negocio.dart';
 import '../services/clientes_repository.dart';
+import '../services/registro_repository.dart';
 import 'clientes_page.dart';
+import 'registro_page.dart';
 
 class BusinessHomePage extends StatefulWidget {
   const BusinessHomePage({
@@ -69,11 +72,13 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
 
           final profile = snapshot.data;
           if (profile == null) {
-            return _ProfileMessage(
-              message:
-                  'Esta cuenta todavía no tiene un perfil de negocio asociado.',
-              onRetry: _signOut,
-              actionLabel: 'Cerrar sesión',
+            final client = Supabase.instance.client;
+            return RegistroPage.completar(
+              repository: SupabaseRegistroRepository(client),
+              pendiente: RegistroNegocio.fromMetadata(
+                client.auth.currentUser?.userMetadata,
+              ),
+              onNegocioCreado: () => setState(() => _profile = _loadProfile()),
             );
           }
 
@@ -259,15 +264,10 @@ class _DashboardOverview extends StatelessWidget {
 }
 
 class _ProfileMessage extends StatelessWidget {
-  const _ProfileMessage({
-    required this.message,
-    this.onRetry,
-    this.actionLabel = 'Reintentar',
-  });
+  const _ProfileMessage({required this.message, this.onRetry});
 
   final String message;
   final VoidCallback? onRetry;
-  final String actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -280,7 +280,10 @@ class _ProfileMessage extends StatelessWidget {
             Text(message, textAlign: TextAlign.center),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
-              OutlinedButton(onPressed: onRetry, child: Text(actionLabel)),
+              OutlinedButton(
+                onPressed: onRetry,
+                child: const Text('Reintentar'),
+              ),
             ],
           ],
         ),

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/registro_repository.dart';
+import 'registro_page.dart';
+
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, this.registroRepository});
+
+  final RegistroRepository? registroRepository;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -48,6 +53,17 @@ class _LoginPageState extends State<LoginPage> {
         setState(() => _submitting = false);
       }
     }
+  }
+
+  void _abrirRegistro() {
+    final repository =
+        widget.registroRepository ??
+        SupabaseRegistroRepository(Supabase.instance.client);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RegistroPage(repository: repository),
+      ),
+    );
   }
 
   @override
@@ -123,6 +139,11 @@ class _LoginPageState extends State<LoginPage> {
                         FilledButton(
                           onPressed: _submitting ? null : _signIn,
                           child: Text(_submitting ? 'Ingresando…' : 'Ingresar'),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: _submitting ? null : _abrirRegistro,
+                          child: const Text('Registrar mi negocio'),
                         ),
                       ],
                     ),
