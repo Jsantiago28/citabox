@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../models/cliente.dart';
 import '../services/clientes_repository.dart';
+import '../theme.dart';
+import '../utils/formato.dart';
+import '../widgets/estado_cita_badge.dart';
 
 class ClientesPage extends StatefulWidget {
   const ClientesPage({
     super.key,
     required this.negocioId,
     required this.repository,
+    this.moneda = 'DOP',
   });
 
   final String negocioId;
   final ClientesRepository repository;
+  final String moneda;
 
   @override
   State<ClientesPage> createState() => _ClientesPageState();
@@ -20,6 +25,7 @@ class ClientesPage extends StatefulWidget {
 class _ClientesPageState extends State<ClientesPage> {
   final _searchController = TextEditingController();
   List<Cliente> _clientes = [];
+  Map<String, ResumenCliente> _resumen = {};
   bool _loading = true;
   bool _saving = false;
   String? _error;
@@ -53,6 +59,12 @@ class _ClientesPageState extends State<ClientesPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+
+    // El resumen es complementario: si falla, la lista sigue usable.
+    try {
+      final resumen = await widget.repository.resumen(widget.negocioId);
+      if (mounted) setState(() => _resumen = resumen);
+    } catch (_) {}
   }
 
   Future<void> _abrirFormulario([Cliente? cliente]) async {
@@ -120,54 +132,65 @@ class _ClientesPageState extends State<ClientesPage> {
         final clientes = _clientesFiltrados;
         final isWide = constraints.maxWidth >= 860;
 
+        final buscador = SizedBox(
+          width: isWide ? 280 : double.infinity,
+          child: TextField(
+            controller: _searchController,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'Buscar cliente…',
+              isDense: true,
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _searchController.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Limpiar búsqueda',
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {});
+                      },
+                      icon: const Icon(Icons.close, size: 18),
+                    ),
+            ),
+          ),
+        );
+
+        final nuevo = FilledButton.icon(
+          onPressed: _saving ? null : () => _abrirFormulario(),
+          style: FilledButton.styleFrom(minimumSize: const Size(0, 42)),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Nuevo cliente'),
+        );
+
         return Padding(
           padding: EdgeInsets.all(isWide ? 28 : 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 16,
-                runSpacing: 12,
+              Row(
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Clientes',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      Text('${_clientes.length} registrados'),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Clientes',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${_clientes.length} registrados',
+                          style: const TextStyle(color: Marca.textoSuave),
+                        ),
+                      ],
+                    ),
                   ),
-                  FilledButton.icon(
-                    onPressed: _saving ? null : () => _abrirFormulario(),
-                    icon: const Icon(Icons.person_add_alt_1),
-                    label: const Text('Nuevo cliente'),
-                  ),
+                  if (isWide) ...[buscador, const SizedBox(width: 12)],
+                  nuevo,
                 ],
               ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _searchController,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: 'Buscar cliente',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchController.text.isEmpty
-                      ? null
-                      : IconButton(
-                          tooltip: 'Limpiar búsqueda',
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {});
-                          },
-                          icon: const Icon(Icons.close),
-                        ),
-                ),
-              ),
+              if (!isWide) ...[const SizedBox(height: 16), buscador],
               const SizedBox(height: 16),
               Expanded(child: _buildContent(clientes, isWide)),
             ],
@@ -207,68 +230,104 @@ class _ClientesPageState extends State<ClientesPage> {
       );
     }
 
-    if (isWide) {
-      return SingleChildScrollView(
-        child: Card(
-          clipBehavior: Clip.antiAlias,
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Nombre')),
-              DataColumn(label: Text('Teléfono')),
-              DataColumn(label: Text('Email')),
-              DataColumn(label: Text('Estado')),
-              DataColumn(label: Text('Acciones')),
-            ],
-            rows: clientes.map(_desktopRow).toList(growable: false),
-          ),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      itemCount: clientes.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) => _mobileTile(clientes[index]),
-    );
-  }
-
-  DataRow _desktopRow(Cliente cliente) {
-    return DataRow(
-      cells: [
-        DataCell(Text(cliente.nombre)),
-        DataCell(Text(cliente.telefono.isEmpty ? '—' : cliente.telefono)),
-        DataCell(Text(cliente.email.isEmpty ? '—' : cliente.email)),
-        DataCell(_EstadoCliente(activo: cliente.activo)),
-        DataCell(_acciones(cliente)),
-      ],
-    );
-  }
-
-  Widget _mobileTile(Cliente cliente) {
-    final contacto = [
-      cliente.telefono,
-      cliente.email,
-    ].where((value) => value.isNotEmpty).join(' · ');
-
     return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          child: Text(
-            cliente.nombre.isEmpty ? '?' : cliente.nombre[0].toUpperCase(),
-          ),
-        ),
-        title: Text(cliente.nombre),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+      clipBehavior: Clip.antiAlias,
+      child: ListView.separated(
+        itemCount: clientes.length,
+        separatorBuilder: (_, _) => const Divider(),
+        itemBuilder: (context, index) => _fila(clientes[index], isWide),
+      ),
+    );
+  }
+
+  Widget _fila(Cliente cliente, bool isWide) {
+    final resumen = _resumen[cliente.id] ?? const ResumenCliente();
+    final visitas =
+        '${resumen.visitas} ${resumen.visitas == 1 ? 'visita' : 'visitas'}';
+    final gastado = formatoMoneda(resumen.gastado, widget.moneda);
+    final contacto = cliente.telefono.isNotEmpty
+        ? cliente.telefono
+        : (cliente.email.isNotEmpty ? cliente.email : 'Sin contacto');
+
+    final nombre = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Text(contacto.isEmpty ? 'Sin datos de contacto' : contacto),
-            const SizedBox(height: 6),
-            _EstadoCliente(activo: cliente.activo, compact: true),
+            Flexible(
+              child: Text(
+                cliente.nombre,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: cliente.activo ? Marca.texto : Marca.textoSuave,
+                ),
+              ),
+            ),
+            if (!cliente.activo) ...[
+              const SizedBox(width: 8),
+              const _Etiqueta(texto: 'Inactivo', color: Marca.textoSuave),
+            ],
           ],
         ),
-        isThreeLine: true,
-        trailing: _acciones(cliente),
+        const SizedBox(height: 2),
+        Text(
+          isWide ? contacto : '$contacto · $visitas',
+          style: const TextStyle(color: Marca.textoSuave, fontSize: 12),
+        ),
+      ],
+    );
+
+    return InkWell(
+      onTap: () => _abrirFormulario(cliente),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 4, 10),
+        child: Row(
+          children: [
+            AvatarIniciales(texto: iniciales(cliente.nombre)),
+            const SizedBox(width: 12),
+            Expanded(flex: 3, child: nombre),
+            if (isWide) ...[
+              Expanded(
+                child: Text(
+                  visitas,
+                  style: const TextStyle(color: Marca.textoSuave),
+                ),
+              ),
+              SizedBox(
+                width: 110,
+                child: Text(
+                  gastado,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              SizedBox(
+                width: 110,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: resumen.frecuente
+                      ? const _Etiqueta(texto: 'Frecuente', color: Marca.verde)
+                      : null,
+                ),
+              ),
+            ] else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    gastado,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (resumen.frecuente) ...[
+                    const SizedBox(height: 4),
+                    const _Etiqueta(texto: 'Frecuente', color: Marca.verde),
+                  ],
+                ],
+              ),
+            _acciones(cliente),
+          ],
+        ),
       ),
     );
   }
@@ -296,30 +355,33 @@ class _ClientesPageState extends State<ClientesPage> {
                 dimension: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Icon(Icons.more_vert),
+            : const Icon(Icons.more_vert, color: Marca.textoSuave),
       ),
     );
   }
 }
 
-class _EstadoCliente extends StatelessWidget {
-  const _EstadoCliente({required this.activo, this.compact = false});
+class _Etiqueta extends StatelessWidget {
+  const _Etiqueta({required this.texto, required this.color});
 
-  final bool activo;
-  final bool compact;
+  final String texto;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final color = activo ? const Color(0xFF287A4B) : const Color(0xFF72756F);
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        activo ? 'Activo' : 'Inactivo',
-        style: TextStyle(color: color, fontSize: compact ? 11 : 13),
+        texto,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

@@ -68,6 +68,38 @@ void main() {
     expect(repository.lastBusinessId, 'business-1');
   });
 
+  testWidgets('clients show visits, spending and frequent badge', (
+    tester,
+  ) async {
+    final repository = _FakeClientesRepository(
+      [
+        const Cliente(id: 'c1', nombre: 'Juan Pérez', telefono: '809-555-1234'),
+        const Cliente(id: 'c2', nombre: 'Laura Méndez'),
+      ],
+      {
+        'c1': const ResumenCliente(visitas: 18, gastado: 9400),
+        'c2': const ResumenCliente(visitas: 1, gastado: 500),
+      },
+    );
+
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ClientesPage(negocioId: 'business-1', repository: repository),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('18 visitas'), findsOneWidget);
+    expect(find.text(r'RD$9,400'), findsOneWidget);
+    expect(find.text('1 visita'), findsOneWidget);
+    expect(find.text('Frecuente'), findsOneWidget);
+  });
+
   testWidgets('new client is saved to the active business', (tester) async {
     final repository = _FakeClientesRepository([]);
 
@@ -94,11 +126,16 @@ void main() {
 }
 
 class _FakeClientesRepository implements ClientesRepository {
-  _FakeClientesRepository(this.clientes);
+  _FakeClientesRepository(this.clientes, [this.resumenes = const {}]);
 
   final List<Cliente> clientes;
   String? lastBusinessId;
   String? lastSavedBusinessId;
+  final Map<String, ResumenCliente> resumenes;
+
+  @override
+  Future<Map<String, ResumenCliente>> resumen(String negocioId) async =>
+      resumenes;
 
   @override
   Future<List<Cliente>> listar(String negocioId) async {

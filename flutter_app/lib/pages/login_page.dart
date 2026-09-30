@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/registro_repository.dart';
+import '../theme.dart';
+import '../widgets/logo_barberia.dart';
 import 'registro_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -69,88 +71,89 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Marca.negro,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: Card(
-                color: Colors.white,
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Icon(Icons.content_cut, size: 34),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'Iniciar sesión',
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                        const SizedBox(height: 6),
-                        const Text('Accede al panel de tu negocio.'),
-                        const SizedBox(height: 24),
-                        if (_error != null) ...[
-                          Text(
-                            _error!,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                        TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          autofillHints: const [AutofillHints.email],
-                          textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            labelText: 'Correo',
-                          ),
-                          validator: (value) {
-                            final email = value?.trim() ?? '';
-                            if (!RegExp(r'^\S+@\S+\.\S+$').hasMatch(email)) {
-                              return 'Ingresa un correo válido.';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          autofillHints: const [AutofillHints.password],
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) => _signIn(),
-                          decoration: const InputDecoration(
-                            labelText: 'Contraseña',
-                          ),
-                          validator: (value) => (value == null || value.isEmpty)
-                              ? 'Ingresa tu contraseña.'
-                              : null,
-                        ),
-                        const SizedBox(height: 20),
-                        FilledButton(
-                          onPressed: _submitting ? null : _signIn,
-                          child: Text(_submitting ? 'Ingresando…' : 'Ingresar'),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: _submitting ? null : _abrirRegistro,
-                          child: const Text('Registrar mi negocio'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const EncabezadoMarca(),
+                  const SizedBox(height: 28),
+                  _tarjeta(context),
+                ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tarjeta(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Iniciar sesión',
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              const Text('Accede al panel de tu negocio.'),
+              const SizedBox(height: 24),
+              if (_error != null) ...[
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+                const SizedBox(height: 16),
+              ],
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Correo'),
+                validator: (value) {
+                  final email = value?.trim() ?? '';
+                  if (!RegExp(r'^\S+@\S+\.\S+$').hasMatch(email)) {
+                    return 'Ingresa un correo válido.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: true,
+                autofillHints: const [AutofillHints.password],
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _signIn(),
+                decoration: const InputDecoration(labelText: 'Contraseña'),
+                validator: (value) => (value == null || value.isEmpty)
+                    ? 'Ingresa tu contraseña.'
+                    : null,
+              ),
+              const SizedBox(height: 20),
+              BotonDorado(
+                onPressed: _submitting ? null : _signIn,
+                etiqueta: _submitting ? 'Ingresando…' : 'Ingresar',
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _submitting ? null : _abrirRegistro,
+                child: const Text('Registrar mi negocio'),
+              ),
+            ],
           ),
         ),
       ),

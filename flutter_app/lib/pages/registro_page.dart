@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../models/registro_negocio.dart';
 import '../services/registro_repository.dart';
+import '../theme.dart';
 import '../utils/slug.dart';
+import '../widgets/logo_barberia.dart';
 
 class RegistroPage extends StatefulWidget {
   /// Registro completo: crea la cuenta y deja los datos del negocio
@@ -174,7 +176,14 @@ class _RegistroPageState extends State<RegistroPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: widget._completando ? null : AppBar(),
+      backgroundColor: widget._completando ? null : Marca.negro,
+      appBar: widget._completando
+          ? null
+          : AppBar(
+              backgroundColor: Marca.negro,
+              foregroundColor: Colors.white,
+              title: const LogoBarberia(tamano: 18),
+            ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -343,9 +352,9 @@ class _RegistroPageState extends State<RegistroPage> {
             ),
           ],
           const SizedBox(height: 20),
-          FilledButton(
+          BotonDorado(
             onPressed: _enviando ? null : _enviar,
-            child: Text(_enviando ? 'Creando…' : 'Crear mi negocio'),
+            etiqueta: _enviando ? 'Creando…' : 'Crear mi negocio',
           ),
         ],
       ),
