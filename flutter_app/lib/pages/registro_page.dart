@@ -41,11 +41,13 @@ class _RegistroPageState extends State<RegistroPage> {
   final _ownerTelefono = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _codigo = TextEditingController();
 
   bool _slugEditadoManualmente = false;
   bool _enviando = false;
   bool _esperandoConfirmacion = false;
   String? _error;
+  String? _aviso;
 
   @override
   void initState() {
@@ -72,6 +74,7 @@ class _RegistroPageState extends State<RegistroPage> {
       _ownerTelefono,
       _email,
       _password,
+      _codigo,
     ]) {
       controller.dispose();
     }
@@ -152,6 +155,64 @@ class _RegistroPageState extends State<RegistroPage> {
     }
   }
 
+  Future<void> _verificarCodigo() async {
+    final codigo = _codigo.text.trim();
+    if (!RegExp(r'^\d{6,10}$').hasMatch(codigo)) {
+      setState(() {
+        _aviso = null;
+        _error = 'Escribe el código de 6 dígitos que te enviamos.';
+      });
+      return;
+    }
+
+    setState(() {
+      _enviando = true;
+      _error = null;
+      _aviso = null;
+    });
+    try {
+      await widget.repository.verificarCodigo(
+        email: _email.text.trim(),
+        codigo: codigo,
+      );
+      // Con la sesión abierta, AuthGate muestra el panel y este completa
+      // el negocio con los datos pendientes, igual que con sesión inmediata.
+      if (mounted) Navigator.of(context).pop();
+    } on RegistroException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = 'No se pudo verificar el código. Intenta de nuevo.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
+
+  Future<void> _reenviarCodigo() async {
+    setState(() {
+      _enviando = true;
+      _error = null;
+      _aviso = null;
+    });
+    try {
+      await widget.repository.reenviarCodigo(_email.text.trim());
+      if (mounted) setState(() => _aviso = 'Te enviamos un código nuevo.');
+    } on RegistroException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = 'No se pudo reenviar el código. Intenta de nuevo.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
+
   Future<void> _crearNegocio() async {
     setState(() {
       _enviando = true;
@@ -222,13 +283,40 @@ class _RegistroPageState extends State<RegistroPage> {
         ),
         const SizedBox(height: 12),
         Text(
-          'Te enviamos un enlace de confirmación a ${_email.text.trim()}. '
-          'Confírmalo e inicia sesión: tu negocio se creará automáticamente.',
+          'Te enviamos un código de confirmación a ${_email.text.trim()}. '
+          'Escríbelo aquí y tu negocio se creará automáticamente.',
         ),
         const SizedBox(height: 24),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Ir a iniciar sesión'),
+        if (_error != null) ...[
+          Text(
+            _error!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (_aviso != null) ...[Text(_aviso!), const SizedBox(height: 16)],
+        TextField(
+          key: const Key('registro-codigo'),
+          controller: _codigo,
+          keyboardType: TextInputType.number,
+          autofillHints: const [AutofillHints.oneTimeCode],
+          maxLength: 10,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _enviando ? null : _verificarCodigo(),
+          decoration: const InputDecoration(
+            labelText: 'Código',
+            counterText: '',
+          ),
+        ),
+        const SizedBox(height: 20),
+        BotonDorado(
+          onPressed: _enviando ? null : _verificarCodigo,
+          etiqueta: _enviando ? 'Verificando…' : 'Confirmar',
+        ),
+        const SizedBox(height: 12),
+        TextButton(
+          onPressed: _enviando ? null : _reenviarCodigo,
+          child: const Text('Reenviar código'),
         ),
       ],
     );

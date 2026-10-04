@@ -23,6 +23,12 @@ abstract interface class RegistroRepository {
     required RegistroNegocio datos,
   });
 
+  /// Confirma la cuenta con el código enviado por correo y abre sesión.
+  Future<void> verificarCodigo({required String email, required String codigo});
+
+  /// Vuelve a enviar el código de confirmación.
+  Future<void> reenviarCodigo(String email);
+
   /// Crea negocio + perfil OWNER para la cuenta autenticada.
   Future<void> crearNegocio(RegistroNegocio datos);
 }
@@ -70,6 +76,47 @@ class SupabaseRegistroRepository implements RegistroRepository {
       }
       throw const RegistroException(
         'No se pudo crear la cuenta. Intenta de nuevo.',
+      );
+    }
+  }
+
+  @override
+  Future<void> verificarCodigo({
+    required String email,
+    required String codigo,
+  }) async {
+    try {
+      await _client.auth.verifyOTP(
+        type: OtpType.email,
+        email: email,
+        token: codigo,
+      );
+    } on AuthException catch (error) {
+      final texto = '${error.code} ${error.message}'.toLowerCase();
+      if (texto.contains('expired') || texto.contains('invalid')) {
+        throw const RegistroException(
+          'El código no es válido o ya venció. Pide uno nuevo.',
+        );
+      }
+      throw const RegistroException(
+        'No se pudo verificar el código. Intenta de nuevo.',
+      );
+    }
+  }
+
+  @override
+  Future<void> reenviarCodigo(String email) async {
+    try {
+      await _client.auth.resend(type: OtpType.signup, email: email);
+    } on AuthException catch (error) {
+      final texto = '${error.code} ${error.message}'.toLowerCase();
+      if (texto.contains('rate') || texto.contains('seconds')) {
+        throw const RegistroException(
+          'Espera un momento antes de pedir otro código.',
+        );
+      }
+      throw const RegistroException(
+        'No se pudo reenviar el código. Intenta de nuevo.',
       );
     }
   }

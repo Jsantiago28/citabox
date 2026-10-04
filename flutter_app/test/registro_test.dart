@@ -76,6 +76,71 @@ void main() {
     },
   );
 
+  testWidgets('email code confirms the account and closes registration', (
+    tester,
+  ) async {
+    final repository = _FakeRegistroRepository();
+    await _pumpRegistro(
+      tester,
+      Builder(
+        builder: (context) => TextButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => RegistroPage(repository: repository),
+            ),
+          ),
+          child: const Text('abrir'),
+        ),
+      ),
+    );
+    await tester.tap(find.text('abrir'));
+    await tester.pumpAndSettle();
+    await _llenarFormulario(tester);
+    await _tapCrear(tester);
+
+    await tester.enterText(find.byKey(const Key('registro-codigo')), '12');
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Escribe el código de 6 dígitos que te enviamos.'),
+      findsOneWidget,
+    );
+    expect(repository.codigoVerificado, isNull);
+
+    await tester.tap(find.text('Reenviar código'));
+    await tester.pumpAndSettle();
+    expect(repository.reenvios, 1);
+    expect(find.text('Te enviamos un código nuevo.'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('registro-codigo')), '123456');
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.codigoVerificado, '123456');
+    expect(find.text('abrir'), findsOneWidget);
+  });
+
+  testWidgets('wrong email code shows the backend error', (tester) async {
+    final repository = _FakeRegistroRepository(
+      errorCodigo: const RegistroException(
+        'El código no es válido o ya venció. Pide uno nuevo.',
+      ),
+    );
+    await _pumpRegistro(tester, RegistroPage(repository: repository));
+    await _llenarFormulario(tester);
+    await _tapCrear(tester);
+
+    await tester.enterText(find.byKey(const Key('registro-codigo')), '000000');
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('El código no es válido o ya venció. Pide uno nuevo.'),
+      findsOneWidget,
+    );
+    expect(find.text('Revisa tu correo'), findsOneWidget);
+  });
+
   testWidgets('taken slug is rejected before creating the account', (
     tester,
   ) async {
@@ -183,10 +248,17 @@ Future<void> _tapCrear(WidgetTester tester) async {
 }
 
 class _FakeRegistroRepository implements RegistroRepository {
-  _FakeRegistroRepository({this.slugLibre = true, this.errorNegocio});
+  _FakeRegistroRepository({
+    this.slugLibre = true,
+    this.errorNegocio,
+    this.errorCodigo,
+  });
 
   final bool slugLibre;
   RegistroException? errorNegocio;
+  final RegistroException? errorCodigo;
+  String? codigoVerificado;
+  int reenvios = 0;
   String? email;
   RegistroNegocio? datosCuenta;
   RegistroNegocio? negocioCreado;
@@ -206,6 +278,19 @@ class _FakeRegistroRepository implements RegistroRepository {
     datosCuenta = datos;
     return false;
   }
+
+  @override
+  Future<void> verificarCodigo({
+    required String email,
+    required String codigo,
+  }) async {
+    final error = errorCodigo;
+    if (error != null) throw error;
+    codigoVerificado = codigo;
+  }
+
+  @override
+  Future<void> reenviarCodigo(String email) async => reenvios++;
 
   @override
   Future<void> crearNegocio(RegistroNegocio datos) async {
