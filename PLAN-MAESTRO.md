@@ -1,4 +1,4 @@
-# Plan Maestro — Barbería PRO (estado al 29-sep-2026)
+# Plan Maestro — Barbería PRO (estado al 18-oct-2026)
 
 Este documento sigue el orden del **Plan Maestro** en PDF
 (`Plan_Maestro_Barberia_Salones_Agenda_Apartados.pdf`) y marca qué está hecho y qué falta.
@@ -21,18 +21,18 @@ El modelo visual de referencia está en [docs/modelo-visual.png](docs/modelo-vis
 | # | Fase del Plan Maestro | Estado | En una línea |
 |---|---|---|---|
 | 0 | Preparación | ✅ | Proyecto Flutter, conexión a Supabase y repositorio git |
-| 1 | Base (datos + seguridad multi-negocio) | ✅ | Tablas, RLS y aislamiento por negocio en migraciones 001–002 |
+| 1 | Base (datos + seguridad multi-negocio) | ✅ | Tablas, RLS, aislamiento por negocio y protección de roles (001–005), probado en CI |
 | 2 | Autenticación y roles | 🟡 | Login, registro y roles listos; falta recuperar contraseña e invitar barberos |
 | 3 | Negocio (perfil, horarios, configuración) | ⬜ | Solo existe la pantalla "Próximamente"; faltan tablas de horarios |
 | 4 | Servicios | 🟡 | Hecho en React (referencia); falta en Flutter |
 | 5 | Empleados | 🟡 | Hecho en React (referencia); falta en Flutter, servicios asignados y disponibilidad |
 | 6 | Clientes | ✅ | Lista, búsqueda, alta/edición, visitas, gasto y "Frecuente" |
-| 7 | Agenda | 🟡 | Vista por día con Llegó/No vino; falta crear/editar citas y bloquear solapamientos |
+| 7 | Agenda | 🟡 | Vista por día con Llegó/No vino y solapamientos bloqueados en la base; falta crear/editar citas |
 | 8 | Reserva pública | ⬜ | Nada construido; requiere funciones nuevas en la base |
 | 9 | Apartado | ⬜ | Tabla existe; sin pantallas. Cobro en línea aplazado |
 | 10 | Estados de la cita | 🟡 | Llegó/No vino listos; faltan Completada, Cancelada y reglas en backend |
 | 11 | Reportes | 🟡 | Indicadores del día en el panel; falta la pantalla de reportes |
-| 12 | QA | 🟡 | 18 pruebas automáticas; faltan pruebas con cuenta real, seguridad y dispositivos |
+| 12 | QA | 🟡 | 20 pruebas Flutter + pruebas SQL de seguridad en CI; faltan pruebas con cuenta real y dispositivos |
 | 13 | Lanzamiento | ⬜ | Sin publicar, sin datos demo ni onboarding |
 
 **Avance aproximado de la V1:** 3 fases completas, 6 parciales y 4 pendientes.
@@ -63,7 +63,9 @@ manteniendo Supabase y el esquema/RLS existentes. La app React queda solo como r
 ### 1. Base: modelo de datos y seguridad multi-negocio ✅
 - ✅ `001_initial_schema.sql`: negocios, perfiles, empleados, servicios, clientes, citas, apartados; enums de rol, estado de cita y estado de apartado; RLS por negocio.
 - ✅ `002_hardening_multitenant.sql`: claves foráneas compuestas que impiden mezclar datos de dos negocios.
-- ⬜ **Confirmar que 001–003 están aplicadas en el proyecto real de Supabase** (no verificado desde aquí).
+- ✅ `004_seguridad_perfiles.sql`: corrige una escalada de privilegios (un barbero podía cambiar su propio `rol` a OWNER) y quita el acceso a los perfiles desactivados.
+- ✅ Pruebas SQL en `supabase/tests/` que corren en CI sobre PostgreSQL real: aislamiento entre negocios, roles, perfiles inactivos y solapamiento de citas.
+- ⬜ **Confirmar que 001–005 están aplicadas en el proyecto real de Supabase** (no verificado desde aquí). 004 y 005 son nuevas y hay que aplicarlas en el SQL Editor.
 - ⬜ Tabla `pagos` del PDF: no existe. Se crea cuando se decida el cobro en línea.
 
 ### 2. Autenticación y roles 🟡
@@ -104,7 +106,7 @@ manteniendo Supabase y el esquema/RLS existentes. La app React queda solo como r
 - ✅ Agenda por día (‹ › y "Hoy"); el dueño ve todas las citas y el barbero solo las suyas.
 - ✅ Panel del dueño: citas hoy, llegaron, no-show, ventas y agenda de hoy.
 - ⬜ Crear y editar citas desde el panel (cliente, servicio, barbero, fecha y hora).
-- ⬜ **Migración nueva — bloquear solapamientos.** Hoy solo se impide que dos citas del mismo barbero **empiecen a la misma hora**. Una cita de 10:00 a 10:45 y otra a las 10:30 **sí** se pueden crear. El criterio del PDF ("no hay dobles reservas") exige una restricción por rango de horas en la base.
+- ✅ **Bloqueo de solapamientos** (`005_citas_sin_solapamiento.sql`): un barbero no puede tener dos citas activas cuyos horarios se crucen. Canceladas y no-shows liberan el horario. Error `23P01` para mostrar en la app.
 - ⬜ Vista de semana o calendario (opcional para V1).
 
 ### 8. Reserva pública ⬜
@@ -133,7 +135,8 @@ Estados definidos en la base: Pendiente, Confirmada, Llegó, Completada, No vino
 - ⬜ Prueba del PDF: los totales coinciden con las citas y los cobros registrados.
 
 ### 12. QA 🟡
-- ✅ 18 pruebas automáticas (formatos, registro, clientes, panel y agenda); análisis sin avisos; la versión web compila.
+- ✅ 20 pruebas automáticas de Flutter (formatos, registro, clientes, panel y agenda); análisis sin avisos; la versión web compila.
+- ✅ CI en GitHub Actions (`.github/workflows/ci.yml`) en cada push: migraciones + pruebas SQL en PostgreSQL, `flutter analyze` + `flutter test` y lint/build de React.
 - ✅ Revisión visual con capturas en computadora y celular.
 - ⬜ Probar con una cuenta real de Supabase (registro con y sin confirmación de correo, panel y agenda).
 - ⬜ Seguridad: comprobar que un negocio no puede leer datos de otro.
@@ -158,20 +161,20 @@ Estados definidos en la base: Pendiente, Confirmada, Llegó, Completada, No vino
 | Crear servicio | ⬜ | Falta pantalla Flutter y link público |
 | Crear cliente | ✅ | Queda en el negocio correcto |
 | Reservar horario | ⬜ | Falta reserva pública |
-| Intentar doble reserva | 🟡 | Bloquea misma hora de inicio; no bloquea solapamientos |
+| Intentar doble reserva | ✅ | La base rechaza solapamientos (prueba SQL en CI); falta el mensaje en la app |
 | Apartado | ⬜ | |
 | Cancelar | ⬜ | |
 | No-show | ✅ | Se marca y se cuenta en el panel |
 | Responsive | 🟡 | Panel, agenda y clientes probados en tamaño celular; falta la reserva pública |
-| Seguridad | 🟡 | RLS y FKs compuestas definidas; falta prueba real entre dos negocios |
+| Seguridad | 🟡 | Probado en CI entre dos negocios y entre roles; falta repetirlo en el Supabase real |
 | Reportes | 🟡 | Totales del día probados; falta pantalla de reportes |
 
 ---
 
 ## Orden recomendado de lo que falta
 
-1. **Validar con una cuenta real:** confirmar migraciones aplicadas; probar registro, panel, agenda y clientes.
-2. **Migración 004:** horarios del negocio y de cada barbero, servicios por barbero, monto y política del apartado, y bloqueo de solapamientos.
+1. **Validar con una cuenta real:** aplicar 004 y 005, confirmar 001–005; probar registro, panel, agenda y clientes.
+2. **Migración 006:** horarios del negocio y de cada barbero, servicios por barbero, monto y política del apartado.
 3. **Servicios y Empleados en Flutter**, con la invitación de barberos.
 4. **Configuración del negocio** y enlace público.
 5. **Agenda:** crear/editar citas, Completada y Cancelada.
