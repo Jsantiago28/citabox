@@ -194,14 +194,41 @@ datos, o deshabilitando la confirmación de correo para este flujo)
 requiere una decisión de producto del arquitecto y no se implementó
 para no improvisar una solución de datos no solicitada.
 
+> **Actualización:** la app Flutter ya resuelve esta limitación: guarda los
+> datos del negocio en los metadatos de la cuenta (`signUp(data: ...)`) y
+> completa el bootstrap después de confirmar el correo con un código.
+
 ### Qué queda pendiente para fases posteriores
 
-- Resolver la limitación de confirmación de correo descrita arriba.
 - Invitaciones de empleados y administración avanzada de empleados
   (por ahora Fase 2 solo lee el rol existente, no gestiona invitaciones).
 - Permisos más finos de `EMPLOYEE` por módulo (más allá de la
   separación por negocio ya garantizada).
-- Reglas de disponibilidad/solapamiento de horarios más allá del
-  choque exacto (mismo empleado + misma fecha + misma hora_inicio).
 - Políticas públicas acotadas para la reserva pública (vistas o RPC,
   nunca acceso directo a las tablas privadas completas).
+
+## 004_seguridad_perfiles.sql
+
+Corrige dos fallos de seguridad de la política de `perfiles`:
+
+- **Escalada de privilegios:** `perfiles_update_propio_o_owner` dejaba que
+  un EMPLOYEE cambiara su propio `rol` a `OWNER` o se reactivara. Ahora un
+  trigger (`trg_perfiles_proteger_columnas`) exige ser OWNER activo para
+  cambiar `rol` o `activo`, impide que el dueño se quite el rol o se
+  desactive a sí mismo y bloquea cualquier cambio de `negocio_id`. Las
+  operaciones del servidor (sin `auth.uid()`) no se ven afectadas.
+- **Perfiles inactivos con acceso:** `auth_negocio_id()` ahora solo devuelve
+  el negocio si el perfil está activo, así que un perfil desactivado pierde
+  el acceso a todas las tablas. La política nueva `perfiles_select_propio`
+  le deja leer solo su propio perfil, para que la app muestre "perfil
+  inactivo".
+
+## 005_citas_sin_solapamiento.sql
+
+Sustituye el índice `uq_citas_empleado_horario` (misma hora de inicio) por
+la restricción de exclusión `citas_empleado_sin_solapamiento`
+(`btree_gist`): un mismo empleado no puede tener dos citas activas cuyos
+rangos `[hora_inicio, hora_fin)` se crucen el mismo día. `CANCELADA` y
+`NO_VINO` no ocupan horario. El error para el cliente es `23P01`. El
+archivo incluye una consulta para detectar solapamientos existentes antes
+de aplicarla.
