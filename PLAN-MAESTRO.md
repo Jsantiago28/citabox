@@ -58,7 +58,7 @@ manteniendo Supabase y el esquema/RLS existentes. La app React queda solo como r
 - ✅ URL y *publishable key* de Supabase fuera del código (`dart_defines.local.json`, ignorado por git).
 - ✅ Repositorio git con historial; secretos y `_backups/` excluidos.
 - ✅ App React conservada como referencia (`src/`); `npm run lint` y `npm run build` pasan.
-- ⬜ Limpieza: carpetas duplicadas en la raíz (`pages/`, `services/`, `components/`, `styles/`, `utils/`, `migrations/`) que quedaron de parches viejos.
+- ✅ Limpieza: se eliminaron las carpetas duplicadas de la raíz (`pages/`, `services/`, `components/`, `styles/`, `utils/`, `migrations/`); `validacionesModulos.js` pasó a `src/utils/`.
 
 ### 1. Base: modelo de datos y seguridad multi-negocio ✅
 - ✅ `001_initial_schema.sql`: negocios, perfiles, empleados, servicios, clientes, citas, apartados; enums de rol, estado de cita y estado de apartado; RLS por negocio.
