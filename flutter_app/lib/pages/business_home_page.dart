@@ -4,12 +4,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/registro_negocio.dart';
 import '../services/citas_repository.dart';
 import '../services/clientes_repository.dart';
+import '../services/configuracion_repository.dart';
 import '../services/registro_repository.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../widgets/logo_barberia.dart';
 import 'agenda_page.dart';
 import 'clientes_page.dart';
+import 'configuracion_page.dart';
 import 'dashboard_page.dart';
 import 'proximamente_page.dart';
 import 'registro_page.dart';
@@ -264,10 +266,9 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         icono: Icons.insert_chart_outlined,
         descripcion: 'Ventas, asistencia y clientes frecuentes por período.',
       ),
-      _Seccion.configuracion => const ProximamentePage(
-        titulo: 'Configuración',
-        icono: Icons.settings_outlined,
-        descripcion: 'Datos del negocio, horarios y enlace de reservas.',
+      _Seccion.configuracion => ConfiguracionPage(
+        negocioId: widget.negocioId,
+        repository: SupabaseConfiguracionRepository(Supabase.instance.client),
       ),
     };
   }
