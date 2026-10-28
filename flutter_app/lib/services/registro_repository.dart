@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/registro_negocio.dart';
+import 'password_repository.dart' show mensajeEsperaCorreo;
 
 class RegistroException implements Exception {
   const RegistroException(this.message);
@@ -109,12 +110,8 @@ class SupabaseRegistroRepository implements RegistroRepository {
     try {
       await _client.auth.resend(type: OtpType.signup, email: email);
     } on AuthException catch (error) {
-      final texto = '${error.code} ${error.message}'.toLowerCase();
-      if (texto.contains('rate') || texto.contains('seconds')) {
-        throw const RegistroException(
-          'Espera un momento antes de pedir otro código.',
-        );
-      }
+      final espera = mensajeEsperaCorreo(error);
+      if (espera != null) throw RegistroException(espera);
       throw const RegistroException(
         'No se pudo reenviar el código. Intenta de nuevo.',
       );

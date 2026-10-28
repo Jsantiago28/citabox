@@ -43,12 +43,8 @@ class SupabasePasswordRepository implements PasswordRepository {
     try {
       await _client.auth.resetPasswordForEmail(email);
     } on AuthException catch (error) {
-      final texto = '${error.code} ${error.message}'.toLowerCase();
-      if (texto.contains('rate') || texto.contains('seconds')) {
-        throw const PasswordException(
-          'Espera un momento antes de pedir otro código.',
-        );
-      }
+      final espera = mensajeEsperaCorreo(error);
+      if (espera != null) throw PasswordException(espera);
       throw const PasswordException(
         'No se pudo enviar el código. Intenta de nuevo.',
       );
@@ -110,4 +106,19 @@ class SupabasePasswordRepository implements PasswordRepository {
       );
     }
   }
+}
+
+/// Mensaje cuando Supabase limita los envíos de correo ("…only request this
+/// after 14 seconds"), o null si el error es otro.
+String? mensajeEsperaCorreo(AuthException error) {
+  final texto = '${error.code} ${error.message}'.toLowerCase();
+  final esLimite =
+      error.statusCode == '429' ||
+      texto.contains('rate') ||
+      texto.contains('seconds');
+  if (!esLimite) return null;
+  final segundos = RegExp(r'(\d+)\s*seconds').firstMatch(texto)?.group(1);
+  return segundos == null
+      ? 'Espera un momento antes de pedir otro código.'
+      : 'Espera $segundos segundos antes de pedir otro código.';
 }

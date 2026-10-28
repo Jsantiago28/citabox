@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 import 'package:barberiapro/pages/login_page.dart';
 import 'package:barberiapro/pages/recuperar_password_page.dart';
@@ -11,6 +12,22 @@ void main() {
     expect(debeFijarPassword({debeFijarPasswordKey: null}), isFalse);
     expect(debeFijarPassword({}), isFalse);
     expect(debeFijarPassword(null), isFalse);
+  });
+
+  test('email rate limits tell how many seconds to wait', () {
+    expect(
+      mensajeEsperaCorreo(
+        const AuthException(
+          'For security purposes, you can only request this after 14 seconds.',
+          statusCode: '429',
+        ),
+      ),
+      'Espera 14 segundos antes de pedir otro código.',
+    );
+    expect(
+      mensajeEsperaCorreo(const AuthException('Error sending recovery email')),
+      isNull,
+    );
   });
 
   testWidgets('login opens password recovery with the typed email', (
