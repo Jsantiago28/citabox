@@ -185,6 +185,39 @@ Estados definidos en la base: Pendiente, Confirmada, Llegó, Completada, No vino
 10. Primer negocio real → observar → corregir.
 11. Android e iOS.
 
+## Comparación con apps parecidas (27-oct-2026)
+
+Referencias: Booksy, Fresha, Vagaro, Square Appointments, AgendaPro, Setmore.
+
+| Función | Ellos | Barbería PRO | Decisión |
+|---|---|---|---|
+| Reserva en línea por enlace | ✅ todas | 🟡 en construcción (007) | V1 |
+| Horario por barbero, días libres | ✅ | ✅ base (006), pantallas en curso | V1 |
+| Apartado / depósito | ✅ con tarjeta | 🟡 transferencia + validación manual | V1 (tarjeta después) |
+| Recordatorios | ✅ SMS/push automáticos | ⬜ | V1: botón de WhatsApp con mensaje listo (sin API) |
+| Agregar al calendario | ✅ | ⬜ | V1 (.ics / Google Calendar) |
+| Clientes sin cita (walk-in) | ✅ Booksy, Square | ⬜ | **V1: "Atender ahora"**: en barberías de RD es la mitad del día |
+| Ficha del cliente con notas y preferencias | ✅ | 🟡 sin historial | V1 |
+| Historial de no-shows del cliente | ✅ Booksy/Fresha | ⬜ | V1: contador visible y aviso |
+| Método de pago al cobrar y propina | ✅ | ⬜ | V1 ligera: efectivo/transferencia/tarjeta + propina (migración 008) |
+| App instalable | ✅ nativas | ⬜ | V1: web instalable (PWA); nativas después |
+| Agenda en tiempo real | ✅ | ⬜ | V1.1 (Supabase Realtime) |
+| Reseñas, marketplace, lista de espera | ✅ | ⬜ | V2+ |
+| Comisiones, inventario, membresías | ✅ | ⬜ | V3–V4 (fuera de V1, según el PDF) |
+
+**Ventajas que conservamos:** precio local (RD$), apartado por transferencia (lo normal en RD), WhatsApp
+como canal principal y simplicidad (la "prueba de oro": reservar sin ayuda).
+
+## Reparto del trabajo (equipo de agentes)
+
+| Tanda | Trabajo | Estado |
+|---|---|---|
+| 0 | Migración 006 (horarios, servicios por barbero, apartado, estados) | ✅ en master |
+| 1 | Servicios y Empleados · Configuración · Agenda (crear/editar/completar/cancelar) · Migración 007 reserva pública · Recuperar contraseña + invitar barberos | 🔄 |
+| 1b | Reportes por período · PWA + publicación web + datos demo | 🔄 |
+| 2 | Pantallas de reserva pública y "Mi cita" (+ calendario y WhatsApp) · Apartados: validar pagos · Migración 008 cobro (método y propina) · Atender ahora (walk-in) + recordatorio por WhatsApp · Ficha del cliente con historial, notas y no-shows | ⬜ |
+| 3 | QA completo, revisión de seguridad, aplicar migraciones en Supabase real, publicar | ⬜ |
+
 ## Fuera de la V1 (según el PDF)
 
 Inventario, nómina, comisiones complejas, multi-sucursal avanzada, membresías, promociones sofisticadas,
