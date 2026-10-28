@@ -251,3 +251,47 @@ de aplicarla.
   cambios válidos; `CANCELADA` es definitivo. Error `23514`.
 - **Apartado pagado** (`trg_apartados_al_pagar`): guarda `fecha_pago` y pasa la
   cita de `PENDIENTE` a `CONFIRMADA`.
+
+## 007_reserva_publica.sql
+
+Reserva pública para visitantes sin cuenta (Fase 8) y reporte del pago del
+apartado por transferencia (Fase 9). **No se abre ninguna política RLS
+pública**: `anon` sigue sin poder leer ninguna tabla. Todo pasa por funciones
+RPC `SECURITY DEFINER` (`search_path = public`) que validan cada dato en el
+servidor y devuelven solo lo necesario. "Hoy" y "ahora" salen de
+`negocios.zona_horaria`.
+
+- **`citas.token_publico`** (uuid aleatorio, único): identifica la cita en el
+  enlace "Mi cita" sin cuenta.
+- **Clientes por teléfono:** al reservar se reutiliza el cliente del mismo
+  negocio con el mismo teléfono (comparando solo dígitos; índice
+  `idx_clientes_negocio_telefono_digitos`) o se crea uno nuevo.
+- **Funciones internas `reserva_priv_*`:** revocadas de `public`, `anon` y
+  `authenticated`. `reserva_priv_horarios_libres` es la única fuente de las
+  reglas de disponibilidad (horario del negocio ∩ horario del barbero,
+  bloqueos, servicios por barbero, pasos de `intervalo_reserva_minutos`,
+  cabe antes del cierre, sin cruce con citas activas, solo horas futuras).
+
+### Funciones públicas (`anon` y `authenticated`)
+
+| Función | Qué hace |
+|---|---|
+| `reserva_catalogo(p_slug)` | Negocio activo, servicios activos, barberos activos (sin teléfonos) y horario. |
+| `reserva_horas_disponibles(p_slug, p_servicio_id, p_fecha, p_empleado_id = null)` | `[{hora_inicio, empleado_id}]` libres; sin barbero, una entrada por hora. Fecha entre hoy y hoy + 60. |
+| `reserva_crear(...)` | Revalida, crea/reutiliza cliente, cita `PENDIENTE` con el precio del servicio y, si `apartado_requerido` y `apartado_monto > 0`, apartado `PENDIENTE`. Máx. 3 citas futuras activas por teléfono. |
+| `reserva_consultar(p_token)` | Datos de "Mi cita" (sin datos del cliente), `puede_cancelar`, `puede_reprogramar`. |
+| `reserva_cancelar(p_token)` | Solo `PENDIENTE`/`CONFIRMADA` y con `cancelacion_horas_minimas` de anticipación. Cancela el apartado `PENDIENTE`; uno `PAGADO` queda igual (la devolución la decide el dueño). |
+| `reserva_reprogramar(p_token, p_fecha, p_hora_inicio)` | Misma regla de anticipación; mismo servicio y barbero; revalida excluyendo la propia cita. |
+| `reserva_reportar_pago(p_token, p_referencia)` | Guarda la referencia y `metodo_pago = 'TRANSFERENCIA'` del apartado `PENDIENTE`. No lo marca `PAGADO`: eso lo hace el dueño (y la cita pasa a `CONFIRMADA` por 006). |
+
+### Errores
+
+- `P0001`: regla de negocio (slug o token inexistente, dato inválido, fuera
+  de plazo, límite de citas…). El mensaje está en español y se puede mostrar
+  tal cual.
+- `23P01`: la hora no está disponible (ocupada, ya pasó o fuera de horario),
+  ya sea por la validación previa o por la restricción de 005 en una
+  carrera. La app debe recargar las horas.
+
+Pruebas: `supabase/tests/30_reserva_publica.sql` (negocio `negocio-d`, rol
+`anon` sin JWT).
