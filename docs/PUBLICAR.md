@@ -173,3 +173,19 @@ web y no a `localhost`.
 - No hay `_redirects`: las rutas usan `#` (`/#/reservar/<slug>`) y, al no
   existir `404.html`, Cloudflare Pages sirve `index.html` para cualquier
   ruta.
+
+## Supabase automático (migraciones y funciones)
+
+El workflow **"Publicar Supabase (migraciones y funciones)"** se ejecuta cuando
+el CI termina en verde en master: aplica en el Supabase real las migraciones
+nuevas de `supabase/migrations/` y despliega las Edge Functions de
+`supabase/functions/`. Si no hay nada nuevo, no cambia nada.
+
+Necesita un solo secreto en GitHub:
+
+1. En Supabase → **Account → Access Tokens** crea un token para el proyecto
+   Barberia PRO con acceso completo al proyecto. Ponle una caducidad larga
+   (por ejemplo 1 año) y anota cuándo vence para renovarlo.
+2. En GitHub → **Settings → Secrets and variables → Actions** crea
+   `SUPABASE_ACCESS_TOKEN` con ese token.
+3. Para probarlo: **Actions → "Publicar Supabase…" → Run workflow**.
