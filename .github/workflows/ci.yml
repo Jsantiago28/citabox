@@ -41,6 +41,15 @@ jobs:
             echo "== $f"
             psql -v ON_ERROR_STOP=1 -f "$f"
           done
+      - name: Datos demo (crear dos veces, borrar y volver a crear)
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "insert into negocios (nombre, slug) values ('Demo CI', 'demo-ci') on conflict (slug) do nothing"
+          sed "s/'mi-barberia'/'demo-ci'/" supabase/seed/demo.sql > /tmp/demo.sql
+          sed "s/'mi-barberia'/'demo-ci'/" supabase/seed/borrar_demo.sql > /tmp/borrar_demo.sql
+          psql -v ON_ERROR_STOP=1 -f /tmp/demo.sql
+          psql -v ON_ERROR_STOP=1 -f /tmp/demo.sql
+          psql -v ON_ERROR_STOP=1 -f /tmp/borrar_demo.sql
+          psql -v ON_ERROR_STOP=1 -f /tmp/demo.sql
 
   flutter:
     name: Flutter (análisis y pruebas)

@@ -1,0 +1,111 @@
+name: Publicar web (Cloudflare Pages)
+
+# Se ejecuta a mano (Actions → "Publicar web" → Run workflow) y en cada push a
+# master. Si faltan los secretos, no publica y termina en verde: así no rompe
+# el CI mientras la publicación no esté configurada. Ver docs/PUBLICAR.md.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  comprobar:
+    name: Comprobar secretos
+    runs-on: ubuntu-latest
+    outputs:
+      listo: ${{ steps.revisar.outputs.listo }}
+    steps:
+      - id: revisar
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          faltan=""
+          for nombre in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [ -z "${!nombre}" ]; then faltan="$faltan $nombre"; fi
+          done
+          if [ -n "$faltan" ]; then
+            echo "listo=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Publicación omitida::Faltan secretos:$faltan. Ver docs/PUBLICAR.md."
+          else
+            echo "listo=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  publicar:
+    name: Compilar y publicar
+    needs: comprobar
+    if: needs.comprobar.outputs.listo == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: produccion
+      url: ${{ steps.desplegar.outputs.deployment-url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Dependencias
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Compilar versión web
+        working-directory: flutter_app
+        run: >-
+          flutter build web --release
+          --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          --dart-define=SUPABASE_PUBLISHABLE_KEY=${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+
+      # Opcional: con la variable SITE_URL (p. ej. https://reservas.mibarberia.com)
+      # la imagen de vista previa de WhatsApp usa una dirección completa.
+      - name: Dirección completa para la vista previa
+        if: vars.SITE_URL != ''
+        working-directory: flutter_app/build/web
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          base="${SITE_URL%/}"
+          sed -i \
+            -e "s#content=\"icons/Icon-512.png\"#content=\"$base/icons/Icon-512.png\"#g" \
+            -e "s#<meta property=\"og:type\" content=\"website\">#<meta property=\"og:type\" content=\"website\">\n  <meta property=\"og:url\" content=\"$base/\">#" \
+            index.html
+
+      # Crea el proyecto "barberia-pro" la primera vez (rama de producción:
+      # master). Si ya existe, no hace nada.
+      - name: Crear proyecto de Pages si no existe
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects"
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/barberia-pro")
+          if [ "$codigo" = "200" ]; then
+            echo "El proyecto barberia-pro ya existe."
+          elif [ "$codigo" = "404" ]; then
+            curl -sf -X POST "$api" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data '{"name":"barberia-pro","production_branch":"master"}' > /dev/null
+            echo "Proyecto barberia-pro creado."
+          else
+            echo "::error::Cloudflare respondió $codigo. Revisa CLOUDFLARE_API_TOKEN y CLOUDFLARE_ACCOUNT_ID."
+            exit 1
+          fi
+
+      - name: Publicar en Cloudflare Pages
+        id: desplegar
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy flutter_app/build/web --project-name=barberia-pro --branch=master --commit-dirty=true

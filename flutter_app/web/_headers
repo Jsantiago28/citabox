@@ -1,0 +1,38 @@
+# Cabeceras para Cloudflare Pages
+# https://developers.cloudflare.com/pages/configuration/headers/
+#
+# No hace falta un archivo _redirects: la app usa rutas con "#"
+# (por ejemplo /#/reservar/mi-barberia) y, como no hay 404.html, Cloudflare
+# Pages ya sirve index.html para cualquier dirección desconocida.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: frame-ancestors 'self'
+  X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+# Flutter no pone un código de versión en estos nombres de archivo: el
+# navegador debe preguntar siempre si hay una versión nueva.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/flutter_bootstrap.js
+  Cache-Control: no-cache
+/flutter_service_worker.js
+  Cache-Control: no-cache
+/main.dart.js
+  Cache-Control: no-cache
+/manifest.json
+  Cache-Control: no-cache
+/version.json
+  Cache-Control: no-cache
+
+# Recursos que cambian poco.
+/assets/*
+  Cache-Control: public, max-age=86400, must-revalidate
+/icons/*
+  Cache-Control: public, max-age=604800
+/canvaskit/*
+  Cache-Control: public, max-age=604800
