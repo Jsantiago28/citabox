@@ -5,6 +5,7 @@ import '../models/registro_negocio.dart';
 import '../services/citas_repository.dart';
 import '../services/clientes_repository.dart';
 import '../services/registro_repository.dart';
+import '../services/reportes_repository.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../widgets/logo_barberia.dart';
@@ -13,6 +14,7 @@ import 'clientes_page.dart';
 import 'dashboard_page.dart';
 import 'proximamente_page.dart';
 import 'registro_page.dart';
+import 'reportes_page.dart';
 
 class BusinessHomePage extends StatefulWidget {
   const BusinessHomePage({
@@ -158,6 +160,7 @@ class BusinessWorkspace extends StatefulWidget {
     required this.onSignOut,
     this.citasRepository,
     this.clientesRepository,
+    this.reportesRepository,
   });
 
   final String userId;
@@ -171,6 +174,7 @@ class BusinessWorkspace extends StatefulWidget {
   /// Inyectables en pruebas; por defecto usan Supabase.
   final CitasRepository? citasRepository;
   final ClientesRepository? clientesRepository;
+  final ReportesRepository? reportesRepository;
 
   @override
   State<BusinessWorkspace> createState() => _BusinessWorkspaceState();
@@ -183,6 +187,9 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
   late final ClientesRepository _clientes =
       widget.clientesRepository ??
       SupabaseClientesRepository(Supabase.instance.client);
+  late final ReportesRepository _reportes =
+      widget.reportesRepository ??
+      SupabaseReportesRepository(Supabase.instance.client);
   late final Future<String?> _empleadoId;
   _Seccion _seccion = _Seccion.inicio;
 
@@ -217,7 +224,9 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
   Widget _pagina(String? empleadoId) {
     if (!widget.esOwner &&
         empleadoId == null &&
-        (_seccion == _Seccion.inicio || _seccion == _Seccion.agenda)) {
+        (_seccion == _Seccion.inicio ||
+            _seccion == _Seccion.agenda ||
+            _seccion == _Seccion.reportes)) {
       return const _ProfileMessage(
         message:
             'Tu perfil aún no está vinculado a un empleado. '
@@ -259,10 +268,13 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         icono: Icons.badge_outlined,
         descripcion: 'Tu equipo de barberos y sus horarios.',
       ),
-      _Seccion.reportes => const ProximamentePage(
-        titulo: 'Reportes',
-        icono: Icons.insert_chart_outlined,
-        descripcion: 'Ventas, asistencia y clientes frecuentes por período.',
+      _Seccion.reportes => ReportesPage(
+        key: ValueKey('reportes-$empleadoId'),
+        negocioId: widget.negocioId,
+        moneda: widget.moneda,
+        empleadoId: empleadoId,
+        mostrarBarberos: widget.esOwner,
+        repository: _reportes,
       ),
       _Seccion.configuracion => const ProximamentePage(
         titulo: 'Configuración',

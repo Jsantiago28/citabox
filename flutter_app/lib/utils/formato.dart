@@ -63,6 +63,25 @@ String formatoFechaIso(DateTime fecha) =>
     '${fecha.month.toString().padLeft(2, '0')}-'
     '${fecha.day.toString().padLeft(2, '0')}';
 
+/// 18 de septiembre de 2026 · 1 – 31 de octubre de 2026 ·
+/// 28 de septiembre – 4 de octubre de 2026
+String formatoRangoFechas(DateTime desde, DateTime hasta) {
+  String dia(DateTime f) => '${f.day} de ${_meses[f.month - 1]}';
+  if (desde.year != hasta.year) {
+    return '${dia(desde)} de ${desde.year} – ${dia(hasta)} de ${hasta.year}';
+  }
+  if (desde.month != hasta.month) {
+    return '${dia(desde)} – ${dia(hasta)} de ${hasta.year}';
+  }
+  if (desde.day != hasta.day) {
+    return '${desde.day} – ${dia(hasta)} de ${hasta.year}';
+  }
+  return '${dia(desde)} de ${desde.year}';
+}
+
+/// 18/9
+String formatoDiaMes(DateTime fecha) => '${fecha.day}/${fecha.month}';
+
 /// '15:00:00' → '3:00 PM'
 String formatoHora(String hora) {
   final partes = hora.split(':');
