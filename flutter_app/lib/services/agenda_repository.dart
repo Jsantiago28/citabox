@@ -1,7 +1,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/cita.dart';
 import '../models/cliente.dart';
 import '../utils/formato.dart';
+
+/// Cliente genérico para quien se atiende sin registrarse ("Atender ahora").
+const nombreClienteDePaso = 'Cliente de paso';
 
 /// Servicio tal como lo necesita el formulario de citas.
 class ServicioAgenda {
@@ -132,8 +136,17 @@ abstract interface class AgendaRepository {
     String telefono = '',
   });
 
-  /// Crea la cita en estado PENDIENTE.
-  Future<void> crearCita({required String negocioId, required DatosCita datos});
+  /// Cliente "Cliente de paso" del negocio (por nombre exacto); lo crea si
+  /// no existe.
+  Future<Cliente> clienteDePaso(String negocioId);
+
+  /// Crea la cita, por defecto en estado PENDIENTE. "Atender ahora" la crea
+  /// en LLEGO (el trigger de 006 solo valida los UPDATE de estado).
+  Future<void> crearCita({
+    required String negocioId,
+    required DatosCita datos,
+    EstadoCita estado = EstadoCita.pendiente,
+  });
 
   Future<void> editarCita({
     required String negocioId,
@@ -141,11 +154,14 @@ abstract interface class AgendaRepository {
     required DatosCita datos,
   });
 
-  /// Marca la cita como COMPLETADA y guarda el precio final cobrado.
+  /// Marca la cita como COMPLETADA y guarda el cobro (precio final, método
+  /// de pago y propina) en un solo update.
   Future<void> completar({
     required String negocioId,
     required String citaId,
     required num precio,
+    MetodoPago metodoPago = MetodoPago.efectivo,
+    num propina = 0,
   });
 
   /// Apartado activo de la cita (o el último, si todos están cancelados).
@@ -230,14 +246,28 @@ class SupabaseAgendaRepository implements AgendaRepository {
   }
 
   @override
+  Future<Cliente> clienteDePaso(String negocioId) async {
+    final rows = await _client
+        .from('clientes')
+        .select('id, nombre, telefono, email, notas, activo')
+        .eq('negocio_id', negocioId)
+        .eq('nombre', nombreClienteDePaso)
+        .order('created_at')
+        .limit(1);
+    if (rows.isNotEmpty) return Cliente.fromMap(rows.first);
+    return crearCliente(negocioId: negocioId, nombre: nombreClienteDePaso);
+  }
+
+  @override
   Future<void> crearCita({
     required String negocioId,
     required DatosCita datos,
+    EstadoCita estado = EstadoCita.pendiente,
   }) async {
     await _client.from('citas').insert({
       ...datos.toMap(),
       'negocio_id': negocioId,
-      'estado': 'PENDIENTE',
+      'estado': estado.valor,
     });
   }
 
@@ -261,10 +291,17 @@ class SupabaseAgendaRepository implements AgendaRepository {
     required String negocioId,
     required String citaId,
     required num precio,
+    MetodoPago metodoPago = MetodoPago.efectivo,
+    num propina = 0,
   }) async {
     await _client
         .from('citas')
-        .update({'estado': 'COMPLETADA', 'precio': precio})
+        .update({
+          'estado': EstadoCita.completada.valor,
+          'precio': precio,
+          'metodo_pago': metodoPago.valor,
+          'propina': propina,
+        })
         .eq('negocio_id', negocioId)
         .eq('id', citaId);
   }

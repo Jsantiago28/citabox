@@ -41,6 +41,27 @@ enum EstadoCita {
   };
 }
 
+/// Cómo pagó el cliente (008_cobro_de_citas.sql).
+enum MetodoPago {
+  efectivo('EFECTIVO', 'Efectivo'),
+  transferencia('TRANSFERENCIA', 'Transferencia'),
+  tarjeta('TARJETA', 'Tarjeta'),
+  otro('OTRO', 'Otro');
+
+  const MetodoPago(this.valor, this.etiqueta);
+
+  final String valor;
+  final String etiqueta;
+
+  /// null si la cita no tiene método registrado (o no se reconoce).
+  static MetodoPago? desde(String? valor) {
+    for (final metodo in MetodoPago.values) {
+      if (metodo.valor == valor) return metodo;
+    }
+    return null;
+  }
+}
+
 class Cita {
   const Cita({
     required this.id,
@@ -54,8 +75,11 @@ class Cita {
     this.empleadoId = '',
     this.notas = '',
     this.clienteNombre = '',
+    this.clienteTelefono = '',
     this.servicioNombre = '',
     this.empleadoNombre = '',
+    this.metodoPago,
+    this.propina = 0,
   });
 
   final String id;
@@ -71,12 +95,17 @@ class Cita {
   final String empleadoId;
   final String notas;
   final String clienteNombre;
+  final String clienteTelefono;
   final String servicioNombre;
   final String empleadoNombre;
 
+  /// Se registra al completar y se conserva aunque se deshaga la Completada.
+  final MetodoPago? metodoPago;
+  final num propina;
+
   factory Cita.fromMap(Map<String, dynamic> map) {
-    String nombreDe(String relacion) =>
-        (map[relacion] as Map<String, dynamic>?)?['nombre']?.toString() ?? '';
+    String deRelacion(String relacion, String columna) =>
+        (map[relacion] as Map<String, dynamic>?)?[columna]?.toString() ?? '';
     String texto(String columna) => map[columna]?.toString() ?? '';
 
     return Cita(
@@ -90,13 +119,21 @@ class Cita {
       servicioId: texto('servicio_id'),
       empleadoId: texto('empleado_id'),
       notas: texto('notas'),
-      clienteNombre: nombreDe('clientes'),
-      servicioNombre: nombreDe('servicios'),
-      empleadoNombre: nombreDe('empleados'),
+      clienteNombre: deRelacion('clientes', 'nombre'),
+      clienteTelefono: deRelacion('clientes', 'telefono'),
+      servicioNombre: deRelacion('servicios', 'nombre'),
+      empleadoNombre: deRelacion('empleados', 'nombre'),
+      metodoPago: MetodoPago.desde(map['metodo_pago']?.toString()),
+      propina: num.tryParse(texto('propina')) ?? 0,
     );
   }
 
-  Cita copyWith({EstadoCita? estado, num? precio}) => Cita(
+  Cita copyWith({
+    EstadoCita? estado,
+    num? precio,
+    MetodoPago? metodoPago,
+    num? propina,
+  }) => Cita(
     id: id,
     fecha: fecha,
     horaInicio: horaInicio,
@@ -108,8 +145,11 @@ class Cita {
     empleadoId: empleadoId,
     notas: notas,
     clienteNombre: clienteNombre,
+    clienteTelefono: clienteTelefono,
     servicioNombre: servicioNombre,
     empleadoNombre: empleadoNombre,
+    metodoPago: metodoPago ?? this.metodoPago,
+    propina: propina ?? this.propina,
   );
 
   Cita conEstado(EstadoCita nuevo) => copyWith(estado: nuevo);

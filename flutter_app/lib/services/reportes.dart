@@ -6,6 +6,10 @@
 // - Apartados cobrados: suma de `apartados.monto` PAGADO, según la fecha
 //   de la cita (sin importar el estado de la cita).
 // - Ticket promedio: ingresos / citas atendidas.
+// - Propinas: suma de `citas.propina` de las atendidas, aparte (NO se suma a
+//   los ingresos).
+// - Ingresos por método de pago: los ingresos agrupados por
+//   `citas.metodo_pago`; las atendidas sin método van a "Sin registrar".
 // Los montos se suman en centavos enteros para que los totales cuadren
 // exactamente con las citas de entrada.
 
@@ -25,6 +29,8 @@ class CitaReporte {
     this.servicioId = '',
     this.servicioNombre = '',
     this.apartadoPagado = 0,
+    this.metodoPago,
+    this.propina = 0,
   });
 
   final String id;
@@ -42,6 +48,10 @@ class CitaReporte {
 
   /// Suma de los apartados en estado PAGADO de esta cita.
   final num apartadoPagado;
+
+  /// null si no se registró al cobrar.
+  final MetodoPago? metodoPago;
+  final num propina;
 
   factory CitaReporte.fromMap(Map<String, dynamic> map) {
     String nombreDe(String relacion) =>
@@ -66,6 +76,8 @@ class CitaReporte {
       servicioId: map['servicio_id']?.toString() ?? '',
       servicioNombre: nombreDe('servicios'),
       apartadoPagado: pagado,
+      metodoPago: MetodoPago.desde(map['metodo_pago']?.toString()),
+      propina: numero(map['propina']),
     );
   }
 }
@@ -189,6 +201,23 @@ class FilaCliente {
   final num gastado;
 }
 
+/// Ingresos cobrados con un método de pago; [metodo] null = "Sin registrar".
+class FilaMetodoPago {
+  const FilaMetodoPago({
+    required this.metodo,
+    required this.cantidad,
+    required this.ingresos,
+  });
+
+  static const sinRegistrar = 'Sin registrar';
+
+  final MetodoPago? metodo;
+  final int cantidad;
+  final num ingresos;
+
+  String get etiqueta => metodo?.etiqueta ?? sinRegistrar;
+}
+
 class IngresoDia {
   const IngresoDia(this.dia, this.ingresos);
 
@@ -203,6 +232,8 @@ class Reporte {
     required this.porEstado,
     required this.ingresos,
     required this.apartadosCobrados,
+    required this.propinas,
+    required this.porMetodoPago,
     required this.porBarbero,
     required this.porServicio,
     required this.topClientes,
@@ -216,6 +247,9 @@ class Reporte {
     final porEstado = {for (final estado in EstadoCita.values) estado: 0};
     var ingresos = 0;
     var apartados = 0;
+    var propinas = 0;
+    // Clave null = sin método registrado.
+    final metodos = <MetodoPago?, _Acumulado>{};
     final barberos = <String, _Acumulado>{};
     final servicios = <String, _Acumulado>{};
     final clientes = <String, _Acumulado>{};
@@ -228,7 +262,16 @@ class Reporte {
 
       final precio = _centavos(cita.precio);
       ingresos += precio;
+      propinas += _centavos(cita.propina);
       porDia[_dia(cita.fecha)] = porDia[_dia(cita.fecha)]! + precio;
+      metodos
+          .putIfAbsent(
+            cita.metodoPago,
+            () => _Acumulado(
+              cita.metodoPago?.etiqueta ?? FilaMetodoPago.sinRegistrar,
+            ),
+          )
+          .sumar(precio);
 
       String clave(String id, String nombre) => id.isNotEmpty ? id : nombre;
       barberos
@@ -273,6 +316,17 @@ class Reporte {
       porEstado: Map.unmodifiable(porEstado),
       ingresos: _monto(ingresos),
       apartadosCobrados: _monto(apartados),
+      propinas: _monto(propinas),
+      // Orden fijo: Efectivo, Transferencia, Tarjeta, Otro y Sin registrar.
+      porMetodoPago: [
+        for (final metodo in <MetodoPago?>[...MetodoPago.values, null])
+          if (metodos[metodo] case final grupo?)
+            FilaMetodoPago(
+              metodo: metodo,
+              cantidad: grupo.cantidad,
+              ingresos: _monto(grupo.centavos),
+            ),
+      ],
       porBarbero: [
         for (final e in ordenar(barberos, porIngresos))
           FilaBarbero(
@@ -312,6 +366,12 @@ class Reporte {
   final Map<EstadoCita, int> porEstado;
   final num ingresos;
   final num apartadosCobrados;
+
+  /// Propinas de las citas atendidas; no forman parte de [ingresos].
+  final num propinas;
+
+  /// Desglose de [ingresos] por método de pago (suma exactamente lo mismo).
+  final List<FilaMetodoPago> porMetodoPago;
   final List<FilaBarbero> porBarbero;
   final List<FilaServicio> porServicio;
 
