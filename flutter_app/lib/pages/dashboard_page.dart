@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/cita.dart';
+import '../services/apartados_repository.dart';
 import '../services/citas_repository.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
@@ -17,6 +18,8 @@ class DashboardPage extends StatefulWidget {
     this.moneda = 'DOP',
     this.empleadoId,
     this.hoy,
+    this.apartadosRepository,
+    this.onVerApartados,
   });
 
   final String negocioId;
@@ -32,12 +35,17 @@ class DashboardPage extends StatefulWidget {
   /// Inyectable en pruebas; por defecto la fecha del dispositivo.
   final DateTime? hoy;
 
+  /// Si se indican, el panel avisa cuántos apartados faltan por validar.
+  final ApartadosRepository? apartadosRepository;
+  final VoidCallback? onVerApartados;
+
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
 class _DashboardPageState extends State<DashboardPage> {
   late Future<List<Cita>> _citas;
+  late Future<int> _porValidar;
 
   DateTime get _hoy => widget.hoy ?? DateTime.now();
 
@@ -45,6 +53,21 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _citas = _cargar();
+    _porValidar = _contarApartados();
+  }
+
+  // El aviso es complementario: si falla, el panel sigue igual.
+  Future<int> _contarApartados() async {
+    final repository = widget.apartadosRepository;
+    if (repository == null) return 0;
+    try {
+      return await repository.contarPorValidar(
+        negocioId: widget.negocioId,
+        empleadoId: widget.empleadoId,
+      );
+    } catch (_) {
+      return 0;
+    }
   }
 
   Future<List<Cita>> _cargar() => widget.repository.listarDelDia(
@@ -62,7 +85,10 @@ class _DashboardPageState extends State<DashboardPage> {
         final ancho = constraints.maxWidth >= 860;
         return RefreshIndicator(
           onRefresh: () async {
-            setState(() => _citas = _cargar());
+            setState(() {
+              _citas = _cargar();
+              _porValidar = _contarApartados();
+            });
             await _citas;
           },
           child: ListView(
@@ -75,6 +101,20 @@ class _DashboardPageState extends State<DashboardPage> {
                 mostrarNegocio: ancho,
               ),
               const SizedBox(height: 20),
+              FutureBuilder<int>(
+                future: _porValidar,
+                builder: (context, snapshot) {
+                  final cantidad = snapshot.data ?? 0;
+                  final onVer = widget.onVerApartados;
+                  if (cantidad == 0 || onVer == null) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _AvisoApartados(cantidad: cantidad, onVer: onVer),
+                  );
+                },
+              ),
               FutureBuilder<List<Cita>>(
                 future: _citas,
                 builder: (context, snapshot) {
@@ -169,6 +209,31 @@ class _Encabezado extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AvisoApartados extends StatelessWidget {
+  const _AvisoApartados({required this.cantidad, required this.onVer});
+
+  final int cantidad;
+  final VoidCallback onVer;
+
+  @override
+  Widget build(BuildContext context) {
+    final texto = cantidad == 1
+        ? '1 apartado por validar'
+        : '$cantidad apartados por validar';
+    return Card(
+      key: const Key('aviso-apartados'),
+      color: Marca.naranja.withValues(alpha: 0.08),
+      child: ListTile(
+        onTap: onVer,
+        leading: const Icon(Icons.payments_outlined, color: Marca.naranja),
+        title: Text(texto, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: const Text('Revisa las transferencias reportadas.'),
+        trailing: TextButton(onPressed: onVer, child: const Text('Revisar')),
+      ),
     );
   }
 }
