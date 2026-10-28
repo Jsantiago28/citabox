@@ -301,3 +301,27 @@ Pruebas: `supabase/tests/30_reserva_publica.sql` (negocio `negocio-d`, rol
 Agrega a `citas`: `metodo_pago` (`EFECTIVO`, `TRANSFERENCIA`, `TARJETA`, `OTRO`),
 `propina` (aparte del precio, para no inflar los ingresos del negocio) y
 `cobrada_en`, que se guarda sola la primera vez que la cita pasa a `COMPLETADA`.
+
+## 010_seguridad_reservas_y_roles.sql
+
+Correcciones de la revisión de seguridad del 28-oct-2026:
+
+- **`citas.origen`** (`INTERNA` / `PUBLICA`): las reservas hechas por el enlace
+  público quedan marcadas.
+- **`reserva_crear`** (misma firma): máximo 30 reservas públicas pendientes por
+  hora y negocio; un cliente desactivado no puede reservar en línea; el
+  visitante ya no cambia el correo de una ficha existente; mensaje genérico al
+  llegar al límite por teléfono.
+- **`vencer_reservas_sin_pago()`**: cancela las reservas públicas cuyo apartado
+  no se reportó en 3 horas. Se programa cada 15 minutos con `pg_cron` si está
+  disponible.
+- **Perfiles:** se elimina `perfiles_insert_owner` (los perfiles solo se crean
+  con `bootstrap_negocio_owner` o la Edge Function) y el trigger impide cambiar
+  el `id` de un perfil.
+- **Barbero (EMPLOYEE)** (`trg_citas_limitar_empleado`): solo crea y modifica
+  citas de su propia agenda y solo cambia el precio al completarla.
+- **Apartados:** solo el dueño los registra y valida.
+- **Cancelar una cita** cancela su apartado `PENDIENTE` (`trg_citas_cancelar_apartado`).
+- **Zona horaria** del negocio validada contra `pg_timezone_names`.
+
+Pruebas: `supabase/tests/50_seguridad_reservas_y_roles.sql`.

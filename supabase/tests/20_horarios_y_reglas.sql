@@ -98,6 +98,8 @@ values ('0c000000-0000-0000-0000-0000000000c1', '33333333-3333-3333-3333-3333333
         'c3333333-3333-3333-3333-333333333333', 'e3333333-3333-3333-3333-333333333333',
         '53333333-3333-3333-3333-333333333333', '2026-11-02', '10:00', '10:30', 500);
 
+-- Desde 010 solo el dueño registra y valida apartados.
+select set_config('request.jwt.claim.sub', 'c0000000-0000-0000-0000-00000000000c', false);
 -- Apartado pagado → cita confirmada y fecha de pago registrada.
 insert into apartados (negocio_id, cita_id, monto, metodo_pago)
 values ('33333333-3333-3333-3333-333333333333', '0c000000-0000-0000-0000-0000000000c1', 200, 'TRANSFERENCIA');

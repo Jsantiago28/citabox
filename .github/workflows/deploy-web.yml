@@ -1,13 +1,19 @@
 name: Publicar web (Cloudflare Pages)
 
-# Se ejecuta a mano (Actions → "Publicar web" → Run workflow) y en cada push a
-# master. Si faltan los secretos, no publica y termina en verde: así no rompe
-# el CI mientras la publicación no esté configurada. Ver docs/PUBLICAR.md.
+# Se ejecuta a mano (Actions → "Publicar web" → Run workflow) y cuando el CI
+# termina en verde en master. Si faltan los secretos, no publica y termina en
+# verde: así no rompe nada mientras la publicación no esté configurada. Ver docs/PUBLICAR.md.
 
 on:
   workflow_dispatch:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [master]
+
+permissions:
+  contents: read
+  deployments: write
 
 concurrency:
   group: deploy-web
@@ -41,13 +47,17 @@ jobs:
   publicar:
     name: Compilar y publicar
     needs: comprobar
-    if: needs.comprobar.outputs.listo == 'true'
+    if: >-
+      needs.comprobar.outputs.listo == 'true' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     environment:
       name: produccion
       url: ${{ steps.desplegar.outputs.deployment-url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: subosito/flutter-action@v2
         with:

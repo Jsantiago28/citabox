@@ -25,3 +25,7 @@ $$;
 grant usage on schema public to anon, authenticated, service_role;
 alter default privileges in schema public
   grant select, insert, update, delete on tables to anon, authenticated, service_role;
+-- Igual que Supabase: toda función nueva en "public" es ejecutable por los
+-- roles de la API salvo que la migración lo revoque explícitamente.
+alter default privileges in schema public
+  grant execute on functions to anon, authenticated, service_role;

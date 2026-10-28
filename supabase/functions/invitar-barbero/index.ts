@@ -19,6 +19,7 @@ const corsHeaders = {
 
 // La app usa esta marca para pedir al invitado que fije su contraseña.
 const DEBE_FIJAR_PASSWORD = 'debe_fijar_password';
+const CORREO_NO_INVITABLE =  'Ese correo no se puede invitar. Pide a la persona que use otro correo.';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -118,24 +119,6 @@ async function empleadoSinCuenta(
   return data as Empleado;
 }
 
-/** Busca un usuario de Auth por correo (la API admin no filtra por correo). */
-async function buscarUsuarioPorEmail(admin: SupabaseClient, email: string) {
-  const porPagina = 1000;
-  for (let pagina = 1; pagina <= 100; pagina++) {
-    const { data, error } = await admin.auth.admin.listUsers({
-      page: pagina,
-      perPage: porPagina,
-    });
-    if (error) {
-      throw new ErrorHttp(500, 'No se pudo comprobar el correo.');
-    }
-    const usuario = data.users.find((u) => u.email?.toLowerCase() === email);
-    if (usuario) return usuario;
-    if (data.users.length < porPagina) break;
-  }
-  return null;
-}
-
 function correoYaRegistrado(error: { status?: number; code?: string; message: string }) {
   const texto = `${error.code ?? ''} ${error.message}`.toLowerCase();
   return (
@@ -146,11 +129,11 @@ function correoYaRegistrado(error: { status?: number; code?: string; message: st
 }
 
 /**
- * Invita al correo. Si ya existe una cuenta con ese correo, la reutiliza
- * (sin correo nuevo: esa persona ya tiene contraseña).
- * Devuelve el id del usuario y si se creó en esta llamada.
+ * Invita al correo. Nunca reutiliza una cuenta existente: así ningún dueño
+ * puede apropiarse de una cuenta ajena ni averiguar qué correos están registrados.
+ * Devuelve el id del usuario creado.
  */
-async function invitarOReutilizar(
+async function invitarNuevo(
   admin: SupabaseClient,
   email: string,
   empleado: Empleado,
@@ -159,15 +142,11 @@ async function invitarOReutilizar(
     data: { nombre: empleado.nombre, [DEBE_FIJAR_PASSWORD]: true },
   });
   if (!error && data.user) {
-    return { userId: data.user.id, creado: true };
+    return data.user.id;
   }
 
   if (error && correoYaRegistrado(error)) {
-    const existente = await buscarUsuarioPorEmail(admin, email);
-    if (!existente) {
-      throw new ErrorHttp(409, 'Ese correo ya está registrado, pero no se encontró la cuenta.');
-    }
-    return { userId: existente.id, creado: false };
+    throw new ErrorHttp(409, CORREO_NO_INVITABLE);
   }
 
   if (error?.status === 429) {
@@ -199,33 +178,14 @@ async function invitar(req: Request): Promise<Response> {
   const empleado = await empleadoSinCuenta(usuario, empleadoId, negocioId);
 
   const admin = createClient(url, serviceKey, { auth: sinSesion });
-  const { userId, creado } = await invitarOReutilizar(admin, email, empleado);
+  const userId = await invitarNuevo(admin, email, empleado);
 
   // Deshace la cuenta recién invitada si no se pudo terminar de ligar, para
   // que el dueño pueda reintentar con el mismo correo.
   const deshacer = async (borrarPerfil: boolean) => {
     if (borrarPerfil) await admin.from('perfiles').delete().eq('id', userId);
-    if (creado) await admin.auth.admin.deleteUser(userId);
+    await admin.auth.admin.deleteUser(userId);
   };
-
-  if (!creado) {
-    const { data: perfil, error } = await admin
-      .from('perfiles')
-      .select('negocio_id')
-      .eq('id', userId)
-      .maybeSingle();
-    if (error) {
-      throw new ErrorHttp(500, 'No se pudo comprobar el correo.');
-    }
-    if (perfil) {
-      throw new ErrorHttp(
-        409,
-        perfil.negocio_id === negocioId
-          ? 'Ese correo ya pertenece a otra cuenta de tu negocio.'
-          : 'Ese correo ya pertenece a una cuenta de otro negocio.',
-      );
-    }
-  }
 
   const { error: perfilError } = await admin.from('perfiles').insert({
     id: userId,
@@ -237,7 +197,7 @@ async function invitar(req: Request): Promise<Response> {
   if (perfilError) {
     await deshacer(false);
     if (perfilError.code === '23505') {
-      throw new ErrorHttp(409, 'Ese correo ya tiene una cuenta en el sistema.');
+      throw new ErrorHttp(409, CORREO_NO_INVITABLE);
     }
     throw new ErrorHttp(500, 'No se pudo crear el perfil del barbero.');
   }
@@ -260,9 +220,7 @@ async function invitar(req: Request): Promise<Response> {
     );
   }
 
-  // correo_enviado = false: el correo ya tenía cuenta (sin negocio); esa
-  // persona entra con su contraseña de siempre y no recibe correo nuevo.
-  return responder(200, { ok: true, correo_enviado: creado });
+  return responder(200, { ok: true, correo_enviado: true });
 }
 
 Deno.serve(async (req) => {
