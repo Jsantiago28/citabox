@@ -40,6 +40,7 @@ void main() {
         home: LoginPage(registroRepository: _FakeRegistroRepository()),
       ),
     );
+    await tester.ensureVisible(find.text('Registrar mi negocio'));
     await tester.tap(find.text('Registrar mi negocio'));
     await tester.pumpAndSettle();
 

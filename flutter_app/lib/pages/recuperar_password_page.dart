@@ -16,6 +16,18 @@ class RecuperarPasswordPage extends StatefulWidget {
     this.emailInicial = '',
   }) : fijando = false,
        onSalir = null,
+       onListo = null,
+       invitacion = false;
+
+  /// Barbero invitado: escribe el correo y el código del correo de
+  /// invitación (no se reenvía desde aquí) y elige su contraseña.
+  const RecuperarPasswordPage.invitacion({
+    super.key,
+    required this.repository,
+    this.emailInicial = '',
+  }) : fijando = false,
+       invitacion = true,
+       onSalir = null,
        onListo = null;
 
   /// Cuenta con sesión pero sin contraseña (barbero invitado): solo pide
@@ -26,11 +38,13 @@ class RecuperarPasswordPage extends StatefulWidget {
     this.onSalir,
     this.onListo,
   }) : fijando = true,
-       emailInicial = '';
+       emailInicial = '',
+       invitacion = false;
 
   final PasswordRepository repository;
   final String emailInicial;
   final bool fijando;
+  final bool invitacion;
   final VoidCallback? onSalir;
   final VoidCallback? onListo;
 
@@ -84,6 +98,13 @@ class _RecuperarPasswordPageState extends State<RecuperarPasswordPage> {
 
   Future<void> _enviarCodigo() async {
     if (!_correoForm.currentState!.validate()) return;
+    if (widget.invitacion) {
+      setState(() {
+        _error = null;
+        _paso = _Paso.codigo;
+      });
+      return;
+    }
     await _ejecutar(() async {
       await widget.repository.enviarCodigo(_email.text.trim());
       if (mounted) setState(() => _paso = _Paso.codigo);
@@ -101,10 +122,16 @@ class _RecuperarPasswordPageState extends State<RecuperarPasswordPage> {
 
     await _ejecutar(() async {
       if (!widget.fijando && !_codigoVerificado) {
-        await widget.repository.verificarCodigo(
-          email: _email.text.trim(),
-          codigo: _codigo.text.trim(),
-        );
+        final email = _email.text.trim();
+        final codigo = _codigo.text.trim();
+        if (widget.invitacion) {
+          await widget.repository.verificarInvitacion(
+            email: email,
+            codigo: codigo,
+          );
+        } else {
+          await widget.repository.verificarCodigo(email: email, codigo: codigo);
+        }
         _codigoVerificado = true;
       }
       await widget.repository.cambiarPassword(_password.text);
@@ -114,7 +141,13 @@ class _RecuperarPasswordPageState extends State<RecuperarPasswordPage> {
         widget.onListo?.call();
       } else {
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('Contraseña actualizada.')),
+          SnackBar(
+            content: Text(
+              widget.invitacion
+                  ? '¡Listo! Ya puedes usar la app.'
+                  : 'Contraseña actualizada.',
+            ),
+          ),
         );
         Navigator.of(context).pop();
       }
@@ -178,13 +211,15 @@ class _RecuperarPasswordPageState extends State<RecuperarPasswordPage> {
           ),
           const SizedBox(height: 20),
           Text(
-            'Recuperar contraseña',
+            widget.invitacion ? 'Activar invitación' : 'Recuperar contraseña',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Escribe el correo de tu cuenta y te enviaremos un código para '
-            'crear una contraseña nueva.',
+          Text(
+            widget.invitacion
+                ? 'Escribe el correo donde recibiste la invitación de tu barbería.'
+                : 'Escribe el correo de tu cuenta y te enviaremos un código para '
+                      'crear una contraseña nueva.',
           ),
           const SizedBox(height: 24),
           ..._mensajes(context),
@@ -204,7 +239,9 @@ class _RecuperarPasswordPageState extends State<RecuperarPasswordPage> {
           const SizedBox(height: 20),
           BotonDorado(
             onPressed: _enviando ? null : _enviarCodigo,
-            etiqueta: _enviando ? 'Enviando…' : 'Enviar código',
+            etiqueta: _enviando
+                ? 'Enviando…'
+                : (widget.invitacion ? 'Continuar' : 'Enviar código'),
           ),
         ],
       ),
@@ -238,6 +275,9 @@ class _RecuperarPasswordPageState extends State<RecuperarPasswordPage> {
             fijando
                 ? 'Tu cuenta ya está lista. Elige una contraseña para entrar '
                       'la próxima vez.'
+                : widget.invitacion
+                ? 'Escribe el código del correo de invitación y elige tu '
+                      'contraseña.'
                 : 'Te enviamos un código a ${_email.text.trim()}. '
                       'Escríbelo junto con tu contraseña nueva.',
           ),
@@ -296,7 +336,14 @@ class _RecuperarPasswordPageState extends State<RecuperarPasswordPage> {
             onPressed: _enviando ? null : _guardar,
             etiqueta: _enviando ? 'Guardando…' : 'Guardar contraseña',
           ),
-          if (pideCodigo) ...[
+          if (pideCodigo && widget.invitacion) ...[
+            const SizedBox(height: 12),
+            const Text(
+              'Si el código venció, usa "¿Olvidaste tu contraseña?" con este '
+              'mismo correo.',
+            ),
+          ],
+          if (pideCodigo && !widget.invitacion) ...[
             const SizedBox(height: 12),
             TextButton(
               onPressed: _enviando ? null : _reenviarCodigo,

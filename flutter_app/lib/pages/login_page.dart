@@ -75,14 +75,26 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  PasswordRepository get _passwordRepository =>
+      widget.passwordRepository ??
+      SupabasePasswordRepository(Supabase.instance.client);
+
   void _abrirRecuperacion() {
-    final repository =
-        widget.passwordRepository ??
-        SupabasePasswordRepository(Supabase.instance.client);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => RecuperarPasswordPage(
-          repository: repository,
+          repository: _passwordRepository,
+          emailInicial: _emailController.text.trim(),
+        ),
+      ),
+    );
+  }
+
+  void _abrirInvitacion() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RecuperarPasswordPage.invitacion(
+          repository: _passwordRepository,
           emailInicial: _emailController.text.trim(),
         ),
       ),
@@ -175,6 +187,12 @@ class _LoginPageState extends State<LoginPage> {
               BotonDorado(
                 onPressed: _submitting ? null : _signIn,
                 etiqueta: _submitting ? 'Ingresando…' : 'Ingresar',
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                key: const Key('login-invitacion'),
+                onPressed: _submitting ? null : _abrirInvitacion,
+                child: const Text('Soy barbero: tengo un código de invitación'),
               ),
               const SizedBox(height: 8),
               TextButton(

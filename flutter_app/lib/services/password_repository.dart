@@ -23,6 +23,12 @@ abstract interface class PasswordRepository {
   /// Comprueba el código de recuperación y abre sesión.
   Future<void> verificarCodigo({required String email, required String codigo});
 
+  /// Comprueba el código del correo de invitación (barbero) y abre sesión.
+  Future<void> verificarInvitacion({
+    required String email,
+    required String codigo,
+  });
+
   /// Cambia la contraseña de la cuenta con sesión abierta.
   Future<void> cambiarPassword(String password);
 }
@@ -53,13 +59,17 @@ class SupabasePasswordRepository implements PasswordRepository {
   Future<void> verificarCodigo({
     required String email,
     required String codigo,
-  }) async {
+  }) => _verificar(OtpType.recovery, email, codigo);
+
+  @override
+  Future<void> verificarInvitacion({
+    required String email,
+    required String codigo,
+  }) => _verificar(OtpType.invite, email, codigo);
+
+  Future<void> _verificar(OtpType tipo, String email, String codigo) async {
     try {
-      await _client.auth.verifyOTP(
-        type: OtpType.recovery,
-        email: email,
-        token: codigo,
-      );
+      await _client.auth.verifyOTP(type: tipo, email: email, token: codigo);
     } on AuthException catch (error) {
       final texto = '${error.code} ${error.message}'.toLowerCase();
       if (texto.contains('expired') || texto.contains('invalid')) {

@@ -51,9 +51,11 @@ Supabase en la función; no hay que configurarlas. La clave `service_role`
 nunca debe ir en la app.
 
 ### Configuración en el panel de Supabase
-
 - **Authentication → URL Configuration:** `Site URL` (y `Redirect URLs`) con
-  la dirección donde se publica la app web; el enlace de invitación lleva ahí.
+  la dirección donde se publica la app web.
+- **SMTP propio** (Emails → SMTP Settings): obligatorio, porque el correo de
+  Supabase solo envía a los miembros del equipo. Hoy se usa Gmail con
+  contraseña de aplicación.
 - **Authentication → Email Templates → Reset Password:** la app pide un
   **código**, así que la plantilla debe mostrar `{{ .Token }}`, por ejemplo:
 
@@ -63,5 +65,7 @@ nunca debe ir en la app.
   <p style="font-size:24px;font-weight:bold">{{ .Token }}</p>
   ```
 
-- **Invite user:** puede quedarse con el enlace `{{ .ConfirmationURL }}`;
-  conviene traducir el texto al español y mencionar el negocio.
+- **Invite user:** también con **código** `{{ .Token }}`. El barbero entra en
+  la app por "Soy barbero: tengo un código de invitación", escribe su correo
+  y el código (`verifyOTP` tipo `invite`) y crea su contraseña. Si el código
+  venció, usa "¿Olvidaste tu contraseña?" con el mismo correo.

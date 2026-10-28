@@ -210,6 +210,37 @@ void main() {
     await tester.tap(find.text('Cerrar sesión'));
     expect(salio, isTrue);
   });
+
+  testWidgets('invited barber activates the account with the invite code', (
+    tester,
+  ) async {
+    final repository = _FakePasswordRepository();
+    await _pump(tester, LoginPage(passwordRepository: repository));
+
+    await tester.tap(find.byKey(const Key('login-invitacion')));
+    await tester.pumpAndSettle();
+    expect(find.text('Activar invitación'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('recuperar-email')),
+      'barbero@example.com',
+    );
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+
+    // La invitación ya trae el código: no se envía otro.
+    expect(repository.codigosEnviados, isEmpty);
+    expect(find.text('Reenviar código'), findsNothing);
+
+    await _llenarPassword(tester, codigo: '123456');
+    await tester.tap(find.text('Guardar contraseña'));
+    await tester.pumpAndSettle();
+
+    expect(repository.invitacionesVerificadas, 1);
+    expect(repository.emailVerificado, 'barbero@example.com');
+    expect(repository.codigoVerificado, '123456');
+    expect(repository.passwordNueva, 'nueva1234');
+  });
 }
 
 Future<void> _pump(WidgetTester tester, Widget page) async {
@@ -241,6 +272,7 @@ class _FakePasswordRepository implements PasswordRepository {
   PasswordException? errorPassword;
   final List<String> codigosEnviados = [];
   int verificaciones = 0;
+  int invitacionesVerificadas = 0;
   String? emailVerificado;
   String? codigoVerificado;
   String? passwordNueva;
@@ -258,6 +290,15 @@ class _FakePasswordRepository implements PasswordRepository {
     if (error != null) throw error;
     emailVerificado = email;
     codigoVerificado = codigo;
+  }
+
+  @override
+  Future<void> verificarInvitacion({
+    required String email,
+    required String codigo,
+  }) async {
+    invitacionesVerificadas++;
+    await verificarCodigo(email: email, codigo: codigo);
   }
 
   @override
