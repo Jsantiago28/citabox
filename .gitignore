@@ -7,3 +7,6 @@ dist
 
 # Respaldos manuales previos a git (se conservan en disco)
 _backups/
+
+# Estado local de Supabase CLI (proyecto enlazado)
+supabase/.temp/
