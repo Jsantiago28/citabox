@@ -138,3 +138,23 @@ end $$;
 reset role;
 
 \echo 'Todas las pruebas de horarios y reglas pasaron.'
+
+-- -------------------------------------------------------------------------
+-- 008: cobro de la cita
+-- -------------------------------------------------------------------------
+do $$ begin
+  if (select cobrada_en from citas where id = '0c000000-0000-0000-0000-0000000000c1') is null then
+    raise exception 'FALLO: la cita completada no registró la hora del cobro';
+  end if;
+end $$;
+
+do $$ begin
+  update citas set metodo_pago = 'BITCOIN' where id = '0c000000-0000-0000-0000-0000000000c1';
+  raise exception 'FALLO: se aceptó un método de pago desconocido';
+exception when check_violation then null;
+end $$;
+
+update citas set metodo_pago = 'EFECTIVO', propina = 100
+ where id = '0c000000-0000-0000-0000-0000000000c1';
+
+\echo 'Pruebas de cobro pasaron.'

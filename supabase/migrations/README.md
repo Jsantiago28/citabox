@@ -251,3 +251,9 @@ de aplicarla.
   cambios válidos; `CANCELADA` es definitivo. Error `23514`.
 - **Apartado pagado** (`trg_apartados_al_pagar`): guarda `fecha_pago` y pasa la
   cita de `PENDIENTE` a `CONFIRMADA`.
+
+## 008_cobro_de_citas.sql
+
+Agrega a `citas`: `metodo_pago` (`EFECTIVO`, `TRANSFERENCIA`, `TARJETA`, `OTRO`),
+`propina` (aparte del precio, para no inflar los ingresos del negocio) y
+`cobrada_en`, que se guarda sola la primera vez que la cita pasa a `COMPLETADA`.
