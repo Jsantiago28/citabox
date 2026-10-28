@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/servicio.dart';
 import '../services/servicios_repository.dart';
+import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../widgets/etiqueta.dart';
@@ -76,8 +77,10 @@ class _ServiciosPageState extends State<ServiciosPage> {
         datos: datos,
       );
       await _cargarServicios();
-    } catch (_) {
-      if (mounted) _mostrarError('No se pudo guardar el servicio.');
+    } catch (error) {
+      if (mounted) {
+        _mostrarError(mensajeDeError(error, 'No se pudo guardar el servicio.'));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -92,9 +95,14 @@ class _ServiciosPageState extends State<ServiciosPage> {
         activo: !servicio.activo,
       );
       await _cargarServicios();
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        _mostrarError('No se pudo actualizar el estado del servicio.');
+        _mostrarError(
+          mensajeDeError(
+            error,
+            'No se pudo actualizar el estado del servicio.',
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _changingStatusId = null);

@@ -4,8 +4,10 @@ import '../models/cita.dart';
 import '../models/cliente.dart';
 import '../services/clientes_repository.dart';
 import '../services/ficha_cliente.dart';
+import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
+import '../utils/whatsapp.dart';
 import '../widgets/estado_cita_badge.dart';
 import '../widgets/etiqueta.dart';
 
@@ -104,10 +106,14 @@ class _ClienteFichaState extends State<ClienteFicha> {
         datos: {'notas': notas.isEmpty ? null : notas},
       );
       await widget.onCambio();
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudieron guardar las notas.')),
+          SnackBar(
+            content: Text(
+              mensajeDeError(error, 'No se pudieron guardar las notas.'),
+            ),
+          ),
         );
       }
     } finally {
@@ -210,7 +216,14 @@ class _ClienteFichaState extends State<ClienteFicha> {
                       label: const Text('Llamar'),
                     ),
                     OutlinedButton.icon(
-                      onPressed: () => _abrir(_enlaceWhatsApp(telefono)),
+                      onPressed: () => _abrir(
+                        Uri.parse(
+                          enlaceWhatsApp(
+                            cliente.telefono,
+                            _saludo(cliente.nombre),
+                          ),
+                        ),
+                      ),
                       icon: const Icon(Icons.chat_outlined, size: 18),
                       label: const Text('WhatsApp'),
                     ),
@@ -528,9 +541,11 @@ class _ClienteFichaState extends State<ClienteFicha> {
 String _digitosTelefono(String telefono) =>
     telefono.replaceAll(RegExp(r'\D'), '');
 
-/// Enlace de WhatsApp; los números de 10 dígitos (RD/NANP) llevan el 1.
-Uri _enlaceWhatsApp(String digitos) =>
-    Uri.parse('https://wa.me/${digitos.length == 10 ? '1$digitos' : digitos}');
+/// 'Ana Pérez' → 'Hola Ana' (mensaje inicial del chat de WhatsApp).
+String _saludo(String nombre) {
+  final primero = nombre.trim().split(RegExp(r'\s+')).first;
+  return primero.isEmpty ? 'Hola' : 'Hola $primero';
+}
 
 class _Indicador extends StatelessWidget {
   const _Indicador({required this.etiqueta, required this.valor, this.color});

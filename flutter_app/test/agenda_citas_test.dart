@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -7,6 +9,7 @@ import 'package:barberiapro/models/cliente.dart';
 import 'package:barberiapro/pages/agenda_page.dart';
 import 'package:barberiapro/services/agenda_repository.dart';
 import 'package:barberiapro/services/citas_repository.dart';
+import 'package:barberiapro/services/sin_permiso.dart';
 import 'package:barberiapro/utils/citas_reglas.dart';
 
 void main() {
@@ -27,13 +30,151 @@ void main() {
       'Ese barbero ya tiene una cita en ese horario.',
     );
     expect(
-      mensajeErrorCita(const PostgrestException(message: 'x', code: '23514')),
+      mensajeErrorCita(
+        const PostgrestException(
+          message: 'No se puede pasar una cita de COMPLETADA a PENDIENTE.',
+          code: '23514',
+        ),
+      ),
       'Ese cambio de estado no está permitido.',
+    );
+    // Otros check: precio negativo, hora_fin <= hora_inicio...
+    expect(
+      mensajeErrorCita(
+        const PostgrestException(
+          message:
+              'new row for relation "citas" violates check constraint '
+              '"citas_precio_check"',
+          code: '23514',
+        ),
+      ),
+      'Revisa el precio y el horario de la cita.',
     );
     expect(
       mensajeErrorCita(Exception('sin red'), porDefecto: 'Falló.'),
       'Falló.',
     );
+  });
+
+  test('42501 uses the Spanish server message or a generic one', () {
+    for (final mensaje in [
+      'Solo puedes modificar tus propias citas.',
+      'Solo puedes crear citas en tu propia agenda.',
+      'Solo el dueño puede cambiar el precio de una cita.',
+      'No se puede cambiar este dato de la cita.',
+    ]) {
+      expect(
+        mensajeErrorCita(PostgrestException(message: mensaje, code: '42501')),
+        mensaje,
+      );
+    }
+    expect(
+      mensajeErrorCita(
+        const PostgrestException(
+          message:
+              'new row violates row-level security policy for table '
+              '"citas"',
+          code: '42501',
+        ),
+      ),
+      'No tienes permiso para esta acción.',
+    );
+    expect(
+      mensajeErrorCita(
+        const PostgrestException(
+          message: 'permission denied for table citas',
+          code: '42501',
+        ),
+      ),
+      'No tienes permiso para esta acción.',
+    );
+    expect(
+      mensajeErrorCita(const SinPermisoException()),
+      'No tienes permiso o el registro ya no existe.',
+    );
+  });
+
+  testWidgets('a stale day response does not overwrite the newer one', (
+    tester,
+  ) async {
+    final citas = _CitasControladas();
+    tester.view.physicalSize = const Size(1280, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AgendaPage(
+            negocioId: 'n1',
+            repository: citas,
+            agendaRepository: _FakeAgenda(),
+            fechaInicial: DateTime(2026, 9, 18),
+          ),
+        ),
+      ),
+    );
+    citas.responder(DateTime(2026, 9, 18), const []);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Día siguiente'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Día siguiente'));
+    await tester.pump();
+    expect(citas.pedidas, [
+      DateTime(2026, 9, 18),
+      DateTime(2026, 9, 19),
+      DateTime(2026, 9, 20),
+    ]);
+
+    // Llega primero la respuesta del 20 y después la (vieja) del 19.
+    citas.responder(DateTime(2026, 9, 20), [
+      _cita('c20', EstadoCita.pendiente, cliente: 'Cliente del 20'),
+    ]);
+    await tester.pump();
+    citas.responder(DateTime(2026, 9, 19), [
+      _cita('c19', EstadoCita.pendiente, cliente: 'Cliente del 19'),
+    ]);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cliente del 20'), findsOneWidget);
+    expect(find.text('Cliente del 19'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('moving days keeps local midnight across DST changes', (
+    tester,
+  ) async {
+    final citas = _FakeCitas([]);
+    tester.view.physicalSize = const Size(1280, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final pedidas = <DateTime>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AgendaPage(
+            negocioId: 'n1',
+            repository: _Registro(citas, pedidas),
+            agendaRepository: _FakeAgenda(),
+            // Cambios de horario de EE. UU. y Europa.
+            fechaInicial: DateTime(2026, 3, 7),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 25; i++) {
+      await tester.tap(find.byTooltip('Día siguiente'));
+      await tester.pumpAndSettle();
+    }
+    for (final fecha in pedidas) {
+      expect((fecha.hour, fecha.minute), (0, 0));
+    }
+    expect(pedidas.last, DateTime(2026, 4, 1));
+
+    await tester.tap(find.byTooltip('Día anterior'));
+    await tester.pumpAndSettle();
+    expect(pedidas.last, DateTime(2026, 3, 31));
   });
 
   test('state transitions mirror 006 rules', () {
@@ -440,9 +581,13 @@ void main() {
   });
 
   testWidgets('rejected state changes show a clear message', (tester) async {
-    final citas = _FakeCitas([
-      _cita('c1', EstadoCita.pendiente),
-    ], error: const PostgrestException(message: 'x', code: '23514'));
+    final citas = _FakeCitas(
+      [_cita('c1', EstadoCita.pendiente)],
+      error: const PostgrestException(
+        message: 'No se puede pasar una cita de PENDIENTE a LLEGO.',
+        code: '23514',
+      ),
+    );
     await _abrirAgenda(tester, citas, _FakeAgenda());
 
     await tester.tap(find.text('Llegó'));
@@ -491,6 +636,102 @@ void main() {
     expect(datos.notas, 'Trae su propia navaja');
     expect(find.text('Cita actualizada.'), findsOneWidget);
   });
+
+  testWidgets('a barber edits an appointment but not its price', (
+    tester,
+  ) async {
+    final citas = _FakeCitas([_cita('c1', EstadoCita.pendiente)]);
+    final agenda = _FakeAgenda();
+    await _abrirAgenda(tester, citas, agenda, empleadoId: 'b1', esOwner: false);
+
+    await tester.tap(find.text('Ana López'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+
+    final precio = tester.widget<TextField>(
+      find.descendant(
+        of: find.byKey(const ValueKey('precio-cita')),
+        matching: find.byType(TextField),
+      ),
+    );
+    expect(precio.readOnly, isTrue);
+    expect(find.text('Solo el dueño cambia el precio.'), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Hora de inicio'),
+      '16:00',
+    );
+    await tester.tap(find.text('Guardar cita'));
+    await tester.pumpAndSettle();
+
+    final (_, datos) = agenda.editadas.single;
+    expect(datos.precio, 500);
+    expect(datos.horaInicio, '16:00:00');
+  });
+
+  testWidgets('the owner can still change the price when editing', (
+    tester,
+  ) async {
+    final citas = _FakeCitas([_cita('c1', EstadoCita.pendiente)]);
+    final agenda = _FakeAgenda();
+    await _abrirAgenda(tester, citas, agenda);
+
+    await tester.tap(find.text('Ana López'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+
+    final precio = tester.widget<TextField>(
+      find.descendant(
+        of: find.byKey(const ValueKey('precio-cita')),
+        matching: find.byType(TextField),
+      ),
+    );
+    expect(precio.readOnly, isFalse);
+    expect(find.text('Solo el dueño cambia el precio.'), findsNothing);
+  });
+
+  testWidgets('edits rejected by the server explain why', (tester) async {
+    final citas = _FakeCitas([_cita('c1', EstadoCita.pendiente)]);
+    final agenda = _FakeAgenda(
+      errorAlEditar: const PostgrestException(
+        message: 'Solo puedes modificar tus propias citas.',
+        code: '42501',
+      ),
+    );
+    await _abrirAgenda(tester, citas, agenda, empleadoId: 'b1', esOwner: false);
+
+    await tester.tap(find.text('Ana López'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Guardar cita'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Solo puedes modificar tus propias citas.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a state change blocked by RLS restores the state and says so', (
+    tester,
+  ) async {
+    final citas = _FakeCitas([
+      _cita('c1', EstadoCita.pendiente),
+    ], error: const SinPermisoException());
+    await _abrirAgenda(tester, citas, _FakeAgenda());
+
+    await tester.tap(find.text('Llegó'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No tienes permiso o el registro ya no existe.'),
+      findsOneWidget,
+    );
+    expect(citas.cambios, isEmpty);
+  });
 }
 
 Future<void> _abrirAgenda(
@@ -498,6 +739,7 @@ Future<void> _abrirAgenda(
   _FakeCitas citas,
   _FakeAgenda agenda, {
   String? empleadoId,
+  bool esOwner = true,
   DateTime Function()? reloj,
   String negocioNombre = 'la barbería',
   AbrirEnlace? abrirEnlace,
@@ -514,6 +756,7 @@ Future<void> _abrirAgenda(
           repository: citas,
           agendaRepository: agenda,
           empleadoId: empleadoId,
+          esOwner: esOwner,
           fechaInicial: DateTime(2026, 9, 18),
           negocioNombre: negocioNombre,
           reloj: reloj,
@@ -594,10 +837,84 @@ class _FakeCitas implements CitasRepository {
   }) async => 'b1';
 }
 
+/// Responde cada día solo cuando la prueba lo indica.
+class _CitasControladas implements CitasRepository {
+  final pedidas = <DateTime>[];
+  final _pendientes = <DateTime, Completer<List<Cita>>>{};
+
+  void responder(DateTime fecha, List<Cita> citas) =>
+      _pendientes[fecha]!.complete(citas);
+
+  @override
+  Future<List<Cita>> listarDelDia({
+    required String negocioId,
+    required DateTime fecha,
+    String? empleadoId,
+  }) {
+    pedidas.add(fecha);
+    return (_pendientes[fecha] = Completer<List<Cita>>()).future;
+  }
+
+  @override
+  Future<void> cambiarEstado({
+    required String negocioId,
+    required String citaId,
+    required EstadoCita estado,
+  }) async {}
+
+  @override
+  Future<String?> empleadoDelPerfil({
+    required String negocioId,
+    required String perfilId,
+  }) async => null;
+}
+
+/// Anota las fechas pedidas.
+class _Registro implements CitasRepository {
+  _Registro(this._base, this.pedidas);
+
+  final CitasRepository _base;
+  final List<DateTime> pedidas;
+
+  @override
+  Future<List<Cita>> listarDelDia({
+    required String negocioId,
+    required DateTime fecha,
+    String? empleadoId,
+  }) {
+    pedidas.add(fecha);
+    return _base.listarDelDia(
+      negocioId: negocioId,
+      fecha: fecha,
+      empleadoId: empleadoId,
+    );
+  }
+
+  @override
+  Future<void> cambiarEstado({
+    required String negocioId,
+    required String citaId,
+    required EstadoCita estado,
+  }) =>
+      _base.cambiarEstado(negocioId: negocioId, citaId: citaId, estado: estado);
+
+  @override
+  Future<String?> empleadoDelPerfil({
+    required String negocioId,
+    required String perfilId,
+  }) => _base.empleadoDelPerfil(negocioId: negocioId, perfilId: perfilId);
+}
+
 class _FakeAgenda implements AgendaRepository {
-  _FakeAgenda({this.errorAlCrear, this.fallosAlCrear, this.apartado});
+  _FakeAgenda({
+    this.errorAlCrear,
+    this.fallosAlCrear,
+    this.apartado,
+    this.errorAlEditar,
+  });
 
   final Object? errorAlCrear;
+  final Object? errorAlEditar;
 
   /// Cuántas veces falla crearCita con [errorAlCrear]; null = siempre.
   final int? fallosAlCrear;
@@ -677,6 +994,7 @@ class _FakeAgenda implements AgendaRepository {
     required String citaId,
     required DatosCita datos,
   }) async {
+    if (errorAlEditar != null) throw errorAlEditar!;
     editadas.add((citaId, datos));
   }
 

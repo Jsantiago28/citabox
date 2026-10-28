@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/cita.dart';
 import '../utils/formato.dart';
+import 'sin_permiso.dart';
 
 abstract interface class CitasRepository {
   Future<List<Cita>> listarDelDia({
@@ -55,11 +56,13 @@ class SupabaseCitasRepository implements CitasRepository {
     required String citaId,
     required EstadoCita estado,
   }) async {
-    await _client
+    final filas = await _client
         .from('citas')
         .update({'estado': estado.valor})
         .eq('negocio_id', negocioId)
-        .eq('id', citaId);
+        .eq('id', citaId)
+        .select('id');
+    exigirFilas(filas);
   }
 
   @override

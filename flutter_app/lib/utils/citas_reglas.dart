@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/sin_permiso.dart';
+
 /// '14:30', '9:05' o '14:30:00' → minutos desde medianoche; null si no es válida.
 int? minutosDesdeHora(String hora) {
   final partes = hora.trim().split(':');
@@ -61,18 +63,43 @@ int? siguienteHoraLibre({
 
 const mensajeSolapamiento = 'Ese barbero ya tiene una cita en ese horario.';
 const mensajeEstadoNoPermitido = 'Ese cambio de estado no está permitido.';
+const mensajeRevisaPrecioYHorario = 'Revisa el precio y el horario de la cita.';
+const mensajeSinPermisoAccion = 'No tienes permiso para esta acción.';
+
+/// Los triggers de 010 explican el 42501 en español ('Solo puedes modificar
+/// tus propias citas.'); los de Postgres/RLS vienen en inglés
+/// ('new row violates row-level security policy ...').
+bool _esMensajeEnEspanol(String mensaje) {
+  final texto = mensaje.trim().toLowerCase();
+  if (texto.isEmpty) return false;
+  if (RegExp(r'violates|permission denied|policy|row-level').hasMatch(texto)) {
+    return false;
+  }
+  return RegExp(
+    r'[áéíóúñ¿¡]|\b(solo|puedes|puede|no se|tus|tu|el dueño|cita|citas)\b',
+  ).hasMatch(texto);
+}
 
 /// Traduce los errores de Postgres que la agenda sabe explicar.
 String mensajeErrorCita(
   Object error, {
   String porDefecto = 'No se pudo guardar la cita.',
 }) {
+  if (error is SinPermisoException) return error.mensaje;
   if (error is PostgrestException) {
     switch (error.code) {
       case '23P01': // exclusion_violation (005_citas_sin_solapamiento.sql)
         return mensajeSolapamiento;
-      case '23514': // check_violation (006_horarios_y_reglas.sql)
-        return mensajeEstadoNoPermitido;
+      case '23514': // check_violation
+        // El trigger de 006 avisa 'No se puede pasar una cita de X a Y.';
+        // los demás checks son de precio u horario (hora_fin > hora_inicio).
+        return error.message.contains('No se puede pasar')
+            ? mensajeEstadoNoPermitido
+            : mensajeRevisaPrecioYHorario;
+      case '42501': // insufficient_privilege (010_seguridad_reservas_y_roles)
+        return _esMensajeEnEspanol(error.message)
+            ? error.message.trim()
+            : mensajeSinPermisoAccion;
     }
   }
   return porDefecto;

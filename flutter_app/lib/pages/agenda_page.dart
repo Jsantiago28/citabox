@@ -29,6 +29,7 @@ class AgendaPage extends StatefulWidget {
     this.moneda = 'DOP',
     this.negocioNombre = 'la barbería',
     this.empleadoId,
+    this.esOwner = true,
     this.fechaInicial,
     this.reloj,
     this.abrirEnlace,
@@ -44,6 +45,9 @@ class AgendaPage extends StatefulWidget {
 
   /// Con empleado, es la vista "Mi agenda" y no repite el barbero.
   final String? empleadoId;
+
+  /// El barbero no cambia el precio al editar una cita.
+  final bool esOwner;
   final DateTime? fechaInicial;
 
   /// Nombre del negocio para el recordatorio por WhatsApp.
@@ -67,6 +71,7 @@ class _AgendaPageState extends State<AgendaPage> {
   bool _cargando = true;
   String? _error;
   String? _actualizandoId;
+  int _peticion = 0;
 
   // Se crea solo cuando hace falta, para no exigir Supabase en pruebas.
   AgendaRepository get _agenda =>
@@ -89,6 +94,9 @@ class _AgendaPageState extends State<AgendaPage> {
   }
 
   Future<void> _cargar() async {
+    // Al cambiar de día rápido, solo cuenta la respuesta de la última
+    // petición: una respuesta vieja no debe sobrescribir la lista.
+    final peticion = ++_peticion;
     setState(() {
       _cargando = true;
       _error = null;
@@ -99,16 +107,23 @@ class _AgendaPageState extends State<AgendaPage> {
         fecha: _fecha,
         empleadoId: widget.empleadoId,
       );
-      if (mounted) setState(() => _citas = citas);
+      if (mounted && peticion == _peticion) setState(() => _citas = citas);
     } catch (_) {
-      if (mounted) setState(() => _error = 'No se pudo cargar la agenda.');
+      if (mounted && peticion == _peticion) {
+        setState(() => _error = 'No se pudo cargar la agenda.');
+      }
     } finally {
-      if (mounted) setState(() => _cargando = false);
+      if (mounted && peticion == _peticion) {
+        setState(() => _cargando = false);
+      }
     }
   }
 
   void _moverDia(int dias) {
-    setState(() => _fecha = _fecha.add(Duration(days: dias)));
+    // Con DateTime(y, m, d + n) un cambio de horario (DST) no corre el día.
+    setState(
+      () => _fecha = DateTime(_fecha.year, _fecha.month, _fecha.day + dias),
+    );
     _cargar();
   }
 
@@ -263,6 +278,7 @@ class _AgendaPageState extends State<AgendaPage> {
       moneda: widget.moneda,
       empleadoFijo: widget.empleadoId,
       cita: cita,
+      esOwner: widget.esOwner,
     );
     if (datos == null || !mounted) return;
 

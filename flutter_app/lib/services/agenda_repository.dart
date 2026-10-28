@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/cita.dart';
 import '../models/cliente.dart';
 import '../utils/formato.dart';
+import 'paginacion.dart';
+import 'sin_permiso.dart';
 
 /// Cliente genérico para quien se atiende sin registrarse ("Atender ahora").
 const nombreClienteDePaso = 'Cliente de paso';
@@ -179,12 +181,17 @@ class SupabaseAgendaRepository implements AgendaRepository {
   @override
   Future<CatalogoAgenda> catalogo(String negocioId) async {
     final resultados = await Future.wait([
-      _client
-          .from('clientes')
-          .select('id, nombre, telefono, email, notas, activo')
-          .eq('negocio_id', negocioId)
-          .eq('activo', true)
-          .order('nombre'),
+      // Los clientes pueden pasar del límite de filas de PostgREST.
+      leerTodasLasPaginas(
+        (desde, hasta) => _client
+            .from('clientes')
+            .select('id, nombre, telefono, email, notas, activo')
+            .eq('negocio_id', negocioId)
+            .eq('activo', true)
+            .order('nombre')
+            .order('id')
+            .range(desde, hasta),
+      ),
       _client
           .from('servicios')
           .select('id, nombre, precio, duracion_minutos')
@@ -279,11 +286,13 @@ class SupabaseAgendaRepository implements AgendaRepository {
   }) async {
     // El cliente de una cita no cambia al editarla.
     final cambios = datos.toMap()..remove('cliente_id');
-    await _client
+    final filas = await _client
         .from('citas')
         .update(cambios)
         .eq('negocio_id', negocioId)
-        .eq('id', citaId);
+        .eq('id', citaId)
+        .select('id');
+    exigirFilas(filas);
   }
 
   @override
@@ -294,7 +303,7 @@ class SupabaseAgendaRepository implements AgendaRepository {
     MetodoPago metodoPago = MetodoPago.efectivo,
     num propina = 0,
   }) async {
-    await _client
+    final filas = await _client
         .from('citas')
         .update({
           'estado': EstadoCita.completada.valor,
@@ -303,7 +312,9 @@ class SupabaseAgendaRepository implements AgendaRepository {
           'propina': propina,
         })
         .eq('negocio_id', negocioId)
-        .eq('id', citaId);
+        .eq('id', citaId)
+        .select('id');
+    exigirFilas(filas);
   }
 
   @override

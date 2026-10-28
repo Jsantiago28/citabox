@@ -4,6 +4,7 @@ import '../models/empleado.dart';
 import '../models/servicio.dart';
 import '../services/empleados_repository.dart';
 import '../services/servicios_repository.dart';
+import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../widgets/estado_cita_badge.dart';
@@ -79,8 +80,12 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
         datos: datos,
       );
       await _cargarEmpleados();
-    } catch (_) {
-      if (mounted) _mostrarMensaje('No se pudo guardar el empleado.');
+    } catch (error) {
+      if (mounted) {
+        _mostrarMensaje(
+          mensajeDeError(error, 'No se pudo guardar el empleado.'),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -95,9 +100,14 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
         activo: !empleado.activo,
       );
       await _cargarEmpleados();
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        _mostrarMensaje('No se pudo actualizar el estado del empleado.');
+        _mostrarMensaje(
+          mensajeDeError(
+            error,
+            'No se pudo actualizar el estado del empleado.',
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _changingStatusId = null);
@@ -430,8 +440,8 @@ class _EmpleadoDetalleState extends State<_EmpleadoDetalle> {
     try {
       await accion();
       return true;
-    } catch (_) {
-      if (mounted) _mostrarMensaje(mensajeError);
+    } catch (error) {
+      if (mounted) _mostrarMensaje(mensajeDeError(error, mensajeError));
       return false;
     } finally {
       if (mounted) setState(() => _ocupado = false);

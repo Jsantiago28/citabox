@@ -203,8 +203,15 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
   late final ApartadosRepository _apartados =
       widget.apartadosRepository ??
       SupabaseApartadosRepository(Supabase.instance.client);
-  late final Future<String?> _empleadoId;
+  late Future<String?> _empleadoId;
   _Seccion _seccion = _Seccion.inicio;
+
+  /// Secciones que muestran solo lo del barbero y necesitan su empleado.
+  bool get _necesitaEmpleado =>
+      _seccion == _Seccion.inicio ||
+      _seccion == _Seccion.agenda ||
+      _seccion == _Seccion.apartados ||
+      _seccion == _Seccion.reportes;
 
   List<_Seccion> get _secciones => widget.esOwner
       ? _Seccion.values
@@ -224,24 +231,34 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
   @override
   void initState() {
     super.initState();
-    // El dueño ve todo el negocio; el barbero solo sus citas.
-    _empleadoId = widget.esOwner
-        ? Future.value(null)
-        : _citas.empleadoDelPerfil(
-            negocioId: widget.negocioId,
-            perfilId: widget.userId,
-          );
+    _empleadoId = _buscarEmpleado();
+  }
+
+  // El dueño ve todo el negocio; el barbero solo sus citas.
+  Future<String?> _buscarEmpleado() => widget.esOwner
+      ? Future.value(null)
+      : _citas.empleadoDelPerfil(
+          negocioId: widget.negocioId,
+          perfilId: widget.userId,
+        );
+
+  void _reintentarEmpleado() {
+    setState(() {
+      _empleadoId = _buscarEmpleado();
+    });
   }
 
   void _ir(_Seccion seccion) => setState(() => _seccion = seccion);
 
-  Widget _pagina(String? empleadoId) {
-    if (!widget.esOwner &&
-        empleadoId == null &&
-        (_seccion == _Seccion.inicio ||
-            _seccion == _Seccion.agenda ||
-            _seccion == _Seccion.apartados ||
-            _seccion == _Seccion.reportes)) {
+  Widget _pagina(String? empleadoId, {bool falloEmpleado = false}) {
+    // Un fallo de red no es lo mismo que un perfil sin vincular.
+    if (!widget.esOwner && falloEmpleado && _necesitaEmpleado) {
+      return _ProfileMessage(
+        message: 'No se pudo cargar tu agenda.',
+        onRetry: _reintentarEmpleado,
+      );
+    }
+    if (!widget.esOwner && empleadoId == null && _necesitaEmpleado) {
       return const _ProfileMessage(
         message:
             'Tu perfil aún no está vinculado a un empleado. '
@@ -269,6 +286,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         negocioNombre: widget.negocioNombre,
         moneda: widget.moneda,
         empleadoId: empleadoId,
+        esOwner: widget.esOwner,
         repository: _citas,
       ),
       _Seccion.apartados => ApartadosPage(
@@ -277,6 +295,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         negocioNombre: widget.negocioNombre,
         moneda: widget.moneda,
         empleadoId: empleadoId,
+        esOwner: widget.esOwner,
         repository: _apartados,
       ),
       _Seccion.clientes => ClientesPage(
@@ -318,7 +337,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
       builder: (context, snapshot) {
         final listo = snapshot.connectionState == ConnectionState.done;
         final pagina = listo
-            ? _pagina(snapshot.data)
+            ? _pagina(snapshot.data, falloEmpleado: snapshot.hasError)
             : const Center(child: CircularProgressIndicator());
 
         return LayoutBuilder(

@@ -2,6 +2,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/cita.dart';
 import '../models/cliente.dart';
+import 'paginacion.dart';
+import 'sin_permiso.dart';
 
 abstract interface class ClientesRepository {
   Future<List<Cliente>> listar(String negocioId);
@@ -38,11 +40,16 @@ class SupabaseClientesRepository implements ClientesRepository {
 
   @override
   Future<List<Cliente>> listar(String negocioId) async {
-    final rows = await _client
-        .from('clientes')
-        .select('id, nombre, telefono, email, notas, activo')
-        .eq('negocio_id', negocioId)
-        .order('nombre');
+    final rows = await leerTodasLasPaginas(
+      (desde, hasta) => _client
+          .from('clientes')
+          .select('id, nombre, telefono, email, notas, activo')
+          .eq('negocio_id', negocioId)
+          .order('nombre')
+          .order('id')
+          .range(desde, hasta),
+      tamano: _pagina,
+    );
 
     return rows.map((row) => Cliente.fromMap(row)).toList(growable: false);
   }
@@ -128,11 +135,13 @@ class SupabaseClientesRepository implements ClientesRepository {
       return;
     }
 
-    await _client
+    final filas = await _client
         .from('clientes')
         .update(datos)
         .eq('negocio_id', negocioId)
-        .eq('id', clienteId);
+        .eq('id', clienteId)
+        .select('id');
+    exigirFilas(filas);
   }
 
   @override
@@ -141,10 +150,12 @@ class SupabaseClientesRepository implements ClientesRepository {
     required String clienteId,
     required bool activo,
   }) async {
-    await _client
+    final filas = await _client
         .from('clientes')
         .update({'activo': activo})
         .eq('negocio_id', negocioId)
-        .eq('id', clienteId);
+        .eq('id', clienteId)
+        .select('id');
+    exigirFilas(filas);
   }
 }

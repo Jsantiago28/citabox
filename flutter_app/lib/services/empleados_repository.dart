@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/empleado.dart';
 import '../utils/formato.dart';
+import 'sin_permiso.dart';
 
 /// Error de la invitación con un mensaje listo para mostrar.
 class InvitacionException implements Exception {
@@ -107,11 +108,13 @@ class SupabaseEmpleadosRepository implements EmpleadosRepository {
       return;
     }
 
-    await _client
+    final filas = await _client
         .from('empleados')
         .update(datos)
         .eq('negocio_id', negocioId)
-        .eq('id', empleadoId);
+        .eq('id', empleadoId)
+        .select('id');
+    exigirFilas(filas);
   }
 
   @override
@@ -120,11 +123,13 @@ class SupabaseEmpleadosRepository implements EmpleadosRepository {
     required String empleadoId,
     required bool activo,
   }) async {
-    await _client
+    final filas = await _client
         .from('empleados')
         .update({'activo': activo})
         .eq('negocio_id', negocioId)
-        .eq('id', empleadoId);
+        .eq('id', empleadoId)
+        .select('id');
+    exigirFilas(filas);
   }
 
   @override
@@ -147,6 +152,8 @@ class SupabaseEmpleadosRepository implements EmpleadosRepository {
     required String empleadoId,
     required Set<String> servicioIds,
   }) async {
+    // Los borrados de abajo pueden afectar 0 filas sin que sea un error
+    // (no había nada que quitar), así que no se exigen filas.
     // Primero se agregan los nuevos y luego se quitan los demás: si algo
     // falla a mitad, el empleado nunca queda con menos servicios de los
     // elegidos (y sin filas significa "todos").
@@ -265,11 +272,13 @@ class SupabaseEmpleadosRepository implements EmpleadosRepository {
     required String negocioId,
     required String bloqueoId,
   }) async {
-    await _client
+    final filas = await _client
         .from('bloqueos_empleado')
         .delete()
         .eq('negocio_id', negocioId)
-        .eq('id', bloqueoId);
+        .eq('id', bloqueoId)
+        .select('id');
+    exigirFilas(filas);
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/configuracion_negocio.dart';
+import 'sin_permiso.dart';
 
 /// Configuración del negocio. Solo el OWNER puede modificarla (RLS).
 abstract interface class ConfiguracionRepository {
@@ -53,7 +54,12 @@ class SupabaseConfiguracionRepository implements ConfiguracionRepository {
     required String negocioId,
     required Map<String, Object?> datos,
   }) async {
-    await _client.from('negocios').update(datos).eq('id', negocioId);
+    final filas = await _client
+        .from('negocios')
+        .update(datos)
+        .eq('id', negocioId)
+        .select('id');
+    exigirFilas(filas);
   }
 
   @override
@@ -71,6 +77,7 @@ class SupabaseConfiguracionRepository implements ConfiguracionRepository {
       for (var dia = 0; dia < 7; dia++)
         if (!abiertos.any((h) => h.diaSemana == dia)) dia,
     ];
+    // Borrar un día que ya estaba cerrado afecta 0 filas: no es un error.
     if (cerrados.isNotEmpty) {
       await _client
           .from('horarios_negocio')
