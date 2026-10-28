@@ -110,6 +110,7 @@ jobs:
       # master). Si ya existe, no hace nada.
       - name: Crear proyecto de Pages si no existe
         run: |
+          echo "Largo de CLOUDFLARE_ACCOUNT_ID: ${#CF_ACCOUNT} (debe ser 32). Largo del token: ${#CF_TOKEN}."
           api="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/pages/projects"
           codigo=$(curl -s -o /dev/null -w '%{http_code}' \
             -H "Authorization: Bearer $CF_TOKEN" "$api/barberia-pro")
