@@ -16,6 +16,26 @@ El modelo visual de referencia está en [docs/modelo-visual.png](docs/modelo-vis
 
 ---
 
+## Resumen rápido (28-oct-2026)
+
+| # | Fase del Plan Maestro | Estado | En una línea |
+|---|---|---|---|
+| 0 | Preparación | ✅ | Proyecto Flutter, conexión a Supabase y repositorio git |
+| 1 | Base (datos + seguridad multi-negocio) | ✅ | 001–011 aplicadas en Supabase real; RLS, límites del barbero y pruebas SQL en CI |
+| 2 | Autenticación y roles | ✅ | Login, registro, recuperar contraseña con código e invitar barberos (Edge Function). Falta: SMTP propio y desplegar la función |
+| 3 | Negocio (perfil, horarios, configuración) | ✅ | Perfil, horario semanal, apartado configurable y enlace público |
+| 4 | Servicios | ✅ | CRUD en Flutter |
+| 5 | Empleados | ✅ | CRUD, servicios por barbero, horario propio, días libres e invitación |
+| 6 | Clientes | ✅ | Lista, ficha con historial, preferencias, faltas y favoritos |
+| 7 | Agenda | ✅ | Crear/editar citas, "Atender ahora", recordatorio por WhatsApp, cobro con método y propina |
+| 8 | Reserva pública | ✅ | `#/reservar/<slug>` y "Mi cita" (reprogramar, cancelar, calendario, WhatsApp). Falta la prueba de oro en un celular real |
+| 9 | Apartado | ✅ | Transferencia + validación manual del dueño; vencen solas a las 3 horas sin reporte. Tarjeta aplazada |
+| 10 | Estados de la cita | ✅ | Transiciones validadas en el servidor; pago confirma; cancelar libera y cancela el apartado |
+| 11 | Reportes | ✅ | Por período: ingresos, propinas, métodos de pago, no-shows, barberos, servicios, clientes |
+| 12 | QA | 🟡 | 134 pruebas Flutter + 6 archivos de pruebas SQL en CI; revisión de seguridad hecha. Falta probar en navegadores y celulares reales |
+| 13 | Lanzamiento | 🟡 | PWA, publicación en Cloudflare y datos demo listos. Falta: secretos, dominio y primer negocio |
+
+**Avance de la V1:** 12 fases completas y 2 parciales que dependen de pasos manuales (correo, publicación y pruebas en dispositivos).
 
 ---
 
