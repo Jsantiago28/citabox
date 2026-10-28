@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/registro_negocio.dart';
+import '../services/apartados_repository.dart';
 import '../services/citas_repository.dart';
 import '../services/clientes_repository.dart';
 import '../services/configuracion_repository.dart';
@@ -13,6 +14,7 @@ import '../theme.dart';
 import '../utils/formato.dart';
 import '../widgets/logo_barberia.dart';
 import 'agenda_page.dart';
+import 'apartados_page.dart';
 import 'clientes_page.dart';
 import 'configuracion_page.dart';
 import 'dashboard_page.dart';
@@ -141,6 +143,7 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
 enum _Seccion {
   inicio('Inicio', Icons.home_outlined),
   agenda('Agenda', Icons.calendar_month_outlined),
+  apartados('Apartados', Icons.payments_outlined),
   clientes('Clientes', Icons.people_outline),
   servicios('Servicios', Icons.content_cut),
   empleados('Empleados', Icons.badge_outlined),
@@ -166,6 +169,7 @@ class BusinessWorkspace extends StatefulWidget {
     this.citasRepository,
     this.clientesRepository,
     this.reportesRepository,
+    this.apartadosRepository,
   });
 
   final String userId;
@@ -180,6 +184,7 @@ class BusinessWorkspace extends StatefulWidget {
   final CitasRepository? citasRepository;
   final ClientesRepository? clientesRepository;
   final ReportesRepository? reportesRepository;
+  final ApartadosRepository? apartadosRepository;
 
   @override
   State<BusinessWorkspace> createState() => _BusinessWorkspaceState();
@@ -195,6 +200,9 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
   late final ReportesRepository _reportes =
       widget.reportesRepository ??
       SupabaseReportesRepository(Supabase.instance.client);
+  late final ApartadosRepository _apartados =
+      widget.apartadosRepository ??
+      SupabaseApartadosRepository(Supabase.instance.client);
   late final Future<String?> _empleadoId;
   _Seccion _seccion = _Seccion.inicio;
 
@@ -203,6 +211,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
       : const [
           _Seccion.inicio,
           _Seccion.agenda,
+          _Seccion.apartados,
           _Seccion.clientes,
           _Seccion.reportes,
         ];
@@ -231,6 +240,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         empleadoId == null &&
         (_seccion == _Seccion.inicio ||
             _seccion == _Seccion.agenda ||
+            _seccion == _Seccion.apartados ||
             _seccion == _Seccion.reportes)) {
       return const _ProfileMessage(
         message:
@@ -249,6 +259,8 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         empleadoId: empleadoId,
         repository: _citas,
         onVerAgenda: () => _ir(_Seccion.agenda),
+        apartadosRepository: _apartados,
+        onVerApartados: () => _ir(_Seccion.apartados),
       ),
       _Seccion.agenda => AgendaPage(
         key: ValueKey('agenda-$empleadoId'),
@@ -258,6 +270,14 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         moneda: widget.moneda,
         empleadoId: empleadoId,
         repository: _citas,
+      ),
+      _Seccion.apartados => ApartadosPage(
+        key: ValueKey('apartados-$empleadoId'),
+        negocioId: widget.negocioId,
+        negocioNombre: widget.negocioNombre,
+        moneda: widget.moneda,
+        empleadoId: empleadoId,
+        repository: _apartados,
       ),
       _Seccion.clientes => ClientesPage(
         negocioId: widget.negocioId,
