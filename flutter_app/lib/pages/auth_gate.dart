@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/password_repository.dart';
 import 'business_home_page.dart';
 import 'login_page.dart';
+import 'recuperar_password_page.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -16,6 +18,16 @@ class AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         final session = snapshot.data?.session ?? client.auth.currentSession;
         if (session == null) return const LoginPage();
+
+        // Barbero invitado que entró por el enlace del correo: ya tiene
+        // perfil, pero aún no tiene contraseña. Al guardarla se limpia la
+        // marca y el evento userUpdated lo lleva a su panel.
+        if (debeFijarPassword(session.user.userMetadata)) {
+          return RecuperarPasswordPage.fijar(
+            repository: SupabasePasswordRepository(client),
+            onSalir: client.auth.signOut,
+          );
+        }
 
         return BusinessHomePage(
           userId: session.user.id,

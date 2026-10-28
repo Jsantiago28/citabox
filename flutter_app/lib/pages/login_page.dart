@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/password_repository.dart';
 import '../services/registro_repository.dart';
 import '../theme.dart';
 import '../widgets/logo_barberia.dart';
+import 'recuperar_password_page.dart';
 import 'registro_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key, this.registroRepository});
+  const LoginPage({
+    super.key,
+    this.registroRepository,
+    this.passwordRepository,
+  });
 
   final RegistroRepository? registroRepository;
+  final PasswordRepository? passwordRepository;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -64,6 +71,20 @@ class _LoginPageState extends State<LoginPage> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => RegistroPage(repository: repository),
+      ),
+    );
+  }
+
+  void _abrirRecuperacion() {
+    final repository =
+        widget.passwordRepository ??
+        SupabasePasswordRepository(Supabase.instance.client);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RecuperarPasswordPage(
+          repository: repository,
+          emailInicial: _emailController.text.trim(),
+        ),
       ),
     );
   }
@@ -143,7 +164,14 @@ class _LoginPageState extends State<LoginPage> {
                     ? 'Ingresa tu contraseña.'
                     : null,
               ),
-              const SizedBox(height: 20),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _submitting ? null : _abrirRecuperacion,
+                  child: const Text('¿Olvidaste tu contraseña?'),
+                ),
+              ),
+              const SizedBox(height: 8),
               BotonDorado(
                 onPressed: _submitting ? null : _signIn,
                 etiqueta: _submitting ? 'Ingresando…' : 'Ingresar',
