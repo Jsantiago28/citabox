@@ -10,3 +10,6 @@ _backups/
 
 # Estado local de Supabase CLI (proyecto enlazado)
 supabase/.temp/
+
+# Worktrees de agentes de Claude Code
+.claude/worktrees/
