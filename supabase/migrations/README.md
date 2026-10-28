@@ -325,3 +325,22 @@ Correcciones de la revisión de seguridad del 28-oct-2026:
 - **Zona horaria** del negocio validada contra `pg_timezone_names`.
 
 Pruebas: `supabase/tests/50_seguridad_reservas_y_roles.sql`.
+
+## 011_reserva_ajustes.sql
+
+- **`reserva_horas_disponibles(p_slug, p_servicio_id, p_fecha, p_empleado_id = null, p_token = null)`**:
+  nuevo parámetro opcional `p_token`. Al reprogramar "Mi cita", la app pasa el
+  token: la función usa el barbero de la cita y no cuenta la propia cita como
+  ocupada (mismas reglas que `reserva_reprogramar`). El token debe ser de una
+  cita del mismo negocio y del mismo servicio; si se manda otro barbero, otro
+  servicio o un token inválido → `P0001`. Se borra la firma vieja de 4
+  parámetros (PostgREST no queda con dos versiones); llamar sin `p_token`
+  funciona igual que antes. Mismos permisos (`anon`, `authenticated`).
+- **`negocios.apartado_politica`**: el texto por defecto ya no dice "24 horas"
+  (el plazo real es `cancelacion_horas_minimas`, que el dueño puede cambiar):
+  *"…Si cancelas fuera del plazo permitido o no te presentas, el apartado no
+  se devuelve."* Se actualizan solo las filas que conservaban el texto viejo
+  exacto; las que el dueño editó no se tocan.
+
+Pruebas: `supabase/tests/60_reserva_ajustes.sql` (negocio `negocio-g`, rol
+`anon` sin JWT).
