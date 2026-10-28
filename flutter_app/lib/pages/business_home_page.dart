@@ -5,8 +5,10 @@ import '../models/registro_negocio.dart';
 import '../services/citas_repository.dart';
 import '../services/clientes_repository.dart';
 import '../services/configuracion_repository.dart';
+import '../services/empleados_repository.dart';
 import '../services/registro_repository.dart';
 import '../services/reportes_repository.dart';
+import '../services/servicios_repository.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../widgets/logo_barberia.dart';
@@ -14,9 +16,10 @@ import 'agenda_page.dart';
 import 'clientes_page.dart';
 import 'configuracion_page.dart';
 import 'dashboard_page.dart';
-import 'proximamente_page.dart';
+import 'empleados_page.dart';
 import 'registro_page.dart';
 import 'reportes_page.dart';
+import 'servicios_page.dart';
 
 class BusinessHomePage extends StatefulWidget {
   const BusinessHomePage({
@@ -260,15 +263,17 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         moneda: widget.moneda,
         repository: _clientes,
       ),
-      _Seccion.servicios => const ProximamentePage(
-        titulo: 'Servicios',
-        icono: Icons.content_cut,
-        descripcion: 'Precios y duración de cada servicio de tu negocio.',
+      _Seccion.servicios => ServiciosPage(
+        negocioId: widget.negocioId,
+        moneda: widget.moneda,
+        repository: SupabaseServiciosRepository(Supabase.instance.client),
       ),
-      _Seccion.empleados => const ProximamentePage(
-        titulo: 'Empleados',
-        icono: Icons.badge_outlined,
-        descripcion: 'Tu equipo de barberos y sus horarios.',
+      _Seccion.empleados => EmpleadosPage(
+        negocioId: widget.negocioId,
+        repository: SupabaseEmpleadosRepository(Supabase.instance.client),
+        serviciosRepository: SupabaseServiciosRepository(
+          Supabase.instance.client,
+        ),
       ),
       _Seccion.reportes => ReportesPage(
         key: ValueKey('reportes-$empleadoId'),
