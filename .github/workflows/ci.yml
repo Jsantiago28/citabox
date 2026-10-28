@@ -35,8 +35,12 @@ jobs:
             echo "== $f"
             psql -v ON_ERROR_STOP=1 -q -f "$f"
           done
-      - name: Pruebas de seguridad y agenda
-        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/10_seguridad_y_agenda.sql
+      - name: Pruebas SQL
+        run: |
+          for f in $(ls supabase/tests/[1-9]*.sql | sort); do
+            echo "== $f"
+            psql -v ON_ERROR_STOP=1 -f "$f"
+          done
 
   flutter:
     name: Flutter (análisis y pruebas)

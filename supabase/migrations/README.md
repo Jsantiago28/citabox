@@ -232,3 +232,22 @@ rangos `[hora_inicio, hora_fin)` se crucen el mismo día. `CANCELADA` y
 `NO_VINO` no ocupan horario. El error para el cliente es `23P01`. El
 archivo incluye una consulta para detectar solapamientos existentes antes
 de aplicarla.
+
+## 006_horarios_y_reglas.sql
+
+- **Configuración en `negocios`:** `apartado_requerido`, `apartado_monto`
+  (RD$100 por defecto), `apartado_politica`, `apartado_instrucciones` (datos
+  para la transferencia), `cancelacion_horas_minimas` (24) e
+  `intervalo_reserva_minutos` (15, cada cuánto se ofrecen horas).
+- **`horarios_negocio`:** un rango por día (`dia_semana` 0 = domingo … 6 =
+  sábado). Sin fila = cerrado ese día.
+- **`horarios_empleado`:** horario propio del barbero. Si no tiene filas,
+  trabaja en el horario del negocio; si tiene, solo esos días y rangos.
+- **`bloqueos_empleado`:** días libres o vacaciones (rango de fechas inclusivo).
+- **`empleado_servicios`:** servicios que hace cada barbero. Si no tiene
+  filas, hace todos los servicios activos.
+- Todo el negocio lee estas tablas; solo el OWNER las modifica.
+- **Estados de la cita** (`trg_citas_validar_cambio_estado`): solo se permiten
+  cambios válidos; `CANCELADA` es definitivo. Error `23514`.
+- **Apartado pagado** (`trg_apartados_al_pagar`): guarda `fecha_pago` y pasa la
+  cita de `PENDIENTE` a `CONFIRMADA`.
