@@ -16,26 +16,6 @@ El modelo visual de referencia está en [docs/modelo-visual.png](docs/modelo-vis
 
 ---
 
-## Resumen rápido
-
-| # | Fase del Plan Maestro | Estado | En una línea |
-|---|---|---|---|
-| 0 | Preparación | ✅ | Proyecto Flutter, conexión a Supabase y repositorio git |
-| 1 | Base (datos + seguridad multi-negocio) | ✅ | Tablas, RLS, aislamiento por negocio y protección de roles (001–005), probado en CI |
-| 2 | Autenticación y roles | 🟡 | Login, registro y roles listos; falta recuperar contraseña e invitar barberos |
-| 3 | Negocio (perfil, horarios, configuración) | ⬜ | Solo existe la pantalla "Próximamente"; faltan tablas de horarios |
-| 4 | Servicios | 🟡 | Hecho en React (referencia); falta en Flutter |
-| 5 | Empleados | 🟡 | Hecho en React (referencia); falta en Flutter, servicios asignados y disponibilidad |
-| 6 | Clientes | ✅ | Lista, búsqueda, alta/edición, visitas, gasto y "Frecuente" |
-| 7 | Agenda | 🟡 | Vista por día con Llegó/No vino y solapamientos bloqueados en la base; falta crear/editar citas |
-| 8 | Reserva pública | ⬜ | Nada construido; requiere funciones nuevas en la base |
-| 9 | Apartado | ⬜ | Tabla existe; sin pantallas. Cobro en línea aplazado |
-| 10 | Estados de la cita | 🟡 | Llegó/No vino listos; faltan Completada, Cancelada y reglas en backend |
-| 11 | Reportes | 🟡 | Indicadores del día en el panel; falta la pantalla de reportes |
-| 12 | QA | 🟡 | 20 pruebas Flutter + pruebas SQL de seguridad en CI; faltan pruebas con cuenta real y dispositivos |
-| 13 | Lanzamiento | ⬜ | Sin publicar, sin datos demo ni onboarding |
-
-**Avance aproximado de la V1:** 3 fases completas, 6 parciales y 4 pendientes.
 
 ---
 
