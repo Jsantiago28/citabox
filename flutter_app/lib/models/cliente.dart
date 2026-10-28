@@ -27,15 +27,21 @@ class Cliente {
   }
 }
 
-/// Visitas y gasto acumulado, calculados desde las citas atendidas.
+/// Visitas y gasto acumulado (citas atendidas) y faltas (citas NO_VINO).
 class ResumenCliente {
-  const ResumenCliente({this.visitas = 0, this.gastado = 0});
+  const ResumenCliente({this.visitas = 0, this.gastado = 0, this.faltas = 0});
 
   /// A partir de cuántas visitas se marca a un cliente como frecuente.
   static const visitasFrecuente = 10;
 
+  /// A partir de cuántas faltas se avisa que conviene pedir apartado.
+  static const faltasAviso = 2;
+
   final int visitas;
   final num gastado;
+  final int faltas;
 
   bool get frecuente => visitas >= visitasFrecuente;
+
+  bool get conFaltas => faltas >= faltasAviso;
 }

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/cliente.dart';
 import '../services/clientes_repository.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../widgets/estado_cita_badge.dart';
+import 'cliente_ficha.dart';
 
 class ClientesPage extends StatefulWidget {
   const ClientesPage({
@@ -12,11 +14,15 @@ class ClientesPage extends StatefulWidget {
     required this.negocioId,
     required this.repository,
     this.moneda = 'DOP',
+    this.abrirEnlace,
   });
 
   final String negocioId;
   final ClientesRepository repository;
   final String moneda;
+
+  /// Abre enlaces de llamada, WhatsApp o correo; por defecto, url_launcher.
+  final AbrirEnlace? abrirEnlace;
 
   @override
   State<ClientesPage> createState() => _ClientesPageState();
@@ -30,6 +36,10 @@ class _ClientesPageState extends State<ClientesPage> {
   bool _saving = false;
   String? _error;
   String? _changingStatusId;
+  String? _seleccionadoId;
+
+  static Future<bool> _abrirExterno(Uri uri) =>
+      launchUrl(uri, mode: LaunchMode.externalApplication);
 
   @override
   void initState() {
@@ -127,6 +137,23 @@ class _ClientesPageState extends State<ClientesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final seleccionado = _clientes
+        .where((cliente) => cliente.id == _seleccionadoId)
+        .firstOrNull;
+    if (seleccionado != null) {
+      return ClienteFicha(
+        key: ValueKey('cliente-${seleccionado.id}'),
+        negocioId: widget.negocioId,
+        cliente: seleccionado,
+        repository: widget.repository,
+        moneda: widget.moneda,
+        abrirEnlace: widget.abrirEnlace ?? _abrirExterno,
+        onVolver: () => setState(() => _seleccionadoId = null),
+        onEditar: () => _abrirFormulario(seleccionado),
+        onCambio: _cargarClientes,
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final clientes = _clientesFiltrados;
@@ -268,6 +295,10 @@ class _ClientesPageState extends State<ClientesPage> {
               const SizedBox(width: 8),
               const _Etiqueta(texto: 'Inactivo', color: Marca.textoSuave),
             ],
+            if (resumen.conFaltas) ...[
+              const SizedBox(width: 8),
+              const _Etiqueta(texto: 'Faltas', color: Marca.rojo),
+            ],
           ],
         ),
         const SizedBox(height: 2),
@@ -279,7 +310,7 @@ class _ClientesPageState extends State<ClientesPage> {
     );
 
     return InkWell(
-      onTap: () => _abrirFormulario(cliente),
+      onTap: () => setState(() => _seleccionadoId = cliente.id),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 4, 10),
         child: Row(
@@ -338,10 +369,12 @@ class _ClientesPageState extends State<ClientesPage> {
       tooltip: 'Acciones de ${cliente.nombre}',
       enabled: !busy,
       onSelected: (accion) {
+        if (accion == 'ver') setState(() => _seleccionadoId = cliente.id);
         if (accion == 'editar') _abrirFormulario(cliente);
         if (accion == 'estado') _cambiarEstado(cliente);
       },
       itemBuilder: (context) => [
+        const PopupMenuItem(value: 'ver', child: Text('Ver ficha')),
         const PopupMenuItem(value: 'editar', child: Text('Editar')),
         PopupMenuItem(
           value: 'estado',
