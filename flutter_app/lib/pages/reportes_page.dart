@@ -224,6 +224,15 @@ class _Contenido extends StatelessWidget {
           ],
       ],
     );
+    final metodos = _Tabla(
+      titulo: 'Ingresos por método de pago',
+      columnas: const ['Método', 'Citas', 'Ingresos'],
+      vacio: 'Sin ingresos en este período.',
+      filas: [
+        for (final fila in reporte.porMetodoPago)
+          [fila.etiqueta, '${fila.cantidad}', _dinero(fila.ingresos)],
+      ],
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -242,6 +251,11 @@ class _Contenido extends StatelessWidget {
             _Indicador(
               titulo: 'Apartados cobrados',
               valor: _dinero(reporte.apartadosCobrados),
+            ),
+            _Indicador(
+              titulo: 'Propinas',
+              // Van aparte: no se suman a los ingresos.
+              valor: _dinero(reporte.propinas),
             ),
             _Indicador(
               titulo: 'Tasa de no-show',
@@ -267,6 +281,8 @@ class _Contenido extends StatelessWidget {
           titulo: 'Ingresos por día',
           child: _GraficoIngresos(dias: reporte.ingresosPorDia, moneda: moneda),
         ),
+        const SizedBox(height: 24),
+        metodos,
         const SizedBox(height: 24),
         _Seccion(
           titulo: 'Citas por estado',

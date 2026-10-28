@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/cita.dart';
 import '../services/agenda_repository.dart';
@@ -7,8 +8,16 @@ import '../services/citas_repository.dart';
 import '../theme.dart';
 import '../utils/citas_reglas.dart';
 import '../utils/formato.dart';
+import '../utils/whatsapp.dart';
+import '../widgets/atender_ahora_dialog.dart';
 import '../widgets/cita_form_dialog.dart';
 import '../widgets/estado_cita_badge.dart';
+
+/// Abre un enlace externo (WhatsApp). Devuelve false si no se pudo.
+typedef AbrirEnlace = Future<bool> Function(Uri enlace);
+
+Future<bool> _abrirEnlaceExterno(Uri enlace) =>
+    launchUrl(enlace, mode: LaunchMode.externalApplication);
 
 class AgendaPage extends StatefulWidget {
   const AgendaPage({
@@ -18,8 +27,11 @@ class AgendaPage extends StatefulWidget {
     this.agendaRepository,
     this.titulo = 'Agenda',
     this.moneda = 'DOP',
+    this.negocioNombre = 'la barbería',
     this.empleadoId,
     this.fechaInicial,
+    this.reloj,
+    this.abrirEnlace,
   });
 
   final String negocioId;
@@ -34,11 +46,20 @@ class AgendaPage extends StatefulWidget {
   final String? empleadoId;
   final DateTime? fechaInicial;
 
+  /// Nombre del negocio para el recordatorio por WhatsApp.
+  final String negocioNombre;
+
+  /// Hora actual; inyectable en pruebas.
+  final DateTime Function()? reloj;
+
+  /// Por defecto abre el enlace con url_launcher; inyectable en pruebas.
+  final AbrirEnlace? abrirEnlace;
+
   @override
   State<AgendaPage> createState() => _AgendaPageState();
 }
 
-enum _AccionMenu { detalle, editar, cancelar }
+enum _AccionMenu { detalle, editar, recordar, cancelar }
 
 class _AgendaPageState extends State<AgendaPage> {
   late DateTime _fecha;
@@ -52,10 +73,17 @@ class _AgendaPageState extends State<AgendaPage> {
       widget.agendaRepository ??
       SupabaseAgendaRepository(Supabase.instance.client);
 
+  DateTime get _ahora => widget.reloj?.call() ?? DateTime.now();
+
+  bool get _viendoHoy {
+    final ahora = _ahora;
+    return _fecha == DateTime(ahora.year, ahora.month, ahora.day);
+  }
+
   @override
   void initState() {
     super.initState();
-    final inicial = widget.fechaInicial ?? DateTime.now();
+    final inicial = widget.fechaInicial ?? _ahora;
     _fecha = DateTime(inicial.year, inicial.month, inicial.day);
     _cargar();
   }
@@ -85,7 +113,7 @@ class _AgendaPageState extends State<AgendaPage> {
   }
 
   void _irAHoy() {
-    final ahora = DateTime.now();
+    final ahora = _ahora;
     setState(() => _fecha = DateTime(ahora.year, ahora.month, ahora.day));
     _cargar();
   }
@@ -102,18 +130,19 @@ class _AgendaPageState extends State<AgendaPage> {
     if (nuevo == null || !cita.estado.puedePasarA(nuevo)) return;
 
     if (nuevo == EstadoCita.completada) {
-      final precio = await _pedirPrecioFinal(cita);
-      if (precio == null) return;
-      await _guardarEstado(cita, nuevo, precio: precio);
+      final cobro = await _pedirCobro(cita);
+      if (cobro == null) return;
+      await _guardarEstado(cita, nuevo, cobro: cobro);
       return;
     }
+    // Al deshacer Completada → Llegó el cobro queda guardado como dato.
     await _guardarEstado(cita, nuevo);
   }
 
   Future<void> _guardarEstado(
     Cita cita,
     EstadoCita nuevo, {
-    num? precio,
+    _Cobro? cobro,
   }) async {
     final indice = _citas.indexWhere((item) => item.id == cita.id);
     if (indice < 0) return;
@@ -121,15 +150,22 @@ class _AgendaPageState extends State<AgendaPage> {
     setState(() {
       _actualizandoId = cita.id;
       _citas = [..._citas]
-        ..[indice] = cita.copyWith(estado: nuevo, precio: precio);
+        ..[indice] = cita.copyWith(
+          estado: nuevo,
+          precio: cobro?.precio,
+          metodoPago: cobro?.metodo,
+          propina: cobro?.propina,
+        );
     });
 
     try {
-      if (nuevo == EstadoCita.completada && precio != null) {
+      if (nuevo == EstadoCita.completada && cobro != null) {
         await _agenda.completar(
           negocioId: widget.negocioId,
           citaId: cita.id,
-          precio: precio,
+          precio: cobro.precio,
+          metodoPago: cobro.metodo,
+          propina: cobro.propina,
         );
       } else {
         await widget.repository.cambiarEstado(
@@ -149,11 +185,46 @@ class _AgendaPageState extends State<AgendaPage> {
     }
   }
 
-  Future<num?> _pedirPrecioFinal(Cita cita) {
-    return showDialog<num>(
+  Future<_Cobro?> _pedirCobro(Cita cita) {
+    return showDialog<_Cobro>(
       context: context,
       builder: (_) => _DialogoCompletar(cita: cita, moneda: widget.moneda),
     );
+  }
+
+  Future<void> _atenderAhora() async {
+    final creada = await mostrarAtenderAhora(
+      context,
+      negocioId: widget.negocioId,
+      repository: _agenda,
+      ahora: _ahora,
+      citasDelDia: _citas,
+      moneda: widget.moneda,
+      empleadoFijo: widget.empleadoId,
+    );
+    if (creada != true || !mounted) return;
+    _avisar('Cliente en atención.');
+    await _cargar();
+  }
+
+  Future<void> _recordar(Cita cita) async {
+    if (cita.clienteTelefono.trim().isEmpty) return;
+    final mensaje = mensajeRecordatorio(
+      cliente: cita.clienteNombre,
+      negocio: widget.negocioNombre,
+      fecha: DateTime.tryParse(cita.fecha) ?? _fecha,
+      hora: cita.horaInicio,
+      servicio: cita.servicioNombre,
+      barbero: cita.empleadoNombre,
+    );
+    final enlace = Uri.parse(enlaceWhatsApp(cita.clienteTelefono, mensaje));
+    var abierto = false;
+    try {
+      abierto = await (widget.abrirEnlace ?? _abrirEnlaceExterno)(enlace);
+    } catch (_) {
+      abierto = false;
+    }
+    if (!abierto && mounted) _avisar('No se pudo abrir WhatsApp.');
   }
 
   Future<void> _cancelar(Cita cita) async {
@@ -222,6 +293,8 @@ class _AgendaPageState extends State<AgendaPage> {
         _verDetalle(cita);
       case _AccionMenu.editar:
         _abrirFormulario(cita);
+      case _AccionMenu.recordar:
+        _recordar(cita);
       case _AccionMenu.cancelar:
         _cancelar(cita);
     }
@@ -246,6 +319,17 @@ class _AgendaPageState extends State<AgendaPage> {
                           ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
+                  if (_viendoHoy) ...[
+                    OutlinedButton.icon(
+                      onPressed: _cargando ? null : _atenderAhora,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 42),
+                      ),
+                      icon: const Icon(Icons.directions_walk, size: 18),
+                      label: const Text('Atender ahora'),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   FilledButton.icon(
                     onPressed: () => _abrirFormulario(),
                     style: FilledButton.styleFrom(
@@ -456,6 +540,20 @@ class _FilaCita extends StatelessWidget {
         ),
         if (!cancelada)
           const PopupMenuItem(value: _AccionMenu.editar, child: Text('Editar')),
+        if (cita.estado == EstadoCita.pendiente ||
+            cita.estado == EstadoCita.confirmada)
+          PopupMenuItem(
+            value: _AccionMenu.recordar,
+            enabled: cita.clienteTelefono.trim().isNotEmpty,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.chat_outlined),
+              title: const Text('Recordar por WhatsApp'),
+              subtitle: cita.clienteTelefono.trim().isEmpty
+                  ? const Text('El cliente no tiene teléfono registrado.')
+                  : null,
+            ),
+          ),
         if (cita.estado.puedePasarA(EstadoCita.cancelada) && !cancelada)
           const PopupMenuItem(
             value: _AccionMenu.cancelar,
@@ -548,7 +646,10 @@ class _BotonEstado extends StatelessWidget {
   }
 }
 
-/// Pide el precio final cobrado al completar una cita.
+/// Lo cobrado al completar una cita.
+typedef _Cobro = ({num precio, MetodoPago metodo, num propina});
+
+/// Pide el cobro al completar una cita: precio final, método y propina.
 class _DialogoCompletar extends StatefulWidget {
   const _DialogoCompletar({required this.cita, required this.moneda});
 
@@ -560,32 +661,49 @@ class _DialogoCompletar extends StatefulWidget {
 }
 
 class _DialogoCompletarState extends State<_DialogoCompletar> {
-  late final _precio = TextEditingController(
-    text: widget.cita.precio == widget.cita.precio.roundToDouble()
-        ? widget.cita.precio.round().toString()
-        : '${widget.cita.precio}',
+  static String _texto(num monto) =>
+      monto == monto.roundToDouble() ? monto.round().toString() : '$monto';
+
+  late final _precio = TextEditingController(text: _texto(widget.cita.precio));
+  late final _propina = TextEditingController(
+    text: widget.cita.propina > 0 ? _texto(widget.cita.propina) : '',
   );
+  late MetodoPago _metodo = widget.cita.metodoPago ?? MetodoPago.efectivo;
   String? _error;
+  String? _errorPropina;
 
   @override
   void dispose() {
     _precio.dispose();
+    _propina.dispose();
     super.dispose();
   }
 
+  static num? _leer(String texto) =>
+      num.tryParse(texto.trim().replaceAll(',', ''));
+
   void _confirmar() {
-    final precio = num.tryParse(_precio.text.trim().replaceAll(',', ''));
-    if (precio == null || precio < 0) {
-      setState(() => _error = 'Escribe un precio válido.');
-      return;
-    }
-    Navigator.of(context).pop(precio);
+    final precio = _leer(_precio.text);
+    final textoPropina = _propina.text.trim();
+    final propina = textoPropina.isEmpty ? 0 : _leer(textoPropina);
+    setState(() {
+      _error = precio == null || precio < 0
+          ? 'Escribe un precio válido.'
+          : null;
+      _errorPropina = propina == null || propina < 0
+          ? 'Escribe una propina válida (o déjala vacía).'
+          : null;
+    });
+    if (_error != null || _errorPropina != null) return;
+    Navigator.of(context)
+        .pop<_Cobro>((precio: precio!, metodo: _metodo, propina: propina!));
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Completar cita'),
+      scrollable: true,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -600,6 +718,37 @@ class _DialogoCompletarState extends State<_DialogoCompletar> {
               labelText: 'Precio final cobrado',
               prefixText: simboloMoneda(widget.moneda),
               errorText: _error,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Método de pago',
+            style: TextStyle(color: Marca.textoSuave, fontSize: 13),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final metodo in MetodoPago.values)
+                ChoiceChip(
+                  label: Text(metodo.etiqueta),
+                  selected: metodo == _metodo,
+                  showCheckmark: false,
+                  selectedColor: Marca.doradoClaro,
+                  onSelected: (_) => setState(() => _metodo = metodo),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _propina,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Propina (opcional)',
+              helperText: 'Va aparte: no suma a los ingresos.',
+              prefixText: simboloMoneda(widget.moneda),
+              errorText: _errorPropina,
             ),
             onSubmitted: (_) => _confirmar(),
           ),
@@ -655,6 +804,10 @@ class _DialogoDetalle extends StatelessWidget {
             ),
             _Dato('Horario', horario),
             _Dato('Precio', formatoMoneda(cita.precio, moneda)),
+            if (cita.metodoPago != null || cita.propina > 0) ...[
+              _Dato('Pago', cita.metodoPago?.etiqueta ?? 'Sin registrar'),
+              _Dato('Propina', formatoMoneda(cita.propina, moneda)),
+            ],
             _Dato('Notas', cita.notas.isEmpty ? 'Sin notas' : cita.notas),
             FutureBuilder<ApartadoCita?>(
               future: apartado,

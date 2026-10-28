@@ -30,6 +30,35 @@ String? calcularHoraFin(String horaInicio, int duracionMinutos) {
   return horaDesdeMinutos(fin);
 }
 
+/// 14:37 → 14:35 (minutos desde medianoche, redondeado hacia abajo a 5 min).
+int redondearACincoMinutos(DateTime momento) {
+  final minutos = momento.hour * 60 + momento.minute;
+  return minutos - minutos % 5;
+}
+
+/// Primer inicio >= [desde] en el que caben [duracionMinutos] sin chocar con
+/// [ocupados] (pares inicio/fin en minutos). null si no cabe antes de
+/// medianoche.
+int? siguienteHoraLibre({
+  required Iterable<(int, int)> ocupados,
+  required int desde,
+  required int duracionMinutos,
+}) {
+  final ordenados = ocupados.toList()..sort((a, b) => a.$1.compareTo(b.$1));
+  var inicio = desde;
+  var movido = true;
+  while (movido) {
+    movido = false;
+    for (final (ocupadoInicio, ocupadoFin) in ordenados) {
+      if (ocupadoInicio < inicio + duracionMinutos && inicio < ocupadoFin) {
+        inicio = ocupadoFin;
+        movido = true;
+      }
+    }
+  }
+  return inicio + duracionMinutos >= 24 * 60 ? null : inicio;
+}
+
 const mensajeSolapamiento = 'Ese barbero ya tiene una cita en ese horario.';
 const mensajeEstadoNoPermitido = 'Ese cambio de estado no está permitido.';
 

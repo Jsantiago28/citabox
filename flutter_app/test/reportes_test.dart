@@ -77,6 +77,20 @@ void main() {
       expect(reporte.apartadosCobrados, 400);
       expect(reporte.ticketPromedio, 500.19);
 
+      // Propinas aparte: no cambian los ingresos.
+      expect(reporte.propinas, 150.25);
+      expect(
+        [
+          for (final f in reporte.porMetodoPago)
+            (f.etiqueta, f.cantidad, f.ingresos),
+        ],
+        [
+          ('Efectivo', 2, 800.25),
+          ('Transferencia', 1, 500.5),
+          ('Sin registrar', 1, 700),
+        ],
+      );
+
       expect(
         [
           for (final f in reporte.porBarbero)
@@ -151,6 +165,10 @@ void main() {
             servicio: ('s${azar.nextInt(6)}', 'Servicio'),
             cliente: ('k${azar.nextInt(40)}', 'Cliente'),
             apartado: azar.nextBool() ? azar.nextInt(30000) / 100 : 0,
+            metodo: azar.nextInt(5) == 0
+                ? null
+                : MetodoPago.values[azar.nextInt(MetodoPago.values.length)],
+            propina: azar.nextBool() ? azar.nextInt(20000) / 100 : 0,
           ),
       ];
 
@@ -162,6 +180,12 @@ void main() {
       final atendidas = delMes.where((x) => x.estado.atendida).toList();
       final ingresos = atendidas.fold<int>(0, (t, x) => t + c(x.precio));
       final apartados = delMes.fold<int>(0, (t, x) => t + c(x.apartadoPagado));
+      final propinas = atendidas.fold<int>(0, (t, x) => t + c(x.propina));
+      expect(c(reporte.propinas), propinas);
+      expect(
+        reporte.porMetodoPago.fold<int>(0, (t, f) => t + f.cantidad),
+        atendidas.length,
+      );
       final noVino = delMes.where((x) => x.estado == EstadoCita.noVino).length;
 
       expect(reporte.totalCitas, delMes.length);
@@ -177,6 +201,7 @@ void main() {
         reporte.porBarbero.fold<int>(0, (t, f) => t + c(f.ingresos)),
         reporte.porServicio.fold<int>(0, (t, f) => t + c(f.ingresos)),
         reporte.ingresosPorDia.fold<int>(0, (t, d) => t + c(d.ingresos)),
+        reporte.porMetodoPago.fold<int>(0, (t, f) => t + c(f.ingresos)),
       ]) {
         expect(suma, ingresos);
       }
@@ -199,6 +224,8 @@ void main() {
         'cliente_id': 'k1',
         'empleado_id': 'e1',
         'servicio_id': 's1',
+        'metodo_pago': 'TARJETA',
+        'propina': '75.50',
         'clientes': {'nombre': 'Juan Pérez'},
         'empleados': {'nombre': 'Luis'},
         'servicios': {'nombre': 'Corte'},
@@ -215,6 +242,19 @@ void main() {
       expect(cita.empleadoNombre, 'Luis');
       expect(cita.servicioNombre, 'Corte');
       expect(cita.apartadoPagado, 150);
+      expect(cita.metodoPago, MetodoPago.tarjeta);
+      expect(cita.propina, 75.5);
+
+      final sinCobro = CitaReporte.fromMap({
+        'id': 'x2',
+        'fecha': '2026-10-27',
+        'precio': 500,
+        'estado': 'LLEGO',
+        'metodo_pago': null,
+        'propina': '0',
+      });
+      expect(sinCobro.metodoPago, isNull);
+      expect(sinCobro.propina, 0);
     });
   });
 
@@ -244,6 +284,7 @@ void main() {
       expect(_indicador('Tasa de no-show'), '50.0%');
       expect(_indicador('Cancelaciones'), '1');
       expect(_indicador('Apartados cobrados'), r'RD$100');
+      expect(_indicador('Propinas'), r'RD$100');
 
       await tester.tap(find.text('Este mes'));
       await tester.pumpAndSettle();
@@ -254,6 +295,10 @@ void main() {
       expect(_indicador('Ingresos'), r'RD$2,000.75');
       expect(_indicador('Ticket promedio'), r'RD$500.19');
       expect(_indicador('Apartados cobrados'), r'RD$400');
+      expect(_indicador('Propinas'), r'RD$150.25');
+      expect(find.text('Ingresos por método de pago'), findsOneWidget);
+      expect(find.text('Sin registrar'), findsOneWidget);
+      expect(find.text(r'RD$800.25'), findsOneWidget); // efectivo
       expect(_indicador('Tasa de no-show'), '20.0%');
       expect(_indicador('Atendidas'), '4');
       expect(find.text('Por barbero'), findsOneWidget);
@@ -340,6 +385,8 @@ CitaReporte _cita(
   (String, String) empleado = ('e1', 'Luis'),
   (String, String) servicio = ('s2', 'Corte'),
   num apartado = 0,
+  MetodoPago? metodo,
+  num propina = 0,
 }) => CitaReporte(
   id: id,
   fecha: fecha,
@@ -352,6 +399,8 @@ CitaReporte _cita(
   servicioId: servicio.$1,
   servicioNombre: servicio.$2,
   apartadoPagado: apartado,
+  metodoPago: metodo,
+  propina: propina,
 );
 
 List<CitaReporte> _citasDeEjemplo() {
@@ -381,6 +430,8 @@ List<CitaReporte> _citasDeEjemplo() {
       empleado: carlos,
       servicio: corte,
       apartado: 100,
+      metodo: MetodoPago.transferencia,
+      propina: 50.25,
     ),
     _cita(
       'c3',
@@ -390,6 +441,8 @@ List<CitaReporte> _citasDeEjemplo() {
       cliente: juan,
       empleado: luis,
       servicio: corte,
+      metodo: MetodoPago.efectivo,
+      propina: 100,
     ),
     // El apartado de un no-show no se devuelve: cuenta como cobrado.
     _cita(
@@ -410,6 +463,9 @@ List<CitaReporte> _citasDeEjemplo() {
       cliente: ('k4', 'Ana'),
       empleado: luis,
       servicio: ('s4', 'Tinte'),
+      // Solo cuentan los cobros de citas atendidas.
+      metodo: MetodoPago.tarjeta,
+      propina: 999,
     ),
     _cita(
       'c6',
@@ -429,6 +485,7 @@ List<CitaReporte> _citasDeEjemplo() {
       cliente: juan,
       empleado: carlos,
       servicio: barba,
+      metodo: MetodoPago.efectivo,
     ),
     _cita(
       'c8',

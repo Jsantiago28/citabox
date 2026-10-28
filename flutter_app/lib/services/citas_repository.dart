@@ -38,8 +38,8 @@ class SupabaseCitasRepository implements CitasRepository {
         .from('citas')
         .select(
           'id, fecha, hora_inicio, hora_fin, precio, estado, notas, '
-          'cliente_id, servicio_id, empleado_id, '
-          'clientes(nombre), servicios(nombre), empleados(nombre)',
+          'metodo_pago, propina, cliente_id, servicio_id, empleado_id, '
+          'clientes(nombre, telefono), servicios(nombre), empleados(nombre)',
         )
         .eq('negocio_id', negocioId)
         .eq('fecha', formatoFechaIso(fecha));

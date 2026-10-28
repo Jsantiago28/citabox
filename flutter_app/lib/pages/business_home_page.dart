@@ -254,6 +254,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         key: ValueKey('agenda-$empleadoId'),
         negocioId: widget.negocioId,
         titulo: _etiqueta(_Seccion.agenda),
+        negocioNombre: widget.negocioNombre,
         moneda: widget.moneda,
         empleadoId: empleadoId,
         repository: _citas,
