@@ -252,13 +252,6 @@ de aplicarla.
 - **Apartado pagado** (`trg_apartados_al_pagar`): guarda `fecha_pago` y pasa la
   cita de `PENDIENTE` a `CONFIRMADA`.
 
-<<<<<<< HEAD
-## 008_cobro_de_citas.sql
-
-Agrega a `citas`: `metodo_pago` (`EFECTIVO`, `TRANSFERENCIA`, `TARJETA`, `OTRO`),
-`propina` (aparte del precio, para no inflar los ingresos del negocio) y
-`cobrada_en`, que se guarda sola la primera vez que la cita pasa a `COMPLETADA`.
-=======
 ## 007_reserva_publica.sql
 
 Reserva pública para visitantes sin cuenta (Fase 8) y reporte del pago del
@@ -302,4 +295,9 @@ servidor y devuelven solo lo necesario. "Hoy" y "ahora" salen de
 
 Pruebas: `supabase/tests/30_reserva_publica.sql` (negocio `negocio-d`, rol
 `anon` sin JWT).
->>>>>>> worktree-agent-a5b0323c941e4288c
+
+## 008_cobro_de_citas.sql
+
+Agrega a `citas`: `metodo_pago` (`EFECTIVO`, `TRANSFERENCIA`, `TARJETA`, `OTRO`),
+`propina` (aparte del precio, para no inflar los ingresos del negocio) y
+`cobrada_en`, que se guarda sola la primera vez que la cita pasa a `COMPLETADA`.
