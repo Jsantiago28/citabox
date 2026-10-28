@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/apartado.dart';
 import '../models/cita.dart';
 import '../services/apartados_repository.dart';
+import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../utils/whatsapp.dart';
@@ -12,7 +13,8 @@ import '../widgets/estado_cita_badge.dart';
 import '../widgets/etiqueta.dart';
 
 /// Apartados de las citas: el cliente paga por transferencia, reporta la
-/// referencia y aquí el dueño (o el barbero) valida el pago a mano.
+/// referencia y aquí el dueño valida el pago a mano. El barbero solo ve los
+/// de sus citas (RLS no le deja registrar ni validar).
 class ApartadosPage extends StatefulWidget {
   const ApartadosPage({
     super.key,
@@ -21,6 +23,7 @@ class ApartadosPage extends StatefulWidget {
     this.negocioNombre = '',
     this.moneda = 'DOP',
     this.empleadoId,
+    this.esOwner = true,
     this.hoy,
     this.abrirEnlace,
   });
@@ -32,6 +35,9 @@ class ApartadosPage extends StatefulWidget {
 
   /// Si se indica, solo los apartados de las citas de ese empleado.
   final String? empleadoId;
+
+  /// Solo el dueño registra, valida o rechaza apartados.
+  final bool esOwner;
 
   /// Inyectable en pruebas; por defecto la fecha del dispositivo.
   final DateTime? hoy;
@@ -143,8 +149,10 @@ class _ApartadosPageState extends State<ApartadosPage> {
       if (!mounted) return;
       _avisar('Pago validado. La cita quedó confirmada.');
       await _cargar();
-    } catch (_) {
-      if (mounted) _avisar('No se pudo validar el pago.');
+    } catch (error) {
+      if (mounted) {
+        _avisar(mensajeDeError(error, 'No se pudo validar el pago.'));
+      }
     } finally {
       if (mounted) setState(() => _ocupadoId = null);
     }
@@ -183,8 +191,10 @@ class _ApartadosPageState extends State<ApartadosPage> {
       if (!mounted) return;
       _avisar('Apartado cancelado.');
       await _cargar();
-    } catch (_) {
-      if (mounted) _avisar('No se pudo cancelar el apartado.');
+    } catch (error) {
+      if (mounted) {
+        _avisar(mensajeDeError(error, 'No se pudo cancelar el apartado.'));
+      }
     } finally {
       if (mounted) setState(() => _ocupadoId = null);
     }
@@ -360,11 +370,22 @@ class _ApartadosPageState extends State<ApartadosPage> {
                               : '$porValidar por validar',
                           style: const TextStyle(color: Marca.textoSuave),
                         ),
+                        if (!widget.esOwner)
+                          const Text(
+                            'Solo el dueño valida los apartados.',
+                            style: TextStyle(
+                              color: Marca.textoSuave,
+                              fontSize: 12,
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                  if (ancho) ...[buscador, const SizedBox(width: 12)],
-                  registrar,
+                  if (ancho) ...[
+                    buscador,
+                    if (widget.esOwner) const SizedBox(width: 12),
+                  ],
+                  if (widget.esOwner) registrar,
                 ],
               ),
               if (!ancho) ...[const SizedBox(height: 16), buscador],
@@ -544,7 +565,7 @@ class _ApartadosPageState extends State<ApartadosPage> {
               runSpacing: 4,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                if (a.estado == EstadoApartado.pendiente) ...[
+                if (widget.esOwner && a.estado == EstadoApartado.pendiente) ...[
                   FilledButton.icon(
                     onPressed: ocupado ? null : () => _validar(a),
                     icon: const Icon(Icons.check, size: 18),

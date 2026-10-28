@@ -18,6 +18,7 @@ Future<DatosCita?> mostrarFormularioCita(
   String moneda = 'DOP',
   String? empleadoFijo,
   Cita? cita,
+  bool esOwner = true,
 }) {
   return showDialog<DatosCita>(
     context: context,
@@ -29,6 +30,7 @@ Future<DatosCita?> mostrarFormularioCita(
       moneda: moneda,
       empleadoFijo: empleadoFijo,
       cita: cita,
+      esOwner: esOwner,
     ),
   );
 }
@@ -42,6 +44,7 @@ class CitaFormDialog extends StatefulWidget {
     this.moneda = 'DOP',
     this.empleadoFijo,
     this.cita,
+    this.esOwner = true,
   });
 
   final String negocioId;
@@ -54,6 +57,10 @@ class CitaFormDialog extends StatefulWidget {
 
   /// Con cita, el formulario edita en vez de crear.
   final Cita? cita;
+
+  /// El barbero no cambia el precio de una cita ya creada (010: solo el
+  /// dueño, salvo al completarla).
+  final bool esOwner;
 
   @override
   State<CitaFormDialog> createState() => _CitaFormDialogState();
@@ -82,6 +89,8 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
   String? _error;
 
   bool get _editando => widget.cita != null;
+
+  bool get _precioBloqueado => _editando && !widget.esOwner;
 
   @override
   void initState() {
@@ -206,7 +215,9 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
     setState(() {
       _servicioId = id;
       final servicio = _servicio;
-      if (servicio != null) _precio.text = _textoPrecio(servicio.precio);
+      if (servicio != null && !_precioBloqueado) {
+        _precio.text = _textoPrecio(servicio.precio);
+      }
       if (widget.empleadoFijo == null &&
           _empleadoId != null &&
           !_barberos.any((b) => b.id == _empleadoId)) {
@@ -281,7 +292,9 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
         fecha: _fecha,
         horaInicio: horaDesdeMinutos(minutosDesdeHora(_hora.text)!),
         horaFin: horaFin,
-        precio: num.parse(_precio.text.trim().replaceAll(',', '')),
+        precio: _precioBloqueado
+            ? widget.cita!.precio
+            : num.parse(_precio.text.trim().replaceAll(',', '')),
         notas: _notas.text,
       );
 
@@ -464,14 +477,19 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
             ),
             const SizedBox(height: 14),
             TextFormField(
+              key: const ValueKey('precio-cita'),
               controller: _precio,
               enabled: !_guardando,
+              readOnly: _precioBloqueado,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
               decoration: InputDecoration(
                 labelText: 'Precio',
                 prefixText: simboloMoneda(widget.moneda),
+                helperText: _precioBloqueado
+                    ? 'Solo el dueño cambia el precio.'
+                    : null,
               ),
               validator: (valor) {
                 final precio = num.tryParse(

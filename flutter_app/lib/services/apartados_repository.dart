@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/apartado.dart';
 import '../models/cita.dart';
 import '../utils/formato.dart';
+import 'sin_permiso.dart';
 
 abstract interface class ApartadosRepository {
   /// Todos los apartados por validar y el historial reciente del negocio.
@@ -159,7 +160,7 @@ class SupabaseApartadosRepository implements ApartadosRepository {
     String? referencia,
   }) async {
     final ref = referencia?.trim() ?? '';
-    await _client
+    final filas = await _client
         .from('apartados')
         .update({
           'estado': EstadoApartado.pagado.valor,
@@ -169,7 +170,10 @@ class SupabaseApartadosRepository implements ApartadosRepository {
         })
         .eq('negocio_id', negocioId)
         .eq('id', apartadoId)
-        .eq('estado', EstadoApartado.pendiente.valor);
+        .eq('estado', EstadoApartado.pendiente.valor)
+        .select('id');
+    // RLS deja la actualización en 0 filas (sin error) si no es el dueño.
+    exigirFilas(filas);
   }
 
   @override
@@ -177,12 +181,14 @@ class SupabaseApartadosRepository implements ApartadosRepository {
     required String negocioId,
     required String apartadoId,
   }) async {
-    await _client
+    final filas = await _client
         .from('apartados')
         .update({'estado': EstadoApartado.cancelado.valor})
         .eq('negocio_id', negocioId)
         .eq('id', apartadoId)
-        .eq('estado', EstadoApartado.pendiente.valor);
+        .eq('estado', EstadoApartado.pendiente.valor)
+        .select('id');
+    exigirFilas(filas);
   }
 
   @override

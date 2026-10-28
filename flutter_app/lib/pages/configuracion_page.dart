@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../models/configuracion_negocio.dart';
 import '../services/configuracion_repository.dart';
+import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/enlace_publico.dart';
 
@@ -172,8 +173,10 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     try {
       await accion();
       if (mounted) _mensaje(exito);
-    } catch (_) {
-      if (mounted) _mensaje('No se pudieron guardar los cambios.');
+    } catch (error) {
+      if (mounted) {
+        _mensaje(mensajeDeError(error, 'No se pudieron guardar los cambios.'));
+      }
     } finally {
       if (mounted) setState(() => _guardando = null);
     }

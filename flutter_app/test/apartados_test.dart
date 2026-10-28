@@ -7,6 +7,7 @@ import 'package:barberiapro/pages/apartados_page.dart';
 import 'package:barberiapro/pages/dashboard_page.dart';
 import 'package:barberiapro/services/apartados_repository.dart';
 import 'package:barberiapro/services/citas_repository.dart';
+import 'package:barberiapro/services/sin_permiso.dart';
 import 'package:barberiapro/utils/whatsapp.dart';
 
 void main() {
@@ -190,6 +191,46 @@ void main() {
     expect(texto, contains('3:00 PM'));
   });
 
+  testWidgets('barber sees the list but cannot validate, reject or register', (
+    tester,
+  ) async {
+    final repo = _FakeApartadosRepository(_ejemplo());
+    await _montar(tester, repo, esOwner: false);
+
+    expect(find.text('Ana López'), findsOneWidget);
+    expect(find.text('Pedro Marte'), findsOneWidget);
+    expect(find.text('Solo el dueño valida los apartados.'), findsOneWidget);
+    expect(find.text('Validar pago'), findsNothing);
+    expect(find.text('Rechazar'), findsNothing);
+    expect(find.text('Registrar apartado'), findsNothing);
+    // WhatsApp sigue disponible para el barbero.
+    expect(find.byTooltip('Escribir por WhatsApp'), findsWidgets);
+  });
+
+  testWidgets('a validation blocked by RLS is reported, not shown as done', (
+    tester,
+  ) async {
+    final repo = _FakeApartadosRepository(
+      _ejemplo(),
+      error: const SinPermisoException(),
+    );
+    await _montar(tester, repo);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('apartado-a2')),
+        matching: find.text('Validar pago'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar pago'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(mensajeSinPermiso), findsOneWidget);
+    expect(find.text('Pago validado. La cita quedó confirmada.'), findsNothing);
+    expect(find.text('Ana López'), findsOneWidget);
+  });
+
   testWidgets('dashboard shows pending apartados and opens the section', (
     tester,
   ) async {
@@ -226,6 +267,7 @@ Future<void> _montar(
   WidgetTester tester,
   _FakeApartadosRepository repo, {
   List<Uri>? abiertos,
+  bool esOwner = true,
 }) async {
   tester.view.physicalSize = const Size(1280, 1000);
   tester.view.devicePixelRatio = 1;
@@ -238,6 +280,7 @@ Future<void> _montar(
           negocioId: 'n1',
           negocioNombre: 'Barbería El Jefe',
           repository: repo,
+          esOwner: esOwner,
           hoy: DateTime(2026, 10, 28, 9, 30),
           abrirEnlace: (uri) async => abiertos?.add(uri),
         ),
@@ -289,9 +332,12 @@ List<Apartado> _ejemplo() => [
 ];
 
 class _FakeApartadosRepository implements ApartadosRepository {
-  _FakeApartadosRepository(this.apartados);
+  _FakeApartadosRepository(this.apartados, {this.error});
 
   final List<Apartado> apartados;
+
+  /// Si se indica, validar falla con este error.
+  final Object? error;
   final validados = <(String, num, MetodoPagoApartado, String?)>[];
   final cancelados = <String>[];
   final registrados = <(String, num)>[];
@@ -361,6 +407,7 @@ class _FakeApartadosRepository implements ApartadosRepository {
     required MetodoPagoApartado metodo,
     String? referencia,
   }) async {
+    if (error != null) throw error!;
     validados.add((apartadoId, monto, metodo, referencia));
     _reemplazar(
       apartadoId,

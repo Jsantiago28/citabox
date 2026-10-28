@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/servicio.dart';
+import 'sin_permiso.dart';
 
 abstract interface class ServiciosRepository {
   Future<List<Servicio>> listar(String negocioId);
@@ -48,11 +49,13 @@ class SupabaseServiciosRepository implements ServiciosRepository {
       return;
     }
 
-    await _client
+    final filas = await _client
         .from('servicios')
         .update(datos)
         .eq('negocio_id', negocioId)
-        .eq('id', servicioId);
+        .eq('id', servicioId)
+        .select('id');
+    exigirFilas(filas);
   }
 
   @override
@@ -61,10 +64,12 @@ class SupabaseServiciosRepository implements ServiciosRepository {
     required String servicioId,
     required bool activo,
   }) async {
-    await _client
+    final filas = await _client
         .from('servicios')
         .update({'activo': activo})
         .eq('negocio_id', negocioId)
-        .eq('id', servicioId);
+        .eq('id', servicioId)
+        .select('id');
+    exigirFilas(filas);
   }
 }

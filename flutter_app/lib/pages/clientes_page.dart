@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/cliente.dart';
 import '../services/clientes_repository.dart';
+import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../widgets/estado_cita_badge.dart';
@@ -92,8 +93,10 @@ class _ClientesPageState extends State<ClientesPage> {
         datos: datos,
       );
       await _cargarClientes();
-    } catch (_) {
-      if (mounted) _mostrarError('No se pudo guardar el cliente.');
+    } catch (error) {
+      if (mounted) {
+        _mostrarError(mensajeDeError(error, 'No se pudo guardar el cliente.'));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -108,9 +111,11 @@ class _ClientesPageState extends State<ClientesPage> {
         activo: !cliente.activo,
       );
       await _cargarClientes();
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        _mostrarError('No se pudo actualizar el estado del cliente.');
+        _mostrarError(
+          mensajeDeError(error, 'No se pudo actualizar el estado del cliente.'),
+        );
       }
     } finally {
       if (mounted) setState(() => _changingStatusId = null);

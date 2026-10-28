@@ -14,6 +14,7 @@ import 'package:barberiapro/models/cliente.dart';
 import 'package:barberiapro/pages/clientes_page.dart';
 import 'package:barberiapro/pages/login_page.dart';
 import 'package:barberiapro/services/clientes_repository.dart';
+import 'package:barberiapro/utils/whatsapp.dart';
 
 void main() {
   testWidgets('shows setup instructions when Supabase is not configured', (
@@ -270,10 +271,15 @@ void main() {
       await tester.tap(find.text('WhatsApp'));
       await tester.pumpAndSettle();
 
+      // WhatsApp usa el mismo enlace que la agenda (utils/whatsapp.dart).
       expect(enlaces, [
         Uri.parse('tel:8095551234'),
-        Uri.parse('https://wa.me/18095551234'),
+        Uri.parse(enlaceWhatsApp('809-555-1234', 'Hola Juan')),
       ]);
+      expect(
+        enlaces.last.toString(),
+        'https://wa.me/18095551234?text=Hola%20Juan',
+      );
     });
 
     testWidgets('las notas se editan desde la ficha', (tester) async {
