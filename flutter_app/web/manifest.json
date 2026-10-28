@@ -1,12 +1,17 @@
 {
+    "id": ".",
     "name": "Barbería PRO",
     "short_name": "Barbería PRO",
+    "description": "Agenda, clientes y reservas en línea para tu barbería.",
+    "lang": "es",
+    "dir": "ltr",
     "start_url": ".",
+    "scope": ".",
     "display": "standalone",
-    "background_color": "#F5F5F2",
-    "theme_color": "#C9A24B",
-    "description": "Gestiona tu barbería con Barbería PRO.",
-    "orientation": "portrait-primary",
+    "background_color": "#F4F4F2",
+    "theme_color": "#141414",
+    "orientation": "any",
+    "categories": ["business", "productivity", "lifestyle"],
     "prefer_related_applications": false,
     "icons": [
         {
