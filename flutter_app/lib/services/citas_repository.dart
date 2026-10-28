@@ -37,7 +37,8 @@ class SupabaseCitasRepository implements CitasRepository {
     var query = _client
         .from('citas')
         .select(
-          'id, fecha, hora_inicio, precio, estado, '
+          'id, fecha, hora_inicio, hora_fin, precio, estado, notas, '
+          'cliente_id, servicio_id, empleado_id, '
           'clientes(nombre), servicios(nombre), empleados(nombre)',
         )
         .eq('negocio_id', negocioId)
