@@ -400,3 +400,8 @@ Ley 172-13 (protección de datos, RD):
 Cobro manual por transferencia. Cada negocio nace en PRUEBA (30 dias); el servicio sigue activo 7 dias despues de vencer. Sin servicio activo no entran citas ni reservas en linea, y el plan limita los barberos activos (planes.max_barberos). Los precios de planes estan en 0: definir.
 
 Alta de administrador (SQL editor): insert into plataforma_admins (user_id) values ('<uuid de auth.users>'); y abrir #/admin. RPC: admin_listar_negocios, admin_activar, admin_suspender, admin_listar_soporte. Job pg_cron barberia-vencer-suscripciones (diario).
+
+## 018_precios_de_lanzamiento.sql
+
+Precios de lanzamiento por mes: Solo RD$400 (1 barbero), Barbería RD$900
+(hasta 5), Pro RD$1,600 (sin límite). La prueba sigue siendo gratis 30 días.

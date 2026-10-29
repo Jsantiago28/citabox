@@ -207,3 +207,12 @@ do $$ begin
   end if;
 end $$;
 reset role;
+
+-- 018: precios de lanzamiento
+do $$ begin
+  if (select precio_mensual from planes where codigo = 'solo') <> 400
+     or (select precio_mensual from planes where codigo = 'barberia') <> 900
+     or (select precio_mensual from planes where codigo = 'pro') <> 1600 then
+    raise exception 'FALLO: precios de lanzamiento';
+  end if;
+end $$;
