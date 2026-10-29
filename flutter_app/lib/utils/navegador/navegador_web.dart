@@ -1,8 +1,9 @@
 import 'dart:js_interop';
+import 'dart:typed_data';
 
 @JS('Blob')
 extension type _Blob._(JSObject _) implements JSObject {
-  external factory _Blob(JSArray<JSString> partes, _OpcionesBlob opciones);
+  external factory _Blob(JSArray<JSAny> partes, _OpcionesBlob opciones);
 }
 
 extension type _OpcionesBlob._(JSObject _) implements JSObject {
@@ -30,9 +31,15 @@ external String? _leer(String clave);
 @JS('localStorage.setItem')
 external void _guardar(String clave, String valor);
 
-bool descargarArchivo(String nombre, String contenido, String tipo) {
+bool descargarArchivo(String nombre, String contenido, String tipo) =>
+    _descargar(nombre, contenido.toJS, tipo);
+
+bool descargarBytes(String nombre, Uint8List bytes, String tipo) =>
+    _descargar(nombre, bytes.toJS, tipo);
+
+bool _descargar(String nombre, JSAny contenido, String tipo) {
   try {
-    final blob = _Blob([contenido.toJS].toJS, _OpcionesBlob(type: tipo));
+    final blob = _Blob([contenido].toJS, _OpcionesBlob(type: tipo));
     final url = _crearUrl(blob);
     final enlace = _crearElemento('a')
       ..href = url

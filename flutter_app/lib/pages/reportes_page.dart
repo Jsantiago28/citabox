@@ -1,10 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../models/cita.dart';
+import '../services/exportar_excel.dart';
 import '../services/reportes.dart';
 import '../services/reportes_repository.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
+import '../utils/navegador.dart';
 import '../widgets/estado_cita_badge.dart';
 
 class ReportesPage extends StatefulWidget {
@@ -16,6 +20,8 @@ class ReportesPage extends StatefulWidget {
     this.empleadoId,
     this.mostrarBarberos = true,
     this.hoy,
+    this.negocioNombre = '',
+    this.descargar = descargarBytes,
   });
 
   final String negocioId;
@@ -31,6 +37,12 @@ class ReportesPage extends StatefulWidget {
   /// Inyectable en pruebas; por defecto la fecha del dispositivo.
   final DateTime? hoy;
 
+  /// Va en la hoja "Resumen" del Excel.
+  final String negocioNombre;
+
+  /// Inyectable en pruebas; en web descarga el archivo.
+  final bool Function(String nombre, Uint8List bytes, String tipo) descargar;
+
   @override
   State<ReportesPage> createState() => _ReportesPageState();
 }
@@ -39,6 +51,7 @@ class _ReportesPageState extends State<ReportesPage> {
   TipoPeriodo _tipo = TipoPeriodo.hoy;
   late Periodo _periodo;
   late Future<Reporte> _reporte;
+  List<CitaReporte> _citas = const [];
 
   DateTime get _hoy => widget.hoy ?? DateTime.now();
 
@@ -56,7 +69,39 @@ class _ReportesPageState extends State<ReportesPage> {
       periodo: periodo,
       empleadoId: widget.empleadoId,
     );
+    _citas = citas;
     return Reporte.calcular(citas, periodo);
+  }
+
+  Future<void> _descargarExcel() async {
+    final mensajero = ScaffoldMessenger.of(context);
+    try {
+      final reporte = await _reporte;
+      final bytes = generarExcelReporte(
+        reporte: reporte,
+        citas: _citas,
+        negocio: widget.negocioNombre,
+        incluirBarberos: widget.mostrarBarberos,
+      );
+      final ok = widget.descargar(
+        nombreArchivoReporte(reporte.periodo),
+        bytes,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      mensajero.showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? 'Reporte descargado en Excel.'
+                : 'La descarga solo funciona en la versión web.',
+          ),
+        ),
+      );
+    } catch (_) {
+      mensajero.showSnackBar(
+        const SnackBar(content: Text('No se pudo generar el Excel.')),
+      );
+    }
   }
 
   void _recargar() => setState(() => _reporte = _cargar());
@@ -129,6 +174,16 @@ class _ReportesPageState extends State<ReportesPage> {
                       onSelected: (_) => _elegir(tipo),
                     ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  key: const Key('descargar-excel'),
+                  onPressed: _descargarExcel,
+                  icon: const Icon(Icons.download, size: 18),
+                  label: const Text('Descargar Excel'),
+                ),
               ),
               const SizedBox(height: 20),
               FutureBuilder<Reporte>(

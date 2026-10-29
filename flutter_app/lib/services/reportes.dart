@@ -31,9 +31,13 @@ class CitaReporte {
     this.apartadoPagado = 0,
     this.metodoPago,
     this.propina = 0,
+    this.horaInicio = '',
   });
 
   final String id;
+
+  /// 'HH:MM:SS' de la columna time; '' si no se pidió.
+  final String horaInicio;
 
   /// Solo se usa la parte de fecha (año, mes, día).
   final DateTime fecha;
@@ -78,6 +82,7 @@ class CitaReporte {
       apartadoPagado: pagado,
       metodoPago: MetodoPago.desde(map['metodo_pago']?.toString()),
       propina: numero(map['propina']),
+      horaInicio: map['hora_inicio']?.toString() ?? '',
     );
   }
 }

@@ -322,6 +322,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         empleadoId: empleadoId,
         mostrarBarberos: widget.esOwner,
         repository: _reportes,
+        negocioNombre: widget.negocioNombre,
       ),
       _Seccion.configuracion => ConfiguracionPage(
         negocioId: widget.negocioId,

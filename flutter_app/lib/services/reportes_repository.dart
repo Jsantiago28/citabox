@@ -32,7 +32,7 @@ class SupabaseReportesRepository implements ReportesRepository {
       var query = _client
           .from('citas')
           .select(
-            'id, fecha, precio, estado, metodo_pago, propina, '
+            'id, fecha, hora_inicio, precio, estado, metodo_pago, propina, '
             'cliente_id, empleado_id, servicio_id, '
             'clientes(nombre), servicios(nombre), empleados(nombre), '
             'apartados(monto, estado)',
