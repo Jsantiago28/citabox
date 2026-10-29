@@ -92,6 +92,21 @@ jobs:
           --dart-define=SUPABASE_URL="$SB_URL"
           --dart-define=SUPABASE_PUBLISHABLE_KEY="$SB_KEY"
 
+      # Flutter recorta las fuentes de íconos a los íconos usados pero no
+      # cambia su nombre: con un hash en el nombre, cada versión obliga al
+      # navegador a descargar la fuente nueva.
+      - name: Versionar fuentes
+        working-directory: flutter_app/build/web/assets
+        run: |
+          for fuente in fonts/*.otf packages/*/fonts/*.ttf; do
+            [ -f "$fuente" ] || continue
+            hash=$(sha256sum "$fuente" | cut -c1-10)
+            nuevo="${fuente%.*}.$hash.${fuente##*.}"
+            mv "$fuente" "$nuevo"
+            sed -i "s#\"$fuente\"#\"$nuevo\"#g" FontManifest.json
+            echo "$fuente -> $nuevo"
+          done
+
       # Opcional: con la variable SITE_URL (p. ej. https://reservas.mibarberia.com)
       # la imagen de vista previa de WhatsApp usa una dirección completa.
       - name: Dirección completa para la vista previa
