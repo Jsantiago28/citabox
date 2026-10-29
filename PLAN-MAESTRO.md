@@ -85,7 +85,8 @@ La app React queda solo como referencia (`src/`).
 ### 2. Autenticación y roles ✅
 - ✅ Registro del negocio con código por correo; recuperar contraseña con código.
 - ✅ Invitar barberos: Edge Function `invitar-barbero`; el barbero activa su cuenta con un código.
-- ✅ Permisos del barbero: solo su agenda, sus clientes y sus reportes; no valida apartados ni cambia precios (salvo al cobrar).
+- ✅ Permisos del barbero: solo sus citas, sus apartados y sus reportes (014, en la base); no valida apartados ni cambia precios (salvo al cobrar).
+- ✅ **Decisión (28-oct):** los clientes son del negocio; todos los barberos pueden verlos y darles cita. Cada barbero solo ve el historial de las citas que atendió él.
 - ⬜ Enlaces que abran la app nativa en Android/iOS (solo cuando existan las apps).
 
 ### 3. Negocio ✅
