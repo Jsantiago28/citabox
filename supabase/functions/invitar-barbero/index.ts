@@ -23,6 +23,9 @@ const corsHeaders = {
 const DEBE_FIJAR_PASSWORD = 'debe_fijar_password';
 const CORREO_NO_INVITABLE =  'Ese correo no se puede invitar. Pide a la persona que use otro correo.';
 
+// Máximo de invitaciones por negocio en 24 horas.
+const MAX_INVITACIONES_DIA = 10;
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
@@ -180,6 +183,22 @@ async function invitar(req: Request): Promise<Response> {
   const empleado = await empleadoSinCuenta(usuario, empleadoId, negocioId);
 
   const admin = createClient(url, serviceKey, { auth: sinSesion });
+
+  // Límite diario por negocio: frena el abuso del envío de correos.
+  const desde = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error: conteoError } = await admin
+    .from('perfiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('negocio_id', negocioId)
+    .eq('rol', 'EMPLOYEE')
+    .gt('created_at', desde);
+  if (conteoError) {
+    throw new ErrorHttp(500, 'No se pudo comprobar el límite de invitaciones.');
+  }
+  if ((count ?? 0) >= MAX_INVITACIONES_DIA) {
+    throw new ErrorHttp(429, 'Llegaste al límite de invitaciones de hoy.');
+  }
+
   const userId = await invitarNuevo(admin, email, empleado);
 
   // Deshace la cuenta recién invitada si no se pudo terminar de ligar, para

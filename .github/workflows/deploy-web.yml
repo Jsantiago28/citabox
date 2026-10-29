@@ -143,10 +143,23 @@ jobs:
             exit 1
           fi
 
+      # La función flutter_app/functions/r/[slug].js (vista previa al compartir
+      # el enlace) lee estas dos variables como secretos del proyecto Pages.
+      # Se fijan antes de publicar para que la nueva versión ya las tenga.
+      - name: Variables de la función de vista previa
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ env.CF_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_ACCOUNT }}
+        run: |
+          printf '%s' "$SB_URL" | npx --yes wrangler@3 pages secret put SUPABASE_URL --project-name=barberia-pro
+          printf '%s' "$SB_KEY" | npx --yes wrangler@3 pages secret put SUPABASE_PUBLISHABLE_KEY --project-name=barberia-pro
+
+      # workingDirectory: flutter_app → Pages toma ./functions de ahí.
       - name: Publicar en Cloudflare Pages
         id: desplegar
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ env.CF_TOKEN }}
           accountId: ${{ env.CF_ACCOUNT }}
-          command: pages deploy flutter_app/build/web --project-name=barberia-pro --branch=master --commit-dirty=true
+          workingDirectory: flutter_app
+          command: pages deploy build/web --project-name=barberia-pro --branch=master --commit-dirty=true

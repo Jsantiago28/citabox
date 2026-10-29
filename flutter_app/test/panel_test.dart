@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:barberiapro/models/cita.dart';
 import 'package:barberiapro/pages/agenda_page.dart';
 import 'package:barberiapro/pages/dashboard_page.dart';
 import 'package:barberiapro/services/citas_repository.dart';
+import 'package:barberiapro/services/primer_uso_repository.dart';
 import 'package:barberiapro/utils/formato.dart';
 
 void main() {
+  _primerUsoTests();
   test('resumenPorBarbero suma por barbero y ordena por cobrado', () {
     final filas = resumenPorBarbero(const [
       Cita(
@@ -269,6 +272,91 @@ List<Cita> _citasDeEjemplo() => const [
     empleadoNombre: 'Miguel',
   ),
 ];
+
+class _FakePrimerUso implements PrimerUsoRepository {
+  _FakePrimerUso(this.estado);
+
+  final PrimerUso estado;
+
+  @override
+  Future<PrimerUso> cargar(String negocioId) async => estado;
+}
+
+void _primerUsoTests() {
+  Future<List<String>> montar(WidgetTester tester, PrimerUso estado) async {
+    _pantallaAncha(tester);
+    final irA = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DashboardPage(
+            negocioId: 'n1',
+            negocioNombre: 'Barbería El Jefe',
+            nombre: 'Juan',
+            repository: _FakeCitasRepository(_citasDeEjemplo()),
+            onVerAgenda: () {},
+            hoy: DateTime(2026, 9, 18),
+            primerUsoRepository: _FakePrimerUso(estado),
+            onIr: irA.add,
+            baseEnlace: Uri.parse('https://app.test/'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    return irA;
+  }
+
+  testWidgets('configura tu negocio muestra pasos y navega', (tester) async {
+    final irA = await montar(
+      tester,
+      const PrimerUso(slug: 'el-jefe', horario: true),
+    );
+    expect(find.byKey(const Key('configura-tu-negocio')), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('paso-servicios')),
+        matching: find.text('Ir'),
+      ),
+    );
+    expect(irA, ['servicios']);
+  });
+
+  testWidgets('la tarjeta desaparece al completar todo', (tester) async {
+    await montar(
+      tester,
+      const PrimerUso(
+        slug: 'el-jefe',
+        horario: true,
+        servicio: true,
+        barbero: true,
+        logo: true,
+      ),
+    );
+    expect(find.byKey(const Key('configura-tu-negocio')), findsOneWidget);
+    final copiado = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copiado.add((call.arguments as Map)['text'] as String);
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await tester.tap(find.text('Copiar enlace'));
+    await tester.pumpAndSettle();
+    expect(copiado, ['https://app.test/r/el-jefe']);
+    expect(find.byKey(const Key('configura-tu-negocio')), findsNothing);
+  });
+}
 
 class _FakeCitasRepository implements CitasRepository {
   _FakeCitasRepository(this.citas, {this.falla = false});

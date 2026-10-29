@@ -1,9 +1,13 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/cita.dart';
 import '../services/apartados_repository.dart';
 import '../services/citas_repository.dart';
+import '../services/primer_uso_repository.dart';
 import '../theme.dart';
+import '../utils/enlace_publico.dart';
 import '../utils/formato.dart';
 import '../widgets/estado_cita_badge.dart';
 
@@ -21,6 +25,9 @@ class DashboardPage extends StatefulWidget {
     this.apartadosRepository,
     this.onVerApartados,
     this.mostrarPorBarbero = true,
+    this.primerUsoRepository,
+    this.onIr,
+    this.baseEnlace,
   });
 
   final String negocioId;
@@ -43,6 +50,15 @@ class DashboardPage extends StatefulWidget {
   /// Muestra la tarjeta "Hoy por barbero" (solo para el dueño).
   final bool mostrarPorBarbero;
 
+  /// Si se indica (solo dueño), muestra la tarjeta "Configura tu negocio".
+  final PrimerUsoRepository? primerUsoRepository;
+
+  /// Lleva a una sección: 'horario', 'servicios', 'barberos' o 'logo'.
+  final void Function(String seccion)? onIr;
+
+  /// Base del enlace público; por defecto `Uri.base` en web.
+  final Uri? baseEnlace;
+
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
@@ -50,6 +66,29 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   late Future<List<Cita>> _citas;
   late Future<int> _porValidar;
+  Future<PrimerUso?>? _primerUso;
+  bool _enlaceCompartido = false;
+
+  Future<PrimerUso?> _cargarPrimerUso() async {
+    final repository = widget.primerUsoRepository;
+    if (repository == null) return null;
+    try {
+      return await repository.cargar(widget.negocioId);
+    } catch (_) {
+      return null; // la tarjeta es complementaria
+    }
+  }
+
+  Future<void> _copiarEnlace(String slug) async {
+    final base = widget.baseEnlace ?? (kIsWeb ? Uri.base : null);
+    await Clipboard.setData(
+      ClipboardData(text: enlaceReserva(slug, base: base)),
+    );
+    if (!mounted) return;
+    setState(() => _enlaceCompartido = true);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Enlace copiado')));
+  }
 
   DateTime get _hoy => widget.hoy ?? DateTime.now();
 
@@ -58,6 +97,7 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     _citas = _cargar();
     _porValidar = _contarApartados();
+    _primerUso = _cargarPrimerUso();
   }
 
   // El aviso es complementario: si falla, el panel sigue igual.
@@ -92,6 +132,7 @@ class _DashboardPageState extends State<DashboardPage> {
             setState(() {
               _citas = _cargar();
               _porValidar = _contarApartados();
+              _primerUso = _cargarPrimerUso();
             });
             await _citas;
           },
@@ -105,6 +146,40 @@ class _DashboardPageState extends State<DashboardPage> {
                 mostrarNegocio: ancho,
               ),
               const SizedBox(height: 20),
+              if (widget.primerUsoRepository != null)
+                FutureBuilder<PrimerUso?>(
+                  future: _primerUso,
+                  builder: (context, snapshot) {
+                    final estado = snapshot.data;
+                    if (estado == null) return const SizedBox.shrink();
+                    final pasos = [
+                      _Paso('horario', 'Define tu horario', estado.horario),
+                      _Paso(
+                        'servicios',
+                        'Agrega al menos un servicio',
+                        estado.servicio,
+                      ),
+                      _Paso(
+                        'barberos',
+                        'Agrega al menos un barbero',
+                        estado.barbero,
+                      ),
+                      _Paso('logo', 'Sube tu logo', estado.logo),
+                    ];
+                    if (pasos.every((p) => p.hecho) && _enlaceCompartido) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _ConfiguraNegocio(
+                        pasos: pasos,
+                        enlaceCompartido: _enlaceCompartido,
+                        onIr: widget.onIr,
+                        onCopiar: () => _copiarEnlace(estado.slug),
+                      ),
+                    );
+                  },
+                ),
               FutureBuilder<int>(
                 future: _porValidar,
                 builder: (context, snapshot) {
@@ -167,6 +242,101 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 }
 
+class _Paso {
+  const _Paso(this.seccion, this.titulo, this.hecho);
+
+  final String seccion;
+  final String titulo;
+  final bool hecho;
+}
+
+/// Checklist de primer uso para el dueño.
+class _ConfiguraNegocio extends StatelessWidget {
+  const _ConfiguraNegocio({
+    required this.pasos,
+    required this.enlaceCompartido,
+    required this.onIr,
+    required this.onCopiar,
+  });
+
+  final List<_Paso> pasos;
+  final bool enlaceCompartido;
+  final void Function(String seccion)? onIr;
+  final VoidCallback onCopiar;
+
+  Widget _fila(
+    BuildContext context,
+    String clave,
+    String titulo,
+    bool hecho, {
+    required String accion,
+    required VoidCallback? onTap,
+  }) {
+    return Padding(
+      key: Key('paso-$clave'),
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(
+            hecho ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: hecho ? Colors.green : Theme.of(context).disabledColor,
+            size: 22,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              titulo,
+              style: TextStyle(
+                decoration: hecho ? TextDecoration.lineThrough : null,
+              ),
+            ),
+          ),
+          if (!hecho && onTap != null)
+            TextButton(onPressed: onTap, child: Text(accion)),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: const Key('configura-tu-negocio'),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Configura tu negocio',
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            for (final paso in pasos)
+              _fila(
+                context,
+                paso.seccion,
+                paso.titulo,
+                paso.hecho,
+                accion: 'Ir',
+                onTap: onIr == null ? null : () => onIr!(paso.seccion),
+              ),
+            _fila(
+              context,
+              'enlace',
+              'Comparte tu enlace de reservas',
+              enlaceCompartido,
+              accion: 'Copiar enlace',
+              onTap: onCopiar,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Una fila del cierre de caja por barbero.
 class FilaBarbero {
   const FilaBarbero({
@@ -220,7 +390,9 @@ class _HoyPorBarbero extends StatelessWidget {
       child: Row(
         children: [
           Expanded(flex: 3, child: Text(a, style: estilo)),
-          Expanded(child: Text(b, style: estilo, textAlign: TextAlign.right)),
+          Expanded(
+            child: Text(b, style: estilo, textAlign: TextAlign.right),
+          ),
           Expanded(
             flex: 2,
             child: Text(c, style: estilo, textAlign: TextAlign.right),
