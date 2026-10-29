@@ -243,6 +243,35 @@ void main() {
     expect(find.text('Cita creada.'), findsOneWidget);
   });
 
+  testWidgets('owner without barbers can attend the appointment himself', (
+    tester,
+  ) async {
+    final citas = _FakeCitas([]);
+    final agenda = _FakeAgenda(sinBarberos: true);
+    await _abrirAgenda(tester, citas, agenda);
+
+    await tester.tap(find.text('Nueva cita'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ana López'));
+    await tester.pumpAndSettle();
+    await _elegir(tester, 'Servicio', 'Barba · 20 min');
+
+    await tester.ensureVisible(find.byKey(const Key('atiendo-yo')));
+    await tester.tap(find.byKey(const Key('atiendo-yo')));
+    await tester.pumpAndSettle();
+    expect(agenda.duenoRegistrado, 1);
+    expect(find.byKey(const Key('atiendo-yo')), findsNothing);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Hora de inicio'),
+      '10:00',
+    );
+    await tester.tap(find.text('Guardar cita'));
+    await tester.pumpAndSettle();
+
+    expect(agenda.creadas.single.empleadoId, 'b2');
+  });
+
   testWidgets('barber agenda fixes the barber, adds a quick client and '
       'explains overlaps', (tester) async {
     final citas = _FakeCitas([]);
@@ -911,8 +940,12 @@ class _FakeAgenda implements AgendaRepository {
     this.fallosAlCrear,
     this.apartado,
     this.errorAlEditar,
+    this.sinBarberos = false,
   });
 
+  /// Negocio sin barberos hasta que el dueño pulsa "Atiendo yo".
+  bool sinBarberos;
+  var duenoRegistrado = 0;
   final Object? errorAlCrear;
   final Object? errorAlEditar;
 
@@ -934,13 +967,19 @@ class _FakeAgenda implements AgendaRepository {
   }
 
   @override
-  Future<CatalogoAgenda> catalogo(String negocioId) async =>
-      const CatalogoAgenda(
-        clientes: [
+  Future<BarberoAgenda> registrarDuenoComoBarbero(String negocioId) async {
+    duenoRegistrado++;
+    sinBarberos = false;
+    return const BarberoAgenda(id: 'b2', nombre: 'Miguel');
+  }
+
+  @override
+  Future<CatalogoAgenda> catalogo(String negocioId) async => CatalogoAgenda(
+        clientes: const [
           Cliente(id: 'cl1', nombre: 'Ana López', telefono: '809-555-1111'),
           Cliente(id: 'cl2', nombre: 'Pedro Gómez'),
         ],
-        servicios: [
+        servicios: const [
           ServicioAgenda(
             id: 's1',
             nombre: 'Corte',
@@ -954,11 +993,13 @@ class _FakeAgenda implements AgendaRepository {
             duracionMinutos: 20,
           ),
         ],
-        barberos: [
-          BarberoAgenda(id: 'b1', nombre: 'Luis'),
-          BarberoAgenda(id: 'b2', nombre: 'Miguel'),
-        ],
-        serviciosPorBarbero: {
+        barberos: sinBarberos
+            ? const []
+            : const [
+                BarberoAgenda(id: 'b1', nombre: 'Luis'),
+                BarberoAgenda(id: 'b2', nombre: 'Miguel'),
+              ],
+        serviciosPorBarbero: const {
           'b1': {'s1'},
         },
       );

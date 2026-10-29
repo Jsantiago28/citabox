@@ -142,6 +142,10 @@ abstract interface class AgendaRepository {
   /// no existe.
   Future<Cliente> clienteDePaso(String negocioId);
 
+  /// El dueño que trabaja solo se registra como barbero: crea (o reactiva)
+  /// la ficha de empleado ligada a su perfil.
+  Future<BarberoAgenda> registrarDuenoComoBarbero(String negocioId);
+
   /// Crea la cita, por defecto en estado PENDIENTE. "Atender ahora" la crea
   /// en LLEGO (el trigger de 006 solo valida los UPDATE de estado).
   Future<void> crearCita({
@@ -250,6 +254,50 @@ class SupabaseAgendaRepository implements AgendaRepository {
         .select('id, nombre, telefono, email, notas, activo')
         .single();
     return Cliente.fromMap(row);
+  }
+
+  @override
+  Future<BarberoAgenda> registrarDuenoComoBarbero(String negocioId) async {
+    final perfilId = _client.auth.currentUser?.id;
+    if (perfilId == null) throw StateError('Inicia sesión de nuevo.');
+
+    final existente = await _client
+        .from('empleados')
+        .select('id, nombre')
+        .eq('negocio_id', negocioId)
+        .eq('perfil_id', perfilId)
+        .maybeSingle();
+    if (existente != null) {
+      await _client
+          .from('empleados')
+          .update({'activo': true})
+          .eq('negocio_id', negocioId)
+          .eq('id', existente['id']);
+      return BarberoAgenda(
+        id: existente['id'].toString(),
+        nombre: existente['nombre'].toString(),
+      );
+    }
+
+    final perfil = await _client
+        .from('perfiles')
+        .select('nombre, telefono')
+        .eq('id', perfilId)
+        .single();
+    final creado = await _client
+        .from('empleados')
+        .insert({
+          'negocio_id': negocioId,
+          'perfil_id': perfilId,
+          'nombre': perfil['nombre'],
+          'telefono': perfil['telefono'],
+        })
+        .select('id, nombre')
+        .single();
+    return BarberoAgenda(
+      id: creado['id'].toString(),
+      nombre: creado['nombre'].toString(),
+    );
   }
 
   @override

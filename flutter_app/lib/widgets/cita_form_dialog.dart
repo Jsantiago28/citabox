@@ -146,6 +146,30 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
     }
   }
 
+  /// El dueño sin barberos se registra como barbero y queda elegido.
+  Future<void> _atiendoYo() async {
+    setState(() => _guardando = true);
+    try {
+      final barbero = await widget.repository.registrarDuenoComoBarbero(
+        widget.negocioId,
+      );
+      final catalogo = await widget.repository.catalogo(widget.negocioId);
+      if (!mounted) return;
+      setState(() {
+        _catalogo = catalogo;
+        _empleadoId = barbero.id;
+      });
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(content: Text('No se pudo registrarte como barbero.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
   static String _textoPrecio(num precio) =>
       precio == precio.roundToDouble() ? precio.round().toString() : '$precio';
 
@@ -448,6 +472,19 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
                 validator: (valor) =>
                     valor == null ? 'Elige un barbero.' : null,
               ),
+            if (widget.empleadoFijo == null &&
+                widget.esOwner &&
+                _catalogo!.barberos.isEmpty) ...[
+              const SizedBox(height: 8),
+              const Text('Aún no tienes barberos. Si atiendes tú mismo:'),
+              const SizedBox(height: 6),
+              OutlinedButton.icon(
+                key: const Key('atiendo-yo'),
+                onPressed: _guardando ? null : _atiendoYo,
+                icon: const Icon(Icons.content_cut, size: 18),
+                label: const Text('Atiendo yo'),
+              ),
+            ],
             const SizedBox(height: 14),
             OutlinedButton.icon(
               onPressed: _guardando ? null : _elegirFecha,
