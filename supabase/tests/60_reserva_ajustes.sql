@@ -149,3 +149,18 @@ do $$ begin
 end $$;
 
 \echo 'Todas las pruebas de ajustes de la reserva pasaron.'
+
+-- 012: el catálogo público devuelve el ícono del servicio.
+reset role;
+update servicios set icono = 'secador'
+ where negocio_id = (select id from negocios where slug = 'negocio-g');
+do $$ begin
+  if (select reserva_catalogo('negocio-g')->'servicios'->0->>'icono') is distinct from 'secador' then
+    raise exception 'FALLO: reserva_catalogo no devuelve el ícono del servicio';
+  end if;
+end $$;
+do $$ begin
+  update servicios set icono = 'Mal Ícono!' where negocio_id = (select id from negocios where slug = 'negocio-g');
+  raise exception 'FALLO: se aceptó una clave de ícono inválida';
+exception when check_violation then null;
+end $$;

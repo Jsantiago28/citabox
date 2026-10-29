@@ -6,6 +6,7 @@ class Servicio {
     this.precio = 0,
     this.duracionMinutos = 30,
     this.activo = true,
+    this.icono,
   });
 
   final String id;
@@ -14,6 +15,9 @@ class Servicio {
   final num precio;
   final int duracionMinutos;
   final bool activo;
+
+  /// Clave del ícono (utils/iconos_servicio.dart); null = tijera.
+  final String? icono;
 
   factory Servicio.fromMap(Map<String, dynamic> map) {
     return Servicio(
@@ -24,6 +28,7 @@ class Servicio {
       duracionMinutos:
           int.tryParse(map['duracion_minutos']?.toString() ?? '') ?? 0,
       activo: map['activo'] == true,
+      icono: map['icono']?.toString(),
     );
   }
 }

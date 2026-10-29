@@ -6,6 +6,7 @@ import '../services/reserva_repository.dart';
 import '../theme.dart';
 import '../utils/enlace_publico.dart';
 import '../utils/formato.dart';
+import '../utils/iconos_servicio.dart';
 import '../utils/navegador.dart';
 import '../widgets/reserva_publica.dart';
 import 'mi_cita_page.dart';
@@ -418,7 +419,7 @@ class _ReservaPageState extends State<ReservaPage> {
                 '${servicio.duracionMinutos} min',
             if (servicio.descripcion.isNotEmpty) servicio.descripcion,
           ].join('\n'),
-          icono: Icons.content_cut,
+          icono: iconoServicio(servicio.icono),
           onTap: () => _elegirServicio(servicio),
         );
       },
@@ -583,7 +584,7 @@ class _ReservaPageState extends State<ReservaPage> {
           child: Column(
             children: [
               FilaDato(
-                icono: Icons.content_cut,
+                icono: iconoServicio(servicio.icono),
                 etiqueta: 'Servicio',
                 valor: '${servicio.nombre} · ${servicio.duracionMinutos} min',
               ),

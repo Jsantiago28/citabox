@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../models/catalogo_servicios.dart';
 import '../models/servicio.dart';
 import '../services/servicios_repository.dart';
 import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
+import '../utils/iconos_servicio.dart';
 import '../widgets/etiqueta.dart';
 
 class ServiciosPage extends StatefulWidget {
@@ -80,6 +82,40 @@ class _ServiciosPageState extends State<ServiciosPage> {
     } catch (error) {
       if (mounted) {
         _mostrarError(mensajeDeError(error, 'No se pudo guardar el servicio.'));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _seleccionarServicios() async {
+    final elegidos = await showDialog<List<Map<String, Object?>>>(
+      context: context,
+      builder: (context) => _SeleccionarServiciosDialog(
+        existentes: {for (final s in _servicios) _clave(s.nombre)},
+        moneda: widget.moneda,
+      ),
+    );
+    if (elegidos == null || elegidos.isEmpty || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      await widget.repository.crearVarios(
+        negocioId: widget.negocioId,
+        servicios: elegidos,
+      );
+      await _cargarServicios();
+      if (mounted) {
+        final n = elegidos.length;
+        _mostrarError(
+          n == 1 ? 'Se agregó 1 servicio.' : 'Se agregaron $n servicios.',
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        _mostrarError(
+          mensajeDeError(error, 'No se pudieron agregar los servicios.'),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -164,6 +200,14 @@ class _ServiciosPageState extends State<ServiciosPage> {
           label: const Text('Nuevo servicio'),
         );
 
+        final seleccionar = OutlinedButton.icon(
+          key: const Key('seleccionar-servicios'),
+          onPressed: _saving ? null : _seleccionarServicios,
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
+          icon: const Icon(Icons.checklist, size: 18),
+          label: const Text('Seleccionar servicios'),
+        );
+
         return Padding(
           padding: EdgeInsets.all(isWide ? 28 : 16),
           child: Column(
@@ -188,11 +232,21 @@ class _ServiciosPageState extends State<ServiciosPage> {
                       ],
                     ),
                   ),
-                  if (isWide) ...[buscador, const SizedBox(width: 12)],
+                  if (isWide) ...[
+                    buscador,
+                    const SizedBox(width: 12),
+                    seleccionar,
+                    const SizedBox(width: 12),
+                  ],
                   nuevo,
                 ],
               ),
-              if (!isWide) ...[const SizedBox(height: 16), buscador],
+              if (!isWide) ...[
+                const SizedBox(height: 12),
+                seleccionar,
+                const SizedBox(height: 12),
+                buscador,
+              ],
               const SizedBox(height: 16),
               Expanded(child: _buildContent(servicios, isWide)),
             ],
@@ -225,7 +279,8 @@ class _ServiciosPageState extends State<ServiciosPage> {
       return Center(
         child: Text(
           _servicios.isEmpty
-              ? 'Todavía no hay servicios.\nAgrega el primero con "Nuevo servicio".'
+              ? 'Todavía no hay servicios.\nUsa "Seleccionar servicios" para '
+                    'elegirlos de una lista,\no "Nuevo servicio" para crear el tuyo.'
               : 'No hay coincidencias.',
           textAlign: TextAlign.center,
         ),
@@ -290,11 +345,11 @@ class _ServiciosPageState extends State<ServiciosPage> {
         padding: const EdgeInsets.fromLTRB(16, 10, 4, 10),
         child: Row(
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 18,
               backgroundColor: Marca.negro,
               child: Icon(
-                Icons.content_cut,
+                iconoServicio(servicio.icono),
                 size: 18,
                 color: Marca.doradoClaro,
               ),
@@ -387,11 +442,13 @@ class _ServicioFormDialogState extends State<_ServicioFormDialog> {
   late final TextEditingController _precioController;
   late final TextEditingController _duracionController;
   late bool _activo;
+  late String _icono;
 
   @override
   void initState() {
     super.initState();
     final servicio = widget.servicio;
+    _icono = servicio?.icono ?? iconoServicioPorDefecto;
     _nombreController = TextEditingController(text: servicio?.nombre ?? '');
     _descripcionController = TextEditingController(
       text: servicio?.descripcion ?? '',
@@ -423,6 +480,7 @@ class _ServicioFormDialogState extends State<_ServicioFormDialog> {
       'precio': _leerPrecio(_precioController.text),
       'duracion_minutos': int.parse(_duracionController.text.trim()),
       'activo': _activo,
+      'icono': _icono,
     });
   }
 
@@ -507,12 +565,37 @@ class _ServicioFormDialogState extends State<_ServicioFormDialog> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Ícono',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final entrada in iconosServicio.entries)
+                      ChoiceChip(
+                        key: Key('icono-${entrada.key}'),
+                        showCheckmark: false,
+                        label: Icon(entrada.value, size: 18),
+                        selected: _icono == entrada.key,
+                        onSelected: (_) => setState(() => _icono = entrada.key),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 SwitchListTile(
                   key: const Key('servicio-activo'),
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Activo'),
-                  subtitle: const Text('Disponible para reservar.'),
+                  title: const Text('Visible en reservas'),
+                  subtitle: const Text(
+                    'Los clientes pueden elegirlo al reservar.',
+                  ),
                   value: _activo,
                   onChanged: (value) => setState(() => _activo = value),
                 ),
@@ -531,6 +614,172 @@ class _ServicioFormDialogState extends State<_ServicioFormDialog> {
           child: Text(esNuevo ? 'Crear servicio' : 'Guardar cambios'),
         ),
       ],
+    );
+  }
+}
+
+/// Nombre normalizado para no agregar dos veces el mismo servicio.
+String _clave(String nombre) => nombre.trim().toLowerCase();
+
+/// Catálogo sugerido: el dueño marca los servicios que ofrece y les pone
+/// precio. Devuelve las filas a crear.
+class _SeleccionarServiciosDialog extends StatefulWidget {
+  const _SeleccionarServiciosDialog({
+    required this.existentes,
+    required this.moneda,
+  });
+
+  final Set<String> existentes;
+  final String moneda;
+
+  @override
+  State<_SeleccionarServiciosDialog> createState() =>
+      _SeleccionarServiciosDialogState();
+}
+
+class _SeleccionarServiciosDialogState
+    extends State<_SeleccionarServiciosDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _precios = <String, TextEditingController>{};
+
+  @override
+  void dispose() {
+    for (final controller in _precios.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _alternar(ServicioSugerido sugerido) {
+    setState(() {
+      final quitado = _precios.remove(sugerido.nombre);
+      if (quitado != null) {
+        quitado.dispose();
+      } else {
+        _precios[sugerido.nombre] = TextEditingController();
+      }
+    });
+  }
+
+  void _agregar() {
+    if (_precios.isEmpty || !_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop([
+      for (final sugerido in catalogoSalon)
+        if (_precios[sugerido.nombre] case final precio?)
+          <String, Object?>{
+            'nombre': sugerido.nombre,
+            'precio': _leerPrecio(precio.text),
+            'duracion_minutos': sugerido.duracionMinutos,
+            'icono': sugerido.icono,
+            'activo': true,
+          },
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = _precios.length;
+    return AlertDialog(
+      title: const Text('Seleccionar servicios'),
+      content: SizedBox(
+        width: 520,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Marca los servicios que ofreces y escribe tu precio. '
+                'La duración la puedes cambiar después.',
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final sugerido in catalogoSalon) _sugerido(sugerido),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const Key('agregar-seleccionados'),
+          onPressed: n == 0 ? null : _agregar,
+          child: Text(n == 0 ? 'Agregar' : 'Agregar $n'),
+        ),
+      ],
+    );
+  }
+
+  Widget _sugerido(ServicioSugerido sugerido) {
+    final yaExiste = widget.existentes.contains(_clave(sugerido.nombre));
+    final precio = _precios[sugerido.nombre];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Checkbox(
+            key: Key('sugerido-${sugerido.nombre}'),
+            value: yaExiste || precio != null,
+            onChanged: yaExiste ? null : (_) => _alternar(sugerido),
+          ),
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: Marca.negro,
+            child: Icon(
+              iconoServicio(sugerido.icono),
+              size: 16,
+              color: Marca.doradoClaro,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(sugerido.nombre),
+                Text(
+                  yaExiste
+                      ? 'Ya está en tus servicios'
+                      : formatoDuracion(sugerido.duracionMinutos),
+                  style: const TextStyle(color: Marca.textoSuave, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          if (precio != null)
+            SizedBox(
+              width: 120,
+              child: TextFormField(
+                key: Key('precio-${sugerido.nombre}'),
+                controller: precio,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  labelText: 'Precio',
+                  prefixText: simboloMoneda(widget.moneda),
+                ),
+                validator: (value) {
+                  final numero = _leerPrecio(value ?? '');
+                  if (numero == null) return 'Escribe el precio';
+                  if (numero < 0) return 'No negativo';
+                  return null;
+                },
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

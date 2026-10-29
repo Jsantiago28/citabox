@@ -344,3 +344,9 @@ Pruebas: `supabase/tests/50_seguridad_reservas_y_roles.sql`.
 
 Pruebas: `supabase/tests/60_reserva_ajustes.sql` (negocio `negocio-g`, rol
 `anon` sin JWT).
+
+## 012_iconos_de_servicios.sql
+
+Agrega `servicios.icono`, una clave corta opcional (`secador`, `tijera`,
+`tinte`…) que la app convierte en ícono, y la devuelve en `reserva_catalogo`
+para que el cliente vea el ícono al reservar.

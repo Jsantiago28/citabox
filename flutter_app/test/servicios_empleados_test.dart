@@ -46,6 +46,41 @@ void main() {
       expect(repository.ultimosDatos?['activo'], true);
     });
 
+    testWidgets('agrega servicios del catálogo con el precio del dueño', (
+      tester,
+    ) async {
+      final repository = _FakeServiciosRepository([
+        const Servicio(id: 's1', nombre: 'Lavado con rolos', precio: 400),
+      ]);
+      await tester.pumpWidget(
+        _app(ServiciosPage(negocioId: 'negocio-1', repository: repository)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('seleccionar-servicios')));
+      await tester.pumpAndSettle();
+      // "Lavado con rolos" ya existe: no se puede volver a agregar.
+      expect(find.text('Ya está en tus servicios'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('sugerido-Planchado')));
+      await tester.pumpAndSettle();
+      // Sin precio no se agrega.
+      await tester.tap(find.byKey(const Key('agregar-seleccionados')));
+      await tester.pumpAndSettle();
+      expect(find.text('Escribe el precio'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('precio-Planchado')), '600');
+      await tester.tap(find.byKey(const Key('agregar-seleccionados')));
+      await tester.pumpAndSettle();
+
+      final creado = repository.creadosEnLote.single;
+      expect(creado['nombre'], 'Planchado');
+      expect(creado['precio'], 600);
+      expect(creado['duracion_minutos'], 45);
+      expect(creado['icono'], 'plancha');
+      expect(find.text('Planchado'), findsOneWidget);
+    });
+
     testWidgets('valida precio negativo y duración en cero', (tester) async {
       final repository = _FakeServiciosRepository([]);
 
@@ -395,6 +430,27 @@ class _FakeServiciosRepository implements ServiciosRepository {
     } else {
       servicios[servicios.indexWhere((item) => item.id == servicioId)] =
           servicio;
+    }
+  }
+
+  final creadosEnLote = <Map<String, Object?>>[];
+
+  @override
+  Future<void> crearVarios({
+    required String negocioId,
+    required List<Map<String, Object?>> servicios,
+  }) async {
+    creadosEnLote.addAll(servicios);
+    for (final datos in servicios) {
+      this.servicios.add(
+        Servicio(
+          id: 'lote-${this.servicios.length}',
+          nombre: datos['nombre'].toString(),
+          precio: datos['precio'] as num,
+          duracionMinutos: datos['duracion_minutos'] as int,
+          icono: datos['icono'] as String?,
+        ),
+      );
     }
   }
 

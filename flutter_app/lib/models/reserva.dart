@@ -88,6 +88,7 @@ class ServicioPublico {
     required this.precio,
     required this.duracionMinutos,
     this.descripcion = '',
+    this.icono,
   });
 
   final String id;
@@ -95,6 +96,7 @@ class ServicioPublico {
   final String descripcion;
   final num precio;
   final int duracionMinutos;
+  final String? icono;
 
   factory ServicioPublico.fromMap(Map<String, dynamic> map) => ServicioPublico(
     id: _texto(map['id']),
@@ -102,6 +104,7 @@ class ServicioPublico {
     descripcion: _texto(map['descripcion']),
     precio: _numero(map['precio']),
     duracionMinutos: _entero(map['duracion_minutos']),
+    icono: map['icono']?.toString(),
   );
 }
 

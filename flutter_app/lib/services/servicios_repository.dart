@@ -17,6 +17,12 @@ abstract interface class ServiciosRepository {
     required String servicioId,
     required bool activo,
   });
+
+  /// Crea de una vez los servicios elegidos del catálogo sugerido.
+  Future<void> crearVarios({
+    required String negocioId,
+    required List<Map<String, Object?>> servicios,
+  });
 }
 
 class SupabaseServiciosRepository implements ServiciosRepository {
@@ -28,7 +34,9 @@ class SupabaseServiciosRepository implements ServiciosRepository {
   Future<List<Servicio>> listar(String negocioId) async {
     final rows = await _client
         .from('servicios')
-        .select('id, nombre, descripcion, precio, duracion_minutos, activo')
+        .select(
+          'id, nombre, descripcion, precio, duracion_minutos, activo, icono',
+        )
         .eq('negocio_id', negocioId)
         .order('nombre');
 
@@ -56,6 +64,17 @@ class SupabaseServiciosRepository implements ServiciosRepository {
         .eq('id', servicioId)
         .select('id');
     exigirFilas(filas);
+  }
+
+  @override
+  Future<void> crearVarios({
+    required String negocioId,
+    required List<Map<String, Object?>> servicios,
+  }) async {
+    if (servicios.isEmpty) return;
+    await _client.from('servicios').insert([
+      for (final datos in servicios) {...datos, 'negocio_id': negocioId},
+    ]);
   }
 
   @override
