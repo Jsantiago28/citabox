@@ -29,9 +29,12 @@
 /version.json
   Cache-Control: no-cache
 
-# Recursos que cambian poco.
+# assets/ tampoco cambia de nombre entre versiones (por ejemplo la fuente de
+# íconos, que Flutter recorta a los íconos usados): se revalida siempre.
 /assets/*
-  Cache-Control: public, max-age=86400, must-revalidate
+  Cache-Control: no-cache
+
+# Recursos que cambian poco.
 /icons/*
   Cache-Control: public, max-age=604800
 /canvaskit/*
