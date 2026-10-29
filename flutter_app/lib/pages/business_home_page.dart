@@ -14,8 +14,10 @@ import '../services/plataforma_repository.dart';
 import '../services/servicios_repository.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
+import '../utils/fotos.dart';
 import '../widgets/logo_barberia.dart';
 import '../widgets/reportar_problema_dialog.dart';
+import '../widgets/ya_pague_dialog.dart';
 import 'agenda_page.dart';
 import 'apartados_page.dart';
 import 'clientes_page.dart';
@@ -266,6 +268,24 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
     }
   }
 
+  void _yaPague() {
+    mostrarYaPague(
+      context,
+      soporte:
+          widget.soporteRepository ??
+          SupabaseSoporteRepository(Supabase.instance.client),
+      negocioId: widget.negocioId,
+      negocioNombre: widget.negocioNombre,
+      subirRecibo: (foto) => subirFotoDelNegocio(
+        Supabase.instance.client,
+        negocioId: widget.negocioId,
+        nombre: 'recibo',
+        bytes: foto.bytes,
+        tipo: foto.tipo,
+      ),
+    );
+  }
+
   void _reportar() {
     mostrarReportarProblema(
       context,
@@ -400,7 +420,10 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
                   future: _aviso,
                   builder: (_, aviso) => aviso.data == null
                       ? const SizedBox.shrink()
-                      : _BannerSuscripcion(aviso: aviso.data!),
+                      : _BannerSuscripcion(
+                          aviso: aviso.data!,
+                          onYaPague: _yaPague,
+                        ),
                 ),
                 Expanded(child: pagina),
               ],
@@ -575,9 +598,10 @@ class _MenuLateral extends StatelessWidget {
 }
 
 class _BannerSuscripcion extends StatelessWidget {
-  const _BannerSuscripcion({required this.aviso});
+  const _BannerSuscripcion({required this.aviso, required this.onYaPague});
 
   final AvisoSuscripcion aviso;
+  final VoidCallback onYaPague;
 
   @override
   Widget build(BuildContext context) {
@@ -601,6 +625,16 @@ class _BannerSuscripcion extends StatelessWidget {
               aviso.texto,
               style: TextStyle(color: color, fontWeight: FontWeight.w600),
             ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            key: const Key('ya-pague'),
+            onPressed: onYaPague,
+            style: FilledButton.styleFrom(
+              backgroundColor: color,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: const Text('Ya pagué'),
           ),
         ],
       ),
