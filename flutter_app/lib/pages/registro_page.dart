@@ -4,6 +4,7 @@ import '../models/registro_negocio.dart';
 import '../services/registro_repository.dart';
 import '../theme.dart';
 import '../utils/slug.dart';
+import '../widgets/consentimiento_check.dart';
 import '../widgets/logo_barberia.dart';
 
 class RegistroPage extends StatefulWidget {
@@ -45,6 +46,7 @@ class _RegistroPageState extends State<RegistroPage> {
 
   bool _slugEditadoManualmente = false;
   bool _enviando = false;
+  bool _aceptaTerminos = false;
   bool _esperandoConfirmacion = false;
   String? _error;
   String? _aviso;
@@ -439,7 +441,21 @@ class _RegistroPageState extends State<RegistroPage> {
                   : null,
             ),
           ],
-          const SizedBox(height: 20),
+          if (widget.pendiente == null) ...[
+            const SizedBox(height: 12),
+            ConsentimientoCheck(
+              key: const Key('registro-consentimiento'),
+              texto: 'Acepto los términos y la política de privacidad.',
+              enlaces: const {
+                'Ver términos': '/terminos',
+                'Ver política de privacidad': '/privacidad',
+              },
+              valor: _aceptaTerminos,
+              onChanged: (v) => setState(() => _aceptaTerminos = v),
+              mensajeError: 'Debes aceptar los términos y la privacidad.',
+            ),
+          ],
+          const SizedBox(height: 12),
           BotonDorado(
             onPressed: _enviando ? null : _enviar,
             etiqueta: _enviando ? 'Creando…' : 'Crear mi negocio',

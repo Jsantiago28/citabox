@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../models/cita.dart';
@@ -7,6 +9,7 @@ import '../services/ficha_cliente.dart';
 import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
+import '../utils/navegador.dart';
 import '../utils/whatsapp.dart';
 import '../widgets/estado_cita_badge.dart';
 import '../widgets/etiqueta.dart';
@@ -118,6 +121,93 @@ class _ClienteFichaState extends State<ClienteFicha> {
       }
     } finally {
       if (mounted) setState(() => _guardandoNotas = false);
+    }
+  }
+
+  /// Derecho de acceso: descarga un JSON con el cliente y sus citas.
+  void _exportarDatos() {
+    final cliente = widget.cliente;
+    final datos = {
+      'exportado_en': DateTime.now().toIso8601String(),
+      'cliente': {
+        'id': cliente.id,
+        'nombre': cliente.nombre,
+        'telefono': cliente.telefono,
+        'email': cliente.email,
+        'notas': cliente.notas,
+        'activo': cliente.activo,
+      },
+      'citas': [
+        for (final c in _historial)
+          {
+            'id': c.id,
+            'fecha': c.fecha,
+            'hora_inicio': c.horaInicio,
+            'hora_fin': c.horaFin,
+            'precio': c.precio,
+            'estado': c.estado.valor,
+            'notas': c.notas,
+          },
+      ],
+    };
+    final ok = descargarArchivo(
+      'cliente-${cliente.id}.json',
+      const JsonEncoder.withIndent('  ').convert(datos),
+      'application/json',
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok ? 'Datos exportados.' : 'No se pudo descargar el archivo.',
+        ),
+      ),
+    );
+  }
+
+  /// Derecho de cancelación: anonimiza al cliente (las citas se conservan).
+  Future<void> _anonimizar() async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Anonimizar cliente'),
+        content: Text(
+          'Se borrarán el nombre, teléfono, correo y notas de '
+          '${widget.cliente.nombre}. Sus citas se conservan sin datos '
+          'personales. Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const Key('confirmar-anonimizar'),
+            style: FilledButton.styleFrom(backgroundColor: Marca.rojo),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Anonimizar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
+
+    try {
+      await widget.repository.anonimizar(widget.cliente.id);
+      await widget.onCambio();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Cliente anonimizado.')));
+      widget.onVolver();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              mensajeDeError(error, 'No se pudo anonimizar al cliente.'),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -244,6 +334,21 @@ class _ClienteFichaState extends State<ClienteFicha> {
               ),
             ],
           ),
+        ),
+        PopupMenuButton<String>(
+          key: const Key('ficha-menu-datos'),
+          tooltip: 'Datos del cliente',
+          onSelected: (valor) {
+            if (valor == 'exportar') _exportarDatos();
+            if (valor == 'anonimizar') _anonimizar();
+          },
+          itemBuilder: (context) => const [
+            PopupMenuItem(value: 'exportar', child: Text('Exportar datos')),
+            PopupMenuItem(
+              value: 'anonimizar',
+              child: Text('Anonimizar cliente'),
+            ),
+          ],
         ),
       ],
     );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'pages/auth_gate.dart';
+import 'pages/legal_page.dart';
 import 'pages/mi_cita_page.dart';
 import 'pages/reserva_page.dart';
 import 'pages/setup_required_page.dart';
@@ -43,6 +44,12 @@ class BarberiaApp extends StatelessWidget {
       publica = RutaPublica.desde(Uri.base.fragment);
     }
 
+    if (publica is RutaLegal) {
+      return publica.pagina == RutaLegal.terminos
+          ? const LegalPage.terminos()
+          : const LegalPage.privacidad();
+    }
+
     final repositorio = publica == null ? null : _repositorio;
     if (publica != null && repositorio != null) {
       return switch (publica) {
@@ -54,6 +61,7 @@ class BarberiaApp extends StatelessWidget {
           token: token,
           repository: repositorio,
         ),
+        RutaLegal() => const SizedBox.shrink(), // ya resuelto arriba
       };
     }
 

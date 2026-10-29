@@ -50,6 +50,13 @@ sealed class RutaPublica {
         .split('/')
         .where((parte) => parte.isNotEmpty)
         .toList(growable: false);
+    if (partes.length == 1) {
+      return switch (partes[0]) {
+        'terminos' => const RutaLegal(RutaLegal.terminos),
+        'privacidad' => const RutaLegal(RutaLegal.privacidad),
+        _ => null,
+      };
+    }
     if (partes.length != 2) return null;
 
     final String valor;
@@ -78,4 +85,14 @@ class RutaCita extends RutaPublica {
   const RutaCita(this.token);
 
   final String token;
+}
+
+/// Página legal sin datos de negocio: `#/terminos` o `#/privacidad`.
+class RutaLegal extends RutaPublica {
+  const RutaLegal(this.pagina);
+
+  static const terminos = 'terminos';
+  static const privacidad = 'privacidad';
+
+  final String pagina;
 }

@@ -59,6 +59,23 @@ void main() {
     expect(repository.cuentaCreada, isFalse);
   });
 
+  testWidgets('registration requires accepting terms and privacy', (
+    tester,
+  ) async {
+    final repository = _FakeRegistroRepository();
+    await _pumpRegistro(tester, RegistroPage(repository: repository));
+    await _llenarFormulario(tester);
+    await _aceptarTerminos(tester); // la desmarca
+
+    await _tapCrear(tester);
+
+    expect(
+      find.text('Debes aceptar los términos y la privacidad.'),
+      findsOneWidget,
+    );
+    expect(repository.cuentaCreada, isFalse);
+  });
+
   testWidgets(
     'new account keeps business data pending until email confirmation',
     (tester) async {
@@ -240,6 +257,17 @@ Future<void> _llenarFormulario(WidgetTester tester) async {
     find.byKey(const Key('registro-password')),
     'secreto123',
   );
+  await _aceptarTerminos(tester);
+  await tester.pump();
+}
+
+Future<void> _aceptarTerminos(WidgetTester tester) async {
+  final casilla = find.descendant(
+    of: find.byKey(const Key('registro-consentimiento')),
+    matching: find.byType(Checkbox),
+  );
+  await tester.ensureVisible(casilla);
+  await tester.tap(casilla);
   await tester.pump();
 }
 

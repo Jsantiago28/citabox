@@ -383,3 +383,14 @@ Correcciones de la auditoría de seguridad del 29-oct-2026:
 - Sin `TRUNCATE`/`REFERENCES`/`TRIGGER` para `anon` y `authenticated`.
 
 Pruebas: `supabase/tests/50_seguridad_reservas_y_roles.sql`.
+
+## 016_consentimiento_y_datos.sql
+
+Ley 172-13 (protección de datos, RD):
+
+- `clientes.consentimiento_at`: cuándo el cliente aceptó la política de privacidad.
+- `reserva_crear(..., p_acepta_privacidad boolean default false)` (firma nueva,
+  se elimina la de 9 parámetros): sin aceptar falla con P0001; al crear o
+  reutilizar cliente guarda `consentimiento_at = now()`.
+- `anonimizar_cliente(p_cliente_id)`: solo el OWNER del negocio del cliente; borra
+  nombre/teléfono/correo/notas, desactiva y limpia el consentimiento. Las citas se conservan.

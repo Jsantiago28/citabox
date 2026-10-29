@@ -228,7 +228,7 @@ declare
   v jsonb;
 begin
   v := reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401', null, current_date + 7, '11:00',
-                     'Ana Pérez', '(809) 555-1234', 'ana@example.com', 'Primera vez');
+                     'Ana Pérez', '(809) 555-1234', 'ana@example.com', 'Primera vez', p_acepta_privacidad => true);
 
   if v->>'estado' <> 'PENDIENTE' or v->>'hora_inicio' <> '11:00' or v->>'hora_fin' <> '11:30' then
     raise exception 'FALLO: la reserva no quedó PENDIENTE de 11:00 a 11:30: %', v;
@@ -246,7 +246,7 @@ begin
   -- Mismo teléfono con otro formato: reutiliza el cliente.
   v := reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401',
                      'e4444444-4444-4444-4444-444444444401', current_date + 7, '12:00',
-                     'Ana P.', '809-555-1234');
+                     'Ana P.', '809-555-1234', p_acepta_privacidad => true);
   perform set_config('prueba.token_ana2', v->>'token_publico', false);
 end $$;
 
@@ -259,19 +259,19 @@ begin
   begin
     perform reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401',
                           'e4444444-4444-4444-4444-444444444401', current_date + 7, '11:00',
-                          'Pedro', '8095557777');
+                          'Pedro', '8095557777', p_acepta_privacidad => true);
   exception when exclusion_violation then choques := choques + 1;
   end;
   begin
     perform reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401', null,
-                          current_date + 7, '11:00', 'Pedro', '8095557777');
+                          current_date + 7, '11:00', 'Pedro', '8095557777', p_acepta_privacidad => true);
   exception when exclusion_violation then choques := choques + 1;
   end;
   begin
     -- Barba de 45 min a las 10:30 (hasta 11:15) chocaría con la de las 11:00.
     perform reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444402',
                           'e4444444-4444-4444-4444-444444444401', current_date + 7, '10:30',
-                          'Pedro', '8095557777');
+                          'Pedro', '8095557777', p_acepta_privacidad => true);
   exception when exclusion_violation then choques := choques + 1;
   end;
   if choques <> 3 then
@@ -280,17 +280,17 @@ begin
 
   begin
     perform reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401', null,
-                          current_date + 7, '13:00', 'Pedro', '12345');
+                          current_date + 7, '13:00', 'Pedro', '12345', p_acepta_privacidad => true);
   exception when sqlstate 'P0001' then invalidos := invalidos + 1;
   end;
   begin
     perform reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401', null,
-                          current_date + 7, '13:00', '  ', '8095557777');
+                          current_date + 7, '13:00', '  ', '8095557777', p_acepta_privacidad => true);
   exception when sqlstate 'P0001' then invalidos := invalidos + 1;
   end;
   begin
     perform reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401', null,
-                          current_date + 7, '13:00', 'Pedro', '8095557777', 'no-es-correo');
+                          current_date + 7, '13:00', 'Pedro', '8095557777', 'no-es-correo', p_acepta_privacidad => true);
   exception when sqlstate 'P0001' then invalidos := invalidos + 1;
   end;
   if invalidos <> 3 then
@@ -430,11 +430,11 @@ declare
   v jsonb;
 begin
   v := reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401', null, current_date + 3, '10:00',
-                     'Luis', '8095553333');
+                     'Luis', '8095553333', p_acepta_privacidad => true);
   perform set_config('prueba.token_plazo', v->>'token_publico', false);
 
   v := reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401', null, current_date + 8, '10:00',
-                     'Marta', '8095554444');
+                     'Marta', '8095554444', p_acepta_privacidad => true);
   perform set_config('prueba.token_pagado', v->>'token_publico', false);
 end $$;
 
@@ -444,14 +444,14 @@ declare
   ok boolean := false;
 begin
   perform reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401', null, current_date + 9, '09:00',
-                        'Rosa', '8095552222');
+                        'Rosa', '8095552222', p_acepta_privacidad => true);
   perform reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401', null, current_date + 9, '09:30',
-                        'Rosa', '8095552222');
+                        'Rosa', '8095552222', p_acepta_privacidad => true);
   perform reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401', null, current_date + 9, '10:00',
-                        'Rosa', '809 555 2222');
+                        'Rosa', '809 555 2222', p_acepta_privacidad => true);
   begin
     perform reserva_crear('negocio-d', '54444444-4444-4444-4444-444444444401', null, current_date + 9, '10:30',
-                          'Rosa', '8095552222');
+                          'Rosa', '8095552222', p_acepta_privacidad => true);
   exception when sqlstate 'P0001' then ok := true;
   end;
   if not ok then

@@ -29,6 +29,10 @@ abstract interface class ClientesRepository {
     required String clienteId,
     required bool activo,
   });
+
+  /// Derecho de cancelación (Ley 172-13): borra los datos personales del
+  /// cliente y conserva sus citas para los reportes. Solo el dueño.
+  Future<void> anonimizar(String clienteId);
 }
 
 class SupabaseClientesRepository implements ClientesRepository {
@@ -157,5 +161,13 @@ class SupabaseClientesRepository implements ClientesRepository {
         .eq('id', clienteId)
         .select('id');
     exigirFilas(filas);
+  }
+
+  @override
+  Future<void> anonimizar(String clienteId) async {
+    await _client.rpc(
+      'anonimizar_cliente',
+      params: {'p_cliente_id': clienteId},
+    );
   }
 }

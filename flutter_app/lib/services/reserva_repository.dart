@@ -44,6 +44,7 @@ abstract interface class ReservaRepository {
     required String telefono,
     String? email,
     String? notas,
+    bool aceptaPrivacidad = false,
   });
 
   Future<CitaPublica> consultar(String token);
@@ -155,6 +156,7 @@ class SupabaseReservaRepository implements ReservaRepository {
     required String telefono,
     String? email,
     String? notas,
+    bool aceptaPrivacidad = false,
   }) async => _mapa(
     await _rpc('reserva_crear', {
       'p_slug': slug,
@@ -166,6 +168,7 @@ class SupabaseReservaRepository implements ReservaRepository {
       'p_cliente_telefono': telefono,
       'p_cliente_email': email,
       'p_notas': notas,
+      'p_acepta_privacidad': aceptaPrivacidad,
     }),
   );
 
