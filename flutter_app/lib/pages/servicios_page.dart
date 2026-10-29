@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show StorageException;
 
 import '../models/catalogo_servicios.dart';
 import '../models/servicio.dart';
@@ -121,10 +122,13 @@ class _ServiciosPageState extends State<ServiciosPage> {
           );
         } catch (error) {
           if (mounted) {
+            final motivo = error is StorageException
+                ? ' (${error.message})'
+                : '';
             _mostrarError(
               mensajeDeError(
                 error,
-                'El servicio se guardó, pero no se pudo subir la foto.',
+                'El servicio se guardó, pero no se pudo subir la foto.$motivo',
               ),
             );
           }

@@ -87,10 +87,12 @@ class SupabaseServiciosRepository implements ServiciosRepository {
     required Uint8List bytes,
     required String tipo,
   }) async {
-    final extension = switch (tipo) {
-      'image/png' => 'png',
-      'image/webp' => 'webp',
-      _ => 'jpg',
+    // Solo los tipos que acepta el bucket (013); lo demás se sube como JPEG,
+    // que es lo que entrega el navegador al reducir la foto.
+    final (extension, contentType) = switch (tipo) {
+      'image/png' => ('png', 'image/png'),
+      'image/webp' => ('webp', 'image/webp'),
+      _ => ('jpg', 'image/jpeg'),
     };
     // Nombre nuevo en cada subida: el navegador nunca muestra la foto vieja.
     final ruta =
@@ -99,7 +101,9 @@ class SupabaseServiciosRepository implements ServiciosRepository {
     await storage.uploadBinary(
       ruta,
       bytes,
-      fileOptions: FileOptions(contentType: tipo, upsert: true),
+      // Sin upsert: el nombre es único y "upsert" exige además permiso de
+      // lectura sobre storage.objects, que no se concede.
+      fileOptions: FileOptions(contentType: contentType),
     );
 
     final filas = await _client
