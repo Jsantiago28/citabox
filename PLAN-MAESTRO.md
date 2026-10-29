@@ -21,7 +21,7 @@ El modelo visual de referencia está en [docs/modelo-visual.png](docs/modelo-vis
 | # | Fase del Plan Maestro | Estado | En una línea |
 |---|---|---|---|
 | 0 | Preparación | ✅ | Flutter + Supabase + GitHub, con publicación automática |
-| 1 | Base (datos + seguridad multi-negocio) | ✅ | Migraciones 001–015 en Supabase real; RLS, límites por rol, auditoría y pruebas SQL en CI |
+| 1 | Base (datos + seguridad multi-negocio) | ✅ | Migraciones 001–017 en Supabase real; RLS, límites por rol, auditoría, consentimiento, suscripciones y pruebas SQL en CI |
 | 2 | Autenticación y roles | ✅ | Registro con código, recuperar contraseña con código, invitar barberos con código |
 | 3 | Negocio (perfil, horarios, configuración) | ✅ | Perfil, horario semanal, apartado configurable y enlace público |
 | 4 | Servicios | ✅ | CRUD, catálogo de 20 servicios de salón, íconos y foto por servicio |
@@ -194,10 +194,10 @@ La app React queda solo como referencia (`src/`).
 | CI sin permisos mínimos ni versión fija de Flutter | ✅ Corregido |
 | Supabase aceptaba contraseñas de 6 | ✅ Mínimo 8 |
 | **Sin CAPTCHA** en registro y reserva pública | ⬜ Cloudflare Turnstile (requiere crear la clave en Cloudflare) |
-| **Sin 2FA** para dueños | ⬜ MFA TOTP de Supabase + pantalla de enrolamiento |
-| **Sin copias de seguridad utilizables** (plan gratis) | ⬜ Supabase Pro + `pg_dump` semanal a otro almacenamiento + ensayo de restauración |
+| Sin 2FA para dueños | ✅ Verificación en dos pasos opcional (Configuración → Seguridad) |
+| **Sin copias de seguridad utilizables** (plan gratis) | 🟡 Workflow semanal cifrado listo (`respaldo-db.yml`, falta crear 2 secretos); falta Supabase Pro y ensayo de restauración |
 | Contraseñas filtradas (HaveIBeenPwned), caducidad de sesión | ⬜ Requieren Supabase Pro |
-| Límite de invitaciones por negocio y día | ⬜ |
+| Límite de invitaciones por negocio y día | ✅ 10 por día |
 | Aprobación manual para aplicar migraciones a producción | ⬜ Entorno con revisor en GitHub |
 | Configuración de Supabase sin versionar (`config.toml`) | ⬜ |
 | Rotar claves compartidas por el chat (Supabase, Cloudflare, Gmail) | ⬜ El dueño de la cuenta |
@@ -221,15 +221,15 @@ La app React queda solo como referencia (`src/`).
 
 **A. Antes de cobrar al primer negocio**
 1. Prueba de oro y pruebas en celulares reales (dueño, barbero invitado, fotos).
-2. **Legal:** términos de uso, política de privacidad (Ley 172-13), casilla de consentimiento al reservar y al registrarse, borrar/exportar datos de un cliente.
-3. **Cobro del servicio:** tablas `planes` y `suscripciones`, prueba gratis, vencimiento con gracia y modo solo lectura (sin borrar datos), cobro manual por transferencia y **panel de administrador** para ti.
-4. **Supabase Pro** (no se pausa, copias diarias) + `pg_dump` semanal + ensayo de restauración.
+2. 🟡 **Legal:** ✅ términos, privacidad, consentimiento al reservar y registrar, exportar/anonimizar cliente (016). ⬜ Revisión de un abogado.
+3. 🟡 **Cobro del servicio:** ✅ planes, suscripciones, prueba de 30 días, pausa con 7 días de gracia, límite de barberos, panel `#/admin` y soporte (017). ⬜ Definir precios y darte de alta como administrador.
+4. 🟡 ✅ Respaldo semanal cifrado listo (`docs/RESPALDOS.md`). ⬜ Supabase Pro, secretos del respaldo y ensayo de restauración.
 5. **Dominio propio** + correo con **Resend** (SPF/DKIM).
-6. **CAPTCHA** (Turnstile) en registro y reserva; **2FA** para dueños.
-7. **Monitoreo de errores** (Sentry) y botón **"Reportar un problema"**.
-8. **Enlace de reservas con vista previa** en WhatsApp (logo y nombre) y rutas limpias `/r/<slug>`.
+6. 🟡 ✅ 2FA para dueños. ⬜ CAPTCHA (Turnstile, requiere clave de Cloudflare).
+7. 🟡 ✅ Botón "Reportar un problema". ⬜ Sentry (requiere cuenta).
+8. ✅ Enlace `/r/<slug>` con vista previa (nombre y portada) en WhatsApp.
 9. **Rendimiento** en celulares de gama baja (primera carga de Flutter web).
-10. **Asistente de primer uso** (negocio → horario → servicios → barbero → compartir enlace).
+10. ✅ Tarjeta "Configura tu negocio" con los primeros pasos en Inicio.
 
 **B. Primeros 3 meses (lo que más pagan los dueños)**
 11. **Recordatorios automáticos por WhatsApp** (API, con cupo incluido y excedente cobrado).
