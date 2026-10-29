@@ -405,3 +405,10 @@ Alta de administrador (SQL editor): insert into plataforma_admins (user_id) valu
 
 Precios de lanzamiento por mes: Solo RD$400 (1 barbero), Barbería RD$900
 (hasta 5), Pro RD$1,600 (sin límite). La prueba sigue siendo gratis 30 días.
+
+## 019_cuentas_de_pago.sql
+
+`cuentas_pago` (banco, tipo, número, titular): cuentas donde los negocios
+transfieren el pago del plan. Las leen solo los dueños con sesión (y el
+administrador); solo el administrador las crea o borra con
+`admin_guardar_cuenta_pago` / `admin_borrar_cuenta_pago`. No se guarda cédula.

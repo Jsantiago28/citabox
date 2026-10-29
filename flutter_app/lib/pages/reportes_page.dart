@@ -104,7 +104,11 @@ class _ReportesPageState extends State<ReportesPage> {
     }
   }
 
-  void _recargar() => setState(() => _reporte = _cargar());
+  void _recargar() {
+    setState(() {
+      _reporte = _cargar();
+    });
+  }
 
   Future<void> _elegir(TipoPeriodo tipo) async {
     var periodo = Periodo.de(tipo, _hoy);

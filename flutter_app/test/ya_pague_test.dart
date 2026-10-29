@@ -38,6 +38,15 @@ void main() {
                 negocioId: 'n1',
                 negocioNombre: 'STIKING',
                 subirRecibo: (_) async => 'https://x/recibo.jpg',
+                cargarCuentas: () async => const [
+                  CuentaPago(
+                    id: 'c1',
+                    banco: 'Banco Prueba',
+                    tipo: 'Corriente',
+                    numero: '123-456',
+                    titular: 'Titular Prueba',
+                  ),
+                ],
                 elegirFoto: () async =>
                     FotoElegida(Uint8List(8), 'image/jpeg'),
                 abrirEnlace: (enlace) async {
@@ -55,8 +64,13 @@ void main() {
     await tester.tap(find.text('abrir'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Transfiere a:'), findsOneWidget);
+    expect(find.text('Banco Prueba · Corriente'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const Key('plan-pro')));
     await tester.tap(find.byKey(const Key('plan-pro')));
     await tester.enterText(find.byKey(const Key('pago-referencia')), '777');
+    await tester.ensureVisible(find.byKey(const Key('pago-recibo')));
     await tester.tap(find.byKey(const Key('pago-recibo')));
     await tester.pumpAndSettle();
     expect(find.text('Recibo adjunto'), findsOneWidget);

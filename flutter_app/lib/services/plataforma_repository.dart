@@ -203,8 +203,63 @@ class MensajeSoporte {
   );
 }
 
+/// Cuenta bancaria donde los negocios pagan su plan (migración 019).
+class CuentaPago {
+  const CuentaPago({
+    required this.id,
+    required this.banco,
+    required this.tipo,
+    required this.numero,
+    required this.titular,
+  });
+
+  final String id;
+  final String banco;
+  final String tipo;
+  final String numero;
+  final String titular;
+
+  factory CuentaPago.fromMap(Map<String, dynamic> m) => CuentaPago(
+    id: m['id'].toString(),
+    banco: m['banco']?.toString() ?? '',
+    tipo: m['tipo']?.toString() ?? '',
+    numero: m['numero']?.toString() ?? '',
+    titular: m['titular']?.toString() ?? '',
+  );
+}
+
+/// Cuentas visibles para el dueño (solo lectura).
+abstract interface class CuentasPagoRepository {
+  Future<List<CuentaPago>> listar();
+}
+
+class SupabaseCuentasPagoRepository implements CuentasPagoRepository {
+  const SupabaseCuentasPagoRepository(this._client);
+
+  final SupabaseClient _client;
+
+  @override
+  Future<List<CuentaPago>> listar() async {
+    final filas = await _client
+        .from('cuentas_pago')
+        .select('id, banco, tipo, numero, titular')
+        .order('orden')
+        .order('banco');
+    return [for (final f in filas) CuentaPago.fromMap(f)];
+  }
+}
+
 abstract interface class AdminRepository {
   Future<bool> esAdmin();
+  Future<List<CuentaPago>> listarCuentas();
+  Future<void> guardarCuenta({
+    String? id,
+    required String banco,
+    required String tipo,
+    required String numero,
+    required String titular,
+  });
+  Future<void> borrarCuenta(String id);
   Future<List<NegocioAdmin>> listarNegocios();
   Future<void> activar({
     required String negocioId,
@@ -223,6 +278,32 @@ class SupabaseAdminRepository implements AdminRepository {
   @override
   Future<bool> esAdmin() async =>
       (await _client.rpc('es_admin_plataforma')) == true;
+
+  @override
+  Future<List<CuentaPago>> listarCuentas() =>
+      SupabaseCuentasPagoRepository(_client).listar();
+
+  @override
+  Future<void> guardarCuenta({
+    String? id,
+    required String banco,
+    required String tipo,
+    required String numero,
+    required String titular,
+  }) => _client.rpc(
+    'admin_guardar_cuenta_pago',
+    params: {
+      'p_id': id,
+      'p_banco': banco,
+      'p_tipo': tipo,
+      'p_numero': numero,
+      'p_titular': titular,
+    },
+  );
+
+  @override
+  Future<void> borrarCuenta(String id) =>
+      _client.rpc('admin_borrar_cuenta_pago', params: {'p_id': id});
 
   @override
   Future<List<NegocioAdmin>> listarNegocios() async {

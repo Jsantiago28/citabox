@@ -216,3 +216,46 @@ do $$ begin
     raise exception 'FALLO: precios de lanzamiento';
   end if;
 end $$;
+
+-- -------------------------------------------------------------------------
+-- 019: cuentas para pagar los planes
+-- -------------------------------------------------------------------------
+reset role;
+set role authenticated;
+
+-- El admin crea una cuenta.
+select set_config('request.jwt.claim.sub', '80000000-0000-0000-0000-000000000002', false);
+select admin_guardar_cuenta_pago(null, 'Banco de Prueba', 'Corriente', '123-456', 'Titular Prueba', 1);
+
+-- El dueño la ve, pero no puede crear ni cambiar cuentas.
+select set_config('request.jwt.claim.sub', '80000000-0000-0000-0000-000000000001', false);
+do $$ begin
+  if (select count(*) from cuentas_pago where banco = 'Banco de Prueba') <> 1 then
+    raise exception 'FALLO: el dueño no ve las cuentas de pago';
+  end if;
+end $$;
+
+do $$ begin
+  perform admin_guardar_cuenta_pago(null, 'Falsa', 'Ahorros', '999', 'Intruso', 0);
+  raise exception 'FALLO: un dueño creó una cuenta de pago';
+exception when insufficient_privilege then null;
+end $$;
+
+do $$ begin
+  update cuentas_pago set numero = '000-000';
+  raise exception 'FALLO: un dueño cambió una cuenta de pago';
+exception when insufficient_privilege then null;
+end $$;
+
+-- Un visitante no las ve.
+reset role;
+select set_config('request.jwt.claim.sub', '', false);
+set role anon;
+do $$ begin
+  perform 1 from cuentas_pago;
+  raise exception 'FALLO: un visitante puede leer las cuentas de pago';
+exception when insufficient_privilege then null;
+end $$;
+reset role;
+
+\echo 'Pruebas de cuentas de pago pasaron.'

@@ -30,10 +30,16 @@ class _AdminPageState extends State<AdminPage> {
     if (!await widget.repository.esAdmin()) return null;
     final negocios = await widget.repository.listarNegocios();
     final soporte = await widget.repository.listarSoporte();
-    return _Datos(negocios, soporte);
+    final cuentas = await widget.repository.listarCuentas();
+    return _Datos(negocios, soporte, cuentas);
   }
 
-  void _recargar() => setState(() => _datos = _cargar());
+  void _recargar() {
+    // El callback de setState no debe devolver el Future.
+    setState(() {
+      _datos = _cargar();
+    });
+  }
 
   Future<void> _activar(NegocioAdmin n) async {
     final r = await showDialog<(String, DateTime)>(
@@ -78,6 +84,34 @@ class _AdminPageState extends State<AdminPage> {
       _recargar();
     } catch (_) {
       _aviso('No se pudo suspender.');
+    }
+  }
+
+  Future<void> _agregarCuenta() async {
+    final datos = await showDialog<_NuevaCuenta>(
+      context: context,
+      builder: (_) => const _CuentaDialog(),
+    );
+    if (datos == null) return;
+    try {
+      await widget.repository.guardarCuenta(
+        banco: datos.banco,
+        tipo: datos.tipo,
+        numero: datos.numero,
+        titular: datos.titular,
+      );
+      _recargar();
+    } catch (_) {
+      _aviso('No se pudo guardar la cuenta.');
+    }
+  }
+
+  Future<void> _borrarCuenta(CuentaPago c) async {
+    try {
+      await widget.repository.borrarCuenta(c.id);
+      _recargar();
+    } catch (_) {
+      _aviso('No se pudo borrar la cuenta.');
     }
   }
 
@@ -178,6 +212,43 @@ class _AdminPageState extends State<AdminPage> {
                 ),
               ),
               const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Cuentas para cobrar',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    key: const Key('agregar-cuenta'),
+                    onPressed: _agregarCuenta,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Agregar cuenta'),
+                  ),
+                ],
+              ),
+              const Text(
+                'Las ven los dueños en el aviso de pago y en "Ya pagué".',
+              ),
+              const SizedBox(height: 8),
+              if (datos.cuentas.isEmpty)
+                const Text('Sin cuentas. Agrega al menos una.')
+              else
+                for (final c in datos.cuentas)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.account_balance),
+                      title: Text('${c.banco} · ${c.tipo}'),
+                      subtitle: Text('${c.numero}\n${c.titular}'),
+                      trailing: IconButton(
+                        tooltip: 'Borrar',
+                        onPressed: () => _borrarCuenta(c),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ),
+                  ),
+              const SizedBox(height: 24),
               Text(
                 'Soporte (${datos.soporte.length})',
                 style: Theme.of(context).textTheme.titleLarge,
@@ -205,10 +276,114 @@ class _AdminPageState extends State<AdminPage> {
 }
 
 class _Datos {
-  const _Datos(this.negocios, this.soporte);
+  const _Datos(this.negocios, this.soporte, this.cuentas);
 
   final List<NegocioAdmin> negocios;
   final List<MensajeSoporte> soporte;
+  final List<CuentaPago> cuentas;
+}
+
+class _NuevaCuenta {
+  const _NuevaCuenta(this.banco, this.tipo, this.numero, this.titular);
+
+  final String banco;
+  final String tipo;
+  final String numero;
+  final String titular;
+}
+
+class _CuentaDialog extends StatefulWidget {
+  const _CuentaDialog();
+
+  @override
+  State<_CuentaDialog> createState() => _CuentaDialogState();
+}
+
+class _CuentaDialogState extends State<_CuentaDialog> {
+  final _form = GlobalKey<FormState>();
+  final _banco = TextEditingController();
+  final _numero = TextEditingController();
+  final _titular = TextEditingController();
+  String _tipo = 'Corriente';
+
+  @override
+  void dispose() {
+    _banco.dispose();
+    _numero.dispose();
+    _titular.dispose();
+    super.dispose();
+  }
+
+  String? _requerido(String? v) =>
+      (v?.trim().length ?? 0) < 2 ? 'Obligatorio.' : null;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Agregar cuenta'),
+      content: Form(
+        key: _form,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              key: const Key('cuenta-banco'),
+              controller: _banco,
+              decoration: const InputDecoration(labelText: 'Banco'),
+              validator: _requerido,
+            ),
+            DropdownButtonFormField<String>(
+              initialValue: _tipo,
+              decoration: const InputDecoration(labelText: 'Tipo'),
+              items: const [
+                DropdownMenuItem(value: 'Corriente', child: Text('Corriente')),
+                DropdownMenuItem(value: 'Ahorros', child: Text('Ahorros')),
+              ],
+              onChanged: (v) => setState(() => _tipo = v ?? _tipo),
+            ),
+            TextFormField(
+              key: const Key('cuenta-numero'),
+              controller: _numero,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Número de cuenta'),
+              validator: (v) =>
+                  RegExp(r'^[0-9-]{4,30}$').hasMatch(v?.trim() ?? '')
+                  ? null
+                  : 'Solo números y guiones.',
+            ),
+            TextFormField(
+              key: const Key('cuenta-titular'),
+              controller: _titular,
+              decoration: const InputDecoration(labelText: 'A nombre de'),
+              validator: _requerido,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const Key('cuenta-guardar'),
+          onPressed: () {
+            if (!_form.currentState!.validate()) return;
+            Navigator.pop(
+              context,
+              _NuevaCuenta(
+                _banco.text.trim(),
+                _tipo,
+                _numero.text.trim(),
+                _titular.text.trim(),
+              ),
+            );
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
 }
 
 class _ActivarDialog extends StatefulWidget {

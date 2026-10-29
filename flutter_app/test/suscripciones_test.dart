@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:barberiapro/app.dart';
+import 'package:barberiapro/pages/admin_page.dart';
 import 'package:barberiapro/pages/business_home_page.dart';
 import 'package:barberiapro/models/cita.dart';
 import 'package:barberiapro/services/apartados_repository.dart';
@@ -58,6 +59,32 @@ class _Admin implements AdminRepository {
 
   @override
   Future<bool> esAdmin() async => admin;
+
+  final cuentas = <CuentaPago>[];
+
+  @override
+  Future<List<CuentaPago>> listarCuentas() async => List.of(cuentas);
+
+  @override
+  Future<void> guardarCuenta({
+    String? id,
+    required String banco,
+    required String tipo,
+    required String numero,
+    required String titular,
+  }) async => cuentas.add(
+    CuentaPago(
+      id: 'c${cuentas.length}',
+      banco: banco,
+      tipo: tipo,
+      numero: numero,
+      titular: titular,
+    ),
+  );
+
+  @override
+  Future<void> borrarCuenta(String id) async =>
+      cuentas.removeWhere((c) => c.id == id);
 
   @override
   Future<List<NegocioAdmin>> listarNegocios() async => const [
@@ -245,5 +272,39 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Suspender'));
     await tester.pumpAndSettle();
     expect(repo.suspendidos, ['n1/Sin pago']);
+  });
+
+  testWidgets('#/admin: el admin agrega y borra una cuenta para cobrar', (
+    tester,
+  ) async {
+    _ignorarDesbordes();
+    tester.view.physicalSize = const Size(1600, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final repo = _Admin();
+    await tester.pumpWidget(MaterialApp(home: AdminPage(repository: repo)));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('agregar-cuenta')));
+    await tester.tap(find.byKey(const Key('agregar-cuenta')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('cuenta-banco')), 'Banco X');
+    await tester.enterText(find.byKey(const Key('cuenta-numero')), 'abc');
+    await tester.enterText(find.byKey(const Key('cuenta-titular')), 'Juan');
+    await tester.tap(find.byKey(const Key('cuenta-guardar')));
+    await tester.pumpAndSettle();
+    expect(find.text('Solo números y guiones.'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('cuenta-numero')), '123-45');
+    await tester.tap(find.byKey(const Key('cuenta-guardar')));
+    await tester.pumpAndSettle();
+    expect(repo.cuentas.single.numero, '123-45');
+    expect(find.text('Banco X · Corriente'), findsOneWidget);
+
+    await tester.ensureVisible(find.byTooltip('Borrar'));
+    await tester.tap(find.byTooltip('Borrar'));
+    await tester.pumpAndSettle();
+    expect(repo.cuentas, isEmpty);
   });
 }

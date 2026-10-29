@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -45,6 +46,7 @@ Future<void> mostrarYaPague(
   required String negocioId,
   required String negocioNombre,
   required SubirRecibo subirRecibo,
+  Future<List<CuentaPago>> Function()? cargarCuentas,
   ElegirFoto elegirFoto = elegirFotoDelDispositivo,
   AbrirEnlace? abrirEnlace,
   String whatsapp = whatsappPlataforma,
@@ -55,6 +57,7 @@ Future<void> mostrarYaPague(
     negocioId: negocioId,
     negocioNombre: negocioNombre,
     subirRecibo: subirRecibo,
+    cargarCuentas: cargarCuentas,
     elegirFoto: elegirFoto,
     abrirEnlace:
         abrirEnlace ??
@@ -69,6 +72,7 @@ class _YaPagueDialog extends StatefulWidget {
     required this.negocioId,
     required this.negocioNombre,
     required this.subirRecibo,
+    this.cargarCuentas,
     required this.elegirFoto,
     required this.abrirEnlace,
     required this.whatsapp,
@@ -78,6 +82,7 @@ class _YaPagueDialog extends StatefulWidget {
   final String negocioId;
   final String negocioNombre;
   final SubirRecibo subirRecibo;
+  final Future<List<CuentaPago>> Function()? cargarCuentas;
   final ElegirFoto elegirFoto;
   final AbrirEnlace abrirEnlace;
   final String whatsapp;
@@ -174,6 +179,7 @@ class _YaPagueDialogState extends State<_YaPagueDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _CuentasDePago(cargar: widget.cargarCuentas),
               const Text('¿Qué plan pagaste?'),
               RadioGroup<String>(
                 groupValue: _plan,
@@ -236,6 +242,67 @@ class _YaPagueDialogState extends State<_YaPagueDialog> {
           child: Text(_enviando ? 'Enviando…' : 'Enviar aviso de pago'),
         ),
       ],
+    );
+  }
+}
+
+/// "Transfiere a:" con las cuentas de Barbería PRO y botón para copiar.
+class _CuentasDePago extends StatefulWidget {
+  const _CuentasDePago({required this.cargar});
+
+  final Future<List<CuentaPago>> Function()? cargar;
+
+  @override
+  State<_CuentasDePago> createState() => _CuentasDePagoState();
+}
+
+class _CuentasDePagoState extends State<_CuentasDePago> {
+  late final Future<List<CuentaPago>> _cuentas =
+      widget.cargar?.call() ?? Future.value(const []);
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<CuentaPago>>(
+      future: _cuentas,
+      builder: (context, snap) {
+        final cuentas = snap.data ?? const [];
+        if (cuentas.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Transfiere a:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              for (final c in cuentas)
+                Card(
+                  margin: const EdgeInsets.only(top: 6),
+                  child: ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.account_balance),
+                    title: Text('${c.banco} · ${c.tipo}'),
+                    subtitle: Text('${c.numero}\n${c.titular}'),
+                    isThreeLine: true,
+                    trailing: IconButton(
+                      key: Key('copiar-${c.numero}'),
+                      tooltip: 'Copiar número',
+                      icon: const Icon(Icons.copy, size: 18),
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: c.numero));
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                          SnackBar(content: Text('Copiado: ${c.numero}')),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

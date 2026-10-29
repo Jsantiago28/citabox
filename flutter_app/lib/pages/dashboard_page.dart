@@ -206,7 +206,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   if (snapshot.hasError) {
                     return _Mensaje(
                       texto: 'No se pudo cargar la agenda de hoy.',
-                      onReintentar: () => setState(() => _citas = _cargar()),
+                      onReintentar: () => setState(() {
+                        _citas = _cargar();
+                      }),
                     );
                   }
 

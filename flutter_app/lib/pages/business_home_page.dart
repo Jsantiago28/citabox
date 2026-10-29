@@ -93,7 +93,9 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
           return _conBarra(
             _ProfileMessage(
               message: 'No se pudo cargar el perfil del negocio.',
-              onRetry: () => setState(() => _profile = _loadProfile()),
+              onRetry: () => setState(() {
+                _profile = _loadProfile();
+              }),
             ),
           );
         }
@@ -107,7 +109,9 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
               pendiente: RegistroNegocio.fromMetadata(
                 client.auth.currentUser?.userMetadata,
               ),
-              onNegocioCreado: () => setState(() => _profile = _loadProfile()),
+              onNegocioCreado: () => setState(() {
+                _profile = _loadProfile();
+              }),
             ),
           );
         }
@@ -276,6 +280,8 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
           SupabaseSoporteRepository(Supabase.instance.client),
       negocioId: widget.negocioId,
       negocioNombre: widget.negocioNombre,
+      cargarCuentas: SupabaseCuentasPagoRepository(Supabase.instance.client)
+          .listar,
       subirRecibo: (foto) => subirFotoDelNegocio(
         Supabase.instance.client,
         negocioId: widget.negocioId,
