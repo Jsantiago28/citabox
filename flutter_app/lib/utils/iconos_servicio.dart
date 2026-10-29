@@ -24,6 +24,13 @@ const iconosServicio = <String, IconData>{
   'pedicure': Icons.airline_seat_legroom_extra,
   'unas': Icons.diamond_outlined,
   'cejas': Icons.remove_red_eye_outlined,
+  'barba': Icons.face,
+  'navaja': Icons.horizontal_rule,
+  'nino': Icons.child_care,
+  'diseno': Icons.draw_outlined,
+  'degradado': Icons.blur_linear,
+  'lavado': Icons.shower_outlined,
+  'facial': Icons.sentiment_satisfied_alt_outlined,
 };
 
 IconData iconoServicio(String? clave) =>

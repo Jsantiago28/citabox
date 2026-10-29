@@ -810,6 +810,7 @@ class _SeleccionarServiciosDialogState
     extends State<_SeleccionarServiciosDialog> {
   final _formKey = GlobalKey<FormState>();
   final _precios = <String, TextEditingController>{};
+  bool _verSalon = false;
 
   @override
   void dispose() {
@@ -833,7 +834,7 @@ class _SeleccionarServiciosDialogState
   void _agregar() {
     if (_precios.isEmpty || !_formKey.currentState!.validate()) return;
     Navigator.of(context).pop([
-      for (final sugerido in catalogoSalon)
+      for (final sugerido in [...catalogoBarberia, ...catalogoSalon])
         if (_precios[sugerido.nombre] case final precio?)
           <String, Object?>{
             'nombre': sugerido.nombre,
@@ -863,11 +864,24 @@ class _SeleccionarServiciosDialogState
                 'La duración la puedes cambiar después.',
               ),
               const SizedBox(height: 12),
+              SegmentedButton<bool>(
+                key: const Key('catalogo-selector'),
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Barbería')),
+                  ButtonSegment(value: true, label: Text('Salón')),
+                ],
+                selected: {_verSalon},
+                onSelectionChanged: (valor) =>
+                    setState(() => _verSalon = valor.first),
+              ),
+              const SizedBox(height: 8),
               Flexible(
                 child: ListView(
                   shrinkWrap: true,
                   children: [
-                    for (final sugerido in catalogoSalon) _sugerido(sugerido),
+                    for (final sugerido
+                        in _verSalon ? catalogoSalon : catalogoBarberia)
+                      _sugerido(sugerido),
                   ],
                 ),
               ),
