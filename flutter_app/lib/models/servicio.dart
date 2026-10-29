@@ -7,6 +7,7 @@ class Servicio {
     this.duracionMinutos = 30,
     this.activo = true,
     this.icono,
+    this.imagenUrl,
   });
 
   final String id;
@@ -19,6 +20,9 @@ class Servicio {
   /// Clave del ícono (utils/iconos_servicio.dart); null = tijera.
   final String? icono;
 
+  /// Foto subida por el dueño (Storage, migración 013); null = sin foto.
+  final String? imagenUrl;
+
   factory Servicio.fromMap(Map<String, dynamic> map) {
     return Servicio(
       id: map['id'].toString(),
@@ -29,6 +33,7 @@ class Servicio {
           int.tryParse(map['duracion_minutos']?.toString() ?? '') ?? 0,
       activo: map['activo'] == true,
       icono: map['icono']?.toString(),
+      imagenUrl: map['imagen_url']?.toString(),
     );
   }
 }

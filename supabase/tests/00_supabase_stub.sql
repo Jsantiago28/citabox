@@ -29,3 +29,27 @@ alter default privileges in schema public
 -- roles de la API salvo que la migración lo revoque explícitamente.
 alter default privileges in schema public
   grant execute on functions to anon, authenticated, service_role;
+
+-- Storage mínimo (bucket y objetos) para las migraciones que lo configuran.
+create schema storage;
+grant usage on schema storage to anon, authenticated, service_role;
+create table storage.buckets (
+  id text primary key,
+  name text not null,
+  public boolean default false,
+  file_size_limit bigint,
+  allowed_mime_types text[]
+);
+create table storage.objects (
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text references storage.buckets (id),
+  name text not null,
+  owner uuid
+);
+alter table storage.objects enable row level security;
+grant select, insert, update, delete on storage.objects to anon, authenticated, service_role;
+create function storage.foldername(name text)
+returns text[]
+language sql
+immutable
+as $$ select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1]; $$;

@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/catalogo_servicios.dart';
 import '../models/servicio.dart';
@@ -8,6 +11,30 @@ import '../theme.dart';
 import '../utils/formato.dart';
 import '../utils/iconos_servicio.dart';
 import '../widgets/etiqueta.dart';
+import '../widgets/reserva_publica.dart' show ImagenRed;
+
+/// Foto elegida por el dueño, ya reducida, lista para subir.
+class FotoElegida {
+  const FotoElegida(this.bytes, this.tipo);
+
+  final Uint8List bytes;
+  final String tipo;
+}
+
+typedef ElegirFoto = Future<FotoElegida?> Function();
+
+/// Galería o cámara del dispositivo; la reduce a 800 px para que pese poco.
+Future<FotoElegida?> elegirFotoDelDispositivo() async {
+  final archivo = await ImagePicker().pickImage(
+    source: ImageSource.gallery,
+    maxWidth: 800,
+    maxHeight: 800,
+    imageQuality: 80,
+  );
+  if (archivo == null) return null;
+  final tipo = archivo.mimeType ?? 'image/jpeg';
+  return FotoElegida(await archivo.readAsBytes(), tipo);
+}
 
 class ServiciosPage extends StatefulWidget {
   const ServiciosPage({
@@ -15,11 +42,13 @@ class ServiciosPage extends StatefulWidget {
     required this.negocioId,
     required this.repository,
     this.moneda = 'DOP',
+    this.elegirFoto = elegirFotoDelDispositivo,
   });
 
   final String negocioId;
   final ServiciosRepository repository;
   final String moneda;
+  final ElegirFoto elegirFoto;
 
   @override
   State<ServiciosPage> createState() => _ServiciosPageState();
@@ -64,20 +93,43 @@ class _ServiciosPageState extends State<ServiciosPage> {
   }
 
   Future<void> _abrirFormulario([Servicio? servicio]) async {
-    final datos = await showDialog<Map<String, Object?>>(
+    final resultado = await showDialog<_ResultadoServicio>(
       context: context,
-      builder: (context) =>
-          _ServicioFormDialog(servicio: servicio, moneda: widget.moneda),
+      builder: (context) => _ServicioFormDialog(
+        servicio: servicio,
+        moneda: widget.moneda,
+        elegirFoto: widget.elegirFoto,
+      ),
     );
-    if (datos == null || !mounted) return;
+    if (resultado == null || !mounted) return;
 
     setState(() => _saving = true);
     try {
-      await widget.repository.guardar(
+      final id = await widget.repository.guardar(
         negocioId: widget.negocioId,
         servicioId: servicio?.id,
-        datos: datos,
+        datos: resultado.datos,
       );
+      final foto = resultado.foto;
+      if (foto != null) {
+        try {
+          await widget.repository.subirFoto(
+            negocioId: widget.negocioId,
+            servicioId: id,
+            bytes: foto.bytes,
+            tipo: foto.tipo,
+          );
+        } catch (error) {
+          if (mounted) {
+            _mostrarError(
+              mensajeDeError(
+                error,
+                'El servicio se guardó, pero no se pudo subir la foto.',
+              ),
+            );
+          }
+        }
+      }
       await _cargarServicios();
     } catch (error) {
       if (mounted) {
@@ -345,14 +397,9 @@ class _ServiciosPageState extends State<ServiciosPage> {
         padding: const EdgeInsets.fromLTRB(16, 10, 4, 10),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Marca.negro,
-              child: Icon(
-                iconoServicio(servicio.icono),
-                size: 18,
-                color: Marca.doradoClaro,
-              ),
+            _AvatarServicio(
+              icono: servicio.icono,
+              imagenUrl: servicio.imagenUrl,
             ),
             const SizedBox(width: 12),
             Expanded(flex: 3, child: nombre),
@@ -425,11 +472,50 @@ num? _leerPrecio(String texto) =>
 String _precioTexto(num precio) =>
     precio == precio.truncate() ? precio.truncate().toString() : '$precio';
 
+/// Datos del formulario y, si el dueño eligió una, la foto nueva a subir.
+class _ResultadoServicio {
+  const _ResultadoServicio(this.datos, this.foto);
+
+  final Map<String, Object?> datos;
+  final FotoElegida? foto;
+}
+
+/// Foto del servicio en círculo; sin foto (o si no carga), su ícono.
+class _AvatarServicio extends StatelessWidget {
+  const _AvatarServicio({this.icono, this.imagenUrl, this.radio = 18});
+
+  final String? icono;
+  final String? imagenUrl;
+  final double radio;
+
+  @override
+  Widget build(BuildContext context) {
+    final respaldo = CircleAvatar(
+      radius: radio,
+      backgroundColor: Marca.negro,
+      child: Icon(iconoServicio(icono), size: radio, color: Marca.doradoClaro),
+    );
+    final url = imagenUrl;
+    if (url == null || url.isEmpty) return respaldo;
+    return ClipOval(
+      child: SizedBox.square(
+        dimension: radio * 2,
+        child: ImagenRed(url: url, respaldo: respaldo),
+      ),
+    );
+  }
+}
+
 class _ServicioFormDialog extends StatefulWidget {
-  const _ServicioFormDialog({this.servicio, required this.moneda});
+  const _ServicioFormDialog({
+    this.servicio,
+    required this.moneda,
+    required this.elegirFoto,
+  });
 
   final Servicio? servicio;
   final String moneda;
+  final ElegirFoto elegirFoto;
 
   @override
   State<_ServicioFormDialog> createState() => _ServicioFormDialogState();
@@ -437,6 +523,79 @@ class _ServicioFormDialog extends StatefulWidget {
 
 class _ServicioFormDialogState extends State<_ServicioFormDialog> {
   final _formKey = GlobalKey<FormState>();
+  FotoElegida? _fotoNueva;
+  late bool _tieneFoto = widget.servicio?.imagenUrl?.isNotEmpty ?? false;
+
+  Future<void> _elegirFoto() async {
+    try {
+      final foto = await widget.elegirFoto();
+      if (foto == null || !mounted) return;
+      if (foto.bytes.lengthInBytes > 2 * 1024 * 1024) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(content: Text('La foto pesa más de 2 MB.')),
+        );
+        return;
+      }
+      setState(() {
+        _fotoNueva = foto;
+        _tieneFoto = true;
+      });
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir la foto.')),
+        );
+      }
+    }
+  }
+
+  Widget _seccionFoto() {
+    final fotoNueva = _fotoNueva;
+    final Widget vistaPrevia = fotoNueva != null
+        ? ClipOval(
+            child: Image.memory(
+              fotoNueva.bytes,
+              width: 64,
+              height: 64,
+              fit: BoxFit.cover,
+            ),
+          )
+        : _AvatarServicio(
+            icono: _icono,
+            imagenUrl: _tieneFoto ? widget.servicio?.imagenUrl : null,
+            radio: 32,
+          );
+    return Row(
+      children: [
+        vistaPrevia,
+        const SizedBox(width: 12),
+        Expanded(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                key: const Key('servicio-subir-foto'),
+                onPressed: _elegirFoto,
+                icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                label: Text(_tieneFoto ? 'Cambiar foto' : 'Subir foto'),
+              ),
+              if (_tieneFoto)
+                TextButton(
+                  key: const Key('servicio-quitar-foto'),
+                  onPressed: () => setState(() {
+                    _fotoNueva = null;
+                    _tieneFoto = false;
+                  }),
+                  child: const Text('Quitar foto'),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   late final TextEditingController _nombreController;
   late final TextEditingController _descripcionController;
   late final TextEditingController _precioController;
@@ -474,14 +633,18 @@ class _ServicioFormDialogState extends State<_ServicioFormDialog> {
   void _guardar() {
     if (!_formKey.currentState!.validate()) return;
     final descripcion = _descripcionController.text.trim();
-    Navigator.of(context).pop(<String, Object?>{
-      'nombre': _nombreController.text.trim(),
-      'descripcion': descripcion.isEmpty ? null : descripcion,
-      'precio': _leerPrecio(_precioController.text),
-      'duracion_minutos': int.parse(_duracionController.text.trim()),
-      'activo': _activo,
-      'icono': _icono,
-    });
+    Navigator.of(context).pop(
+      _ResultadoServicio({
+        'nombre': _nombreController.text.trim(),
+        'descripcion': descripcion.isEmpty ? null : descripcion,
+        'precio': _leerPrecio(_precioController.text),
+        'duracion_minutos': int.parse(_duracionController.text.trim()),
+        'activo': _activo,
+        'icono': _icono,
+        // La foto nueva se guarda al subirla; aquí solo se quita.
+        if (!_tieneFoto) 'imagen_url': null,
+      }, _fotoNueva),
+    );
   }
 
   @override
@@ -497,6 +660,8 @@ class _ServicioFormDialogState extends State<_ServicioFormDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                _seccionFoto(),
+                const SizedBox(height: 16),
                 TextFormField(
                   key: const Key('servicio-nombre'),
                   controller: _nombreController,

@@ -192,3 +192,38 @@ end $$;
 reset role;
 
 \echo 'Todas las pruebas de seguridad de 010 pasaron.'
+
+-- -------------------------------------------------------------------------
+-- 013: fotos de servicios en Storage
+-- -------------------------------------------------------------------------
+set role authenticated;
+
+select set_config('request.jwt.claim.sub', 'e0000000-0000-0000-0000-00000000000e', false);
+insert into storage.objects (bucket_id, name)
+values ('servicios', '55555555-5555-5555-5555-555555555555/corte.jpg');
+
+do $$ begin
+  insert into storage.objects (bucket_id, name)
+  values ('servicios', '11111111-1111-1111-1111-111111111111/intruso.jpg');
+  raise exception 'FALLO: el dueño subió una foto a la carpeta de otro negocio';
+exception when insufficient_privilege then null;
+end $$;
+
+select set_config('request.jwt.claim.sub', 'e0000000-0000-0000-0000-0000000000e1', false);
+do $$ begin
+  insert into storage.objects (bucket_id, name)
+  values ('servicios', '55555555-5555-5555-5555-555555555555/barbero.jpg');
+  raise exception 'FALLO: un barbero subió una foto de servicio';
+exception when insufficient_privilege then null;
+end $$;
+
+reset role;
+update servicios set imagen_url = 'https://ejemplo.supabase.co/storage/v1/object/public/servicios/x.jpg'
+ where id = '55555555-0000-0000-0000-00000000005e';
+do $$ begin
+  if (select reserva_catalogo('negocio-e')->'servicios'->0->>'imagen_url') is null then
+    raise exception 'FALLO: reserva_catalogo no devuelve la foto del servicio';
+  end if;
+end $$;
+
+\echo 'Pruebas de fotos de servicios pasaron.'

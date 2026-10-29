@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -79,6 +81,65 @@ void main() {
       expect(creado['duracion_minutos'], 45);
       expect(creado['icono'], 'plancha');
       expect(find.text('Planchado'), findsOneWidget);
+    });
+
+    testWidgets('crea un servicio con foto y la sube después de guardarlo', (
+      tester,
+    ) async {
+      final repository = _FakeServiciosRepository([]);
+      await tester.pumpWidget(
+        _app(
+          ServiciosPage(
+            negocioId: 'negocio-1',
+            repository: repository,
+            elegirFoto: () async =>
+                FotoElegida(Uint8List.fromList(_pngTransparente), 'image/png'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Nuevo servicio'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('servicio-subir-foto')));
+      await tester.pumpAndSettle();
+      expect(find.text('Cambiar foto'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('servicio-nombre')), 'Uñas');
+      await tester.enterText(find.byKey(const Key('servicio-precio')), '800');
+      await tester.tap(find.text('Crear servicio'));
+      await tester.pumpAndSettle();
+
+      expect(repository.fotosSubidas.single.$1, 'nuevo-0');
+      expect(repository.fotosSubidas.single.$3, 'image/png');
+      expect(repository.ultimosDatos!.containsKey('imagen_url'), isFalse);
+    });
+
+    testWidgets('quitar la foto la borra del servicio', (tester) async {
+      final repository = _FakeServiciosRepository([
+        const Servicio(
+          id: 's1',
+          nombre: 'Balayage',
+          precio: 3000,
+          imagenUrl: 'https://ejemplo.com/balayage.jpg',
+        ),
+      ]);
+      await tester.pumpWidget(
+        _app(ServiciosPage(negocioId: 'negocio-1', repository: repository)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Balayage'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('servicio-quitar-foto')));
+      await tester.pumpAndSettle();
+      expect(find.text('Subir foto'), findsOneWidget);
+      await tester.tap(find.text('Guardar cambios'));
+      await tester.pumpAndSettle();
+
+      expect(repository.ultimosDatos!['imagen_url'], isNull);
+      expect(repository.ultimosDatos!.containsKey('imagen_url'), isTrue);
+      expect(repository.fotosSubidas, isEmpty);
     });
 
     testWidgets('valida precio negativo y duración en cero', (tester) async {
@@ -409,16 +470,29 @@ class _FakeServiciosRepository implements ServiciosRepository {
   Future<List<Servicio>> listar(String negocioId) async =>
       List<Servicio>.of(servicios);
 
+  final fotosSubidas = <(String, int, String)>[];
+
   @override
-  Future<void> guardar({
+  Future<void> subirFoto({
+    required String negocioId,
+    required String servicioId,
+    required Uint8List bytes,
+    required String tipo,
+  }) async {
+    fotosSubidas.add((servicioId, bytes.length, tipo));
+  }
+
+  @override
+  Future<String> guardar({
     required String negocioId,
     required Map<String, Object?> datos,
     String? servicioId,
   }) async {
     ultimoNegocioGuardado = negocioId;
     ultimosDatos = datos;
+    final id = servicioId ?? 'nuevo-${servicios.length}';
     final servicio = Servicio(
-      id: servicioId ?? 'nuevo-${servicios.length}',
+      id: id,
       nombre: datos['nombre']?.toString() ?? '',
       descripcion: datos['descripcion']?.toString() ?? '',
       precio: datos['precio'] as num,
@@ -431,6 +505,7 @@ class _FakeServiciosRepository implements ServiciosRepository {
       servicios[servicios.indexWhere((item) => item.id == servicioId)] =
           servicio;
     }
+    return id;
   }
 
   final creadosEnLote = <Map<String, Object?>>[];
@@ -596,3 +671,74 @@ class _FakeEmpleadosRepository implements EmpleadosRepository {
     );
   }
 }
+
+/// PNG de 1×1 transparente para las pruebas de foto.
+const _pngTransparente = <int>[
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x48,
+  0x44,
+  0x52,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x08,
+  0x06,
+  0x00,
+  0x00,
+  0x00,
+  0x1F,
+  0x15,
+  0xC4,
+  0x89,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x44,
+  0x41,
+  0x54,
+  0x78,
+  0x9C,
+  0x63,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x05,
+  0x00,
+  0x01,
+  0x0D,
+  0x0A,
+  0x2D,
+  0xB4,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x49,
+  0x45,
+  0x4E,
+  0x44,
+  0xAE,
+  0x42,
+  0x60,
+  0x82,
+];

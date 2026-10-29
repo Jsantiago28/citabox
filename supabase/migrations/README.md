@@ -350,3 +350,10 @@ Pruebas: `supabase/tests/60_reserva_ajustes.sql` (negocio `negocio-g`, rol
 Agrega `servicios.icono`, una clave corta opcional (`secador`, `tijera`,
 `tinte`…) que la app convierte en ícono, y la devuelve en `reserva_catalogo`
 para que el cliente vea el ícono al reservar.
+
+## 013_fotos_de_servicios.sql
+
+Agrega `servicios.imagen_url` y el bucket público de Storage `servicios`
+(máx. 2 MB, JPEG/PNG/WebP). Solo el dueño activo sube, cambia o borra fotos,
+y solo dentro de la carpeta de su negocio (`servicios/<negocio_id>/…`).
+`reserva_catalogo` devuelve `imagen_url`; sin foto, la app muestra el ícono.

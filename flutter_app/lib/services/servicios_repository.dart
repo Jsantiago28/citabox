@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/servicio.dart';
@@ -6,10 +8,19 @@ import 'sin_permiso.dart';
 abstract interface class ServiciosRepository {
   Future<List<Servicio>> listar(String negocioId);
 
-  Future<void> guardar({
+  /// Crea o actualiza el servicio y devuelve su id.
+  Future<String> guardar({
     required String negocioId,
     required Map<String, Object?> datos,
     String? servicioId,
+  });
+
+  /// Sube la foto del servicio a Storage y guarda su dirección.
+  Future<void> subirFoto({
+    required String negocioId,
+    required String servicioId,
+    required Uint8List bytes,
+    required String tipo,
   });
 
   Future<void> cambiarEstado({
@@ -35,7 +46,8 @@ class SupabaseServiciosRepository implements ServiciosRepository {
     final rows = await _client
         .from('servicios')
         .select(
-          'id, nombre, descripcion, precio, duracion_minutos, activo, icono',
+          'id, nombre, descripcion, precio, duracion_minutos, activo, icono, '
+          'imagen_url',
         )
         .eq('negocio_id', negocioId)
         .order('nombre');
@@ -44,22 +56,55 @@ class SupabaseServiciosRepository implements ServiciosRepository {
   }
 
   @override
-  Future<void> guardar({
+  Future<String> guardar({
     required String negocioId,
     required Map<String, Object?> datos,
     String? servicioId,
   }) async {
     if (servicioId == null) {
-      await _client.from('servicios').insert({
-        ...datos,
-        'negocio_id': negocioId,
-      });
-      return;
+      final creado = await _client
+          .from('servicios')
+          .insert({...datos, 'negocio_id': negocioId})
+          .select('id')
+          .single();
+      return creado['id'].toString();
     }
 
     final filas = await _client
         .from('servicios')
         .update(datos)
+        .eq('negocio_id', negocioId)
+        .eq('id', servicioId)
+        .select('id');
+    exigirFilas(filas);
+    return servicioId;
+  }
+
+  @override
+  Future<void> subirFoto({
+    required String negocioId,
+    required String servicioId,
+    required Uint8List bytes,
+    required String tipo,
+  }) async {
+    final extension = switch (tipo) {
+      'image/png' => 'png',
+      'image/webp' => 'webp',
+      _ => 'jpg',
+    };
+    // Nombre nuevo en cada subida: el navegador nunca muestra la foto vieja.
+    final ruta =
+        '$negocioId/$servicioId-${DateTime.now().millisecondsSinceEpoch}.$extension';
+    final storage = _client.storage.from('servicios');
+    await storage.uploadBinary(
+      ruta,
+      bytes,
+      fileOptions: FileOptions(contentType: tipo, upsert: true),
+    );
+
+    final filas = await _client
+        .from('servicios')
+        .update({'imagen_url': storage.getPublicUrl(ruta)})
         .eq('negocio_id', negocioId)
         .eq('id', servicioId)
         .select('id');

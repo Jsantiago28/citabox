@@ -420,6 +420,7 @@ class _ReservaPageState extends State<ReservaPage> {
             if (servicio.descripcion.isNotEmpty) servicio.descripcion,
           ].join('\n'),
           icono: iconoServicio(servicio.icono),
+          foto: servicio.imagenUrl,
           onTap: () => _elegirServicio(servicio),
         );
       },
