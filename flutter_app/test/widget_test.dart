@@ -317,6 +317,9 @@ class _FakeClientesRepository implements ClientesRepository {
   final Map<String, List<Cita>> citas;
 
   @override
+  Future<void> anonimizar(String clienteId) async {}
+
+  @override
   Future<Map<String, ResumenCliente>> resumen(String negocioId) async =>
       resumenes;
 

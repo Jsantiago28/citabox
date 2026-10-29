@@ -8,6 +8,7 @@ import '../utils/enlace_publico.dart';
 import '../utils/formato.dart';
 import '../utils/iconos_servicio.dart';
 import '../utils/navegador.dart';
+import '../widgets/consentimiento_check.dart';
 import '../widgets/reserva_publica.dart';
 import 'mi_cita_page.dart';
 
@@ -61,6 +62,7 @@ class _ReservaPageState extends State<ReservaPage> {
   HoraDisponible? _hora;
   int _versionHoras = 0;
   bool _enviando = false;
+  bool _aceptaPrivacidad = false;
   CitaPublica? _cita;
   String? _citaGuardada;
 
@@ -166,6 +168,7 @@ class _ReservaPageState extends State<ReservaPage> {
         telefono: _telefono.text.trim(),
         email: _correo.text.trim().isEmpty ? null : _correo.text.trim(),
         notas: _nota.text.trim().isEmpty ? null : _nota.text.trim(),
+        aceptaPrivacidad: _aceptaPrivacidad,
       );
       final cita = CitaPublica.desdeReserva(
         respuesta: respuesta,
@@ -564,6 +567,18 @@ class _ReservaPageState extends State<ReservaPage> {
           const Text(
             'Usamos tu teléfono solo para tu cita.',
             style: TextStyle(color: Marca.textoSuave, fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          ConsentimientoCheck(
+            key: const Key('reserva-consentimiento'),
+            texto:
+                'Acepto la política de privacidad y que '
+                '${_catalogo!.negocio.nombre} use mis datos para gestionar '
+                'mi cita.',
+            enlaces: const {'Ver política de privacidad': '/privacidad'},
+            valor: _aceptaPrivacidad,
+            onChanged: (v) => setState(() => _aceptaPrivacidad = v),
+            mensajeError: 'Debes aceptar la política de privacidad.',
           ),
         ],
       ),

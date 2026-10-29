@@ -82,6 +82,7 @@ class _FakeReservaRepository implements ReservaRepository {
   final Set<String> tomadas = {};
   int consultasHoras = 0;
   String? ultimoToken;
+  bool? ultimaAcepta;
   String? ultimoEmpleado;
   Map<String, Object?>? reserva;
   bool cancelada = false;
@@ -126,7 +127,9 @@ class _FakeReservaRepository implements ReservaRepository {
     required String telefono,
     String? email,
     String? notas,
+    bool aceptaPrivacidad = false,
   }) async {
+    ultimaAcepta = aceptaPrivacidad;
     if (tomadas.contains(horaInicio)) {
       horas.remove(horaInicio);
       throw const ReservaError(
@@ -266,6 +269,20 @@ Future<void> _hastaResumen(WidgetTester tester) async {
     find.byKey(const Key('reserva-telefono')),
     '809-555-7777',
   );
+
+  // Sin aceptar la privacidad no se avanza.
+  await tester.tap(find.byKey(const Key('continuar-datos')));
+  await tester.pumpAndSettle();
+  expect(find.text('Debes aceptar la política de privacidad.'), findsOneWidget);
+  expect(find.byKey(const Key('confirmar-reserva')), findsNothing);
+
+  final casilla = find.descendant(
+    of: find.byKey(const Key('reserva-consentimiento')),
+    matching: find.byType(Checkbox),
+  );
+  await tester.ensureVisible(casilla);
+  await tester.tap(casilla);
+  await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('continuar-datos')));
   await tester.pumpAndSettle();
 }

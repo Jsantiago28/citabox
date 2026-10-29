@@ -184,7 +184,7 @@ begin
                                                        current_date + 6, null)) h
    limit 1;
   perform reserva_crear('negocio-e', '55555555-0000-0000-0000-00000000005e', null,
-                        current_date + 6, v_hora, 'Vetado', '809-555-0002');
+                        current_date + 6, v_hora, 'Vetado', '809-555-0002', p_acepta_privacidad => true);
   raise exception 'FALLO: un cliente desactivado reservó en línea';
 exception when sqlstate 'P0001' then
   if sqlerrm not like 'No es posible reservar en línea%' then
