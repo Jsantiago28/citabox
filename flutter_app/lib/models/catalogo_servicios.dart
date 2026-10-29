@@ -9,6 +9,24 @@ class ServicioSugerido {
   final String icono;
 }
 
+const catalogoBarberia = <ServicioSugerido>[
+  ServicioSugerido('Corte de caballero', 30, 'tijera'),
+  ServicioSugerido('Corte + barba', 45, 'tijera'),
+  ServicioSugerido('Fade / degradado', 40, 'degradado'),
+  ServicioSugerido('Corte con diseño', 50, 'diseno'),
+  ServicioSugerido('Corte de niño', 25, 'nino'),
+  ServicioSugerido('Barba (perfilado)', 20, 'barba'),
+  ServicioSugerido('Afeitado con navaja', 30, 'navaja'),
+  ServicioSugerido('Cerquillo / line up', 15, 'navaja'),
+  ServicioSugerido('Cejas', 10, 'cejas'),
+  ServicioSugerido('Lavado de cabello', 15, 'lavado'),
+  ServicioSugerido('Tinte de barba', 30, 'tinte'),
+  ServicioSugerido('Tinte de cabello', 60, 'tinte'),
+  ServicioSugerido('Mascarilla facial', 25, 'facial'),
+  ServicioSugerido('Black mask', 20, 'facial'),
+  ServicioSugerido('Trenzas / twist', 90, 'trenzas'),
+];
+
 const catalogoSalon = <ServicioSugerido>[
   ServicioSugerido('Lavado y blower (pelo corto)', 45, 'secador'),
   ServicioSugerido('Lavado y blower (pelo largo)', 60, 'secador'),

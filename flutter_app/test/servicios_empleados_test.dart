@@ -62,6 +62,16 @@ void main() {
       await tester.tap(find.byKey(const Key('seleccionar-servicios')));
       await tester.pumpAndSettle();
       // "Lavado con rolos" ya existe: no se puede volver a agregar.
+      // Por defecto se ve el catálogo de barbería.
+      expect(
+        find.byKey(const Key('sugerido-Corte de caballero')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('sugerido-Planchado')), findsNothing);
+      await tester.tap(find.byKey(const Key('sugerido-Corte + barba')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Salón'));
+      await tester.pumpAndSettle();
       expect(find.text('Ya está en tus servicios'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('sugerido-Planchado')));
@@ -72,10 +82,18 @@ void main() {
       expect(find.text('Escribe el precio'), findsOneWidget);
 
       await tester.enterText(find.byKey(const Key('precio-Planchado')), '600');
+      // Lo marcado en Barbería se conserva al cambiar de pestaña.
+      expect(find.text('Agregar 2'), findsOneWidget);
+      await tester.tap(find.text('Barbería'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('precio-Corte + barba')), '150');
       await tester.tap(find.byKey(const Key('agregar-seleccionados')));
       await tester.pumpAndSettle();
 
-      final creado = repository.creadosEnLote.single;
+      expect(repository.creadosEnLote.length, 2);
+      final creado = repository.creadosEnLote.firstWhere(
+        (c) => c['nombre'] == 'Planchado',
+      );
       expect(creado['nombre'], 'Planchado');
       expect(creado['precio'], 600);
       expect(creado['duracion_minutos'], 45);
