@@ -1,4 +1,4 @@
-# Plan Maestro — Barbería PRO (estado al 28-oct-2026)
+# Plan Maestro — Barbería PRO (estado al 29-oct-2026)
 
 Este documento sigue el orden del **Plan Maestro** en PDF
 (`Plan_Maestro_Barberia_Salones_Agenda_Apartados.pdf`) y marca qué está hecho y qué falta.
@@ -21,7 +21,7 @@ El modelo visual de referencia está en [docs/modelo-visual.png](docs/modelo-vis
 | # | Fase del Plan Maestro | Estado | En una línea |
 |---|---|---|---|
 | 0 | Preparación | ✅ | Flutter + Supabase + GitHub, con publicación automática |
-| 1 | Base (datos + seguridad multi-negocio) | ✅ | Migraciones 001–013 aplicadas en Supabase real; RLS, límites por rol y pruebas SQL en CI |
+| 1 | Base (datos + seguridad multi-negocio) | ✅ | Migraciones 001–015 en Supabase real; RLS, límites por rol, auditoría y pruebas SQL en CI |
 | 2 | Autenticación y roles | ✅ | Registro con código, recuperar contraseña con código, invitar barberos con código |
 | 3 | Negocio (perfil, horarios, configuración) | ✅ | Perfil, horario semanal, apartado configurable y enlace público |
 | 4 | Servicios | ✅ | CRUD, catálogo de 20 servicios de salón, íconos y foto por servicio |
@@ -175,33 +175,76 @@ La app React queda solo como referencia (`src/`).
 
 ---
 
-## Lo que falta, en orden
+## Verificación del 29-oct-2026 (5 agentes: competencia, RD, seguridad BD, seguridad app, producto)
 
-**A. Para que un negocio real lo use (prioridad máxima)**
-1. Prueba de oro: un cliente reserva desde su celular sin ayuda.
-2. Probar en celulares reales: dueño, barbero invitado y fotos.
-3. ✅ Catálogo de barbería.
-4. ✅ Filtro por barbero en la agenda y tarjeta "Hoy por barbero" en Inicio.
+### Seguridad — lo primero
+**Resultado:** ningún hallazgo crítico. No hay fugas entre negocios ni forma de que un barbero se haga dueño.
 
-**B. Para el lanzamiento**
-5. Dominio propio y correo con Resend.
-6. Guía corta para el dueño y forma de reportar fallos.
-7. Primer negocio real una semana → correcciones.
+| Hallazgo | Estado |
+|---|---|
+| El barbero podía deshacer una cita cobrada y cambiar precio/propina | ✅ Corregido (015) |
+| No había registro de quién cambió o borró qué | ✅ Tabla `auditoria` (015), solo la lee el dueño |
+| Reservas falsas con "pago reportado" nunca vencían | ✅ Vencen a las 24 h sin validar (015) |
+| Mensajes que revelaban si un teléfono tenía citas o estaba bloqueado | ✅ Mensaje único (015) |
+| El barbero podía desactivar clientes; el dueño podía borrar su perfil | ✅ Bloqueado (015) |
+| Logo/portada aceptaban cualquier texto | ✅ Solo `https://` (015) |
+| `TRUNCATE` concedido a los roles de la API | ✅ Retirado (015) |
+| Web sin CSP, HSTS ni COOP | ✅ Publicadas en `_headers` |
+| Función de invitar aceptaba cualquier origen | ✅ Solo `barberia-pro.pages.dev` |
+| CI sin permisos mínimos ni versión fija de Flutter | ✅ Corregido |
+| Supabase aceptaba contraseñas de 6 | ✅ Mínimo 8 |
+| **Sin CAPTCHA** en registro y reserva pública | ⬜ Cloudflare Turnstile (requiere crear la clave en Cloudflare) |
+| **Sin 2FA** para dueños | ⬜ MFA TOTP de Supabase + pantalla de enrolamiento |
+| **Sin copias de seguridad utilizables** (plan gratis) | ⬜ Supabase Pro + `pg_dump` semanal a otro almacenamiento + ensayo de restauración |
+| Contraseñas filtradas (HaveIBeenPwned), caducidad de sesión | ⬜ Requieren Supabase Pro |
+| Límite de invitaciones por negocio y día | ⬜ |
+| Aprobación manual para aplicar migraciones a producción | ⬜ Entorno con revisor en GitHub |
+| Configuración de Supabase sin versionar (`config.toml`) | ⬜ |
+| Rotar claves compartidas por el chat (Supabase, Cloudflare, Gmail) | ⬜ El dueño de la cuenta |
 
-**C. Mejoras después del primer negocio (V1.1)**
-8. Agenda en vivo y avisos (Realtime).
-9. Compartir resumen por WhatsApp y resumen automático por correo.
-10. Logo y fotos de barberos como archivo; color del negocio en la reserva.
-11. Vista de semana y aviso de citas fuera de horario.
+### Mercado (resumen)
+- Internacionales: **USD 20–50/mes por negocio**; Booksy y Fresha además cobran comisión por cliente nuevo.
+- Latinoamérica: el rival real es **AgendaPro** (desde ~USD 8/mes, 50 recordatorios WhatsApp incluidos).
+- **En RD no se encontró software local** para barberías/salones: el competidor real es la libreta y el WhatsApp a mano.
+- Pagos en RD: Stripe no parece operar; **Azul / CardNET** son la vía local. Seguir con transferencia como base.
+- **Ley 172-13** (datos personales): consentimiento, política de privacidad y derecho a borrar/exportar datos.
+- **e-CF (DGII):** la obligación es del negocio, no de la app; plazo para pequeños según fuentes: 15-nov-2026 (confirmar con contador).
 
-**D. Después**
-12. Android e iOS.
-13. Pago con tarjeta.
-
-**Pendientes de seguridad del dueño de la cuenta**
-- Rotar las claves que se compartieron por el chat: token `barberia-cli` de Supabase, token de Cloudflare y contraseña de aplicación de Gmail.
+### Modelo de precios propuesto (validar con dueños dominicanos)
+- Plan **por negocio**, no por barbero: **Solo** (1 barbero) · **Barbería** (hasta ~5, recordatorios y comisiones) · **Pro** (varias sedes, reseñas, marketing).
+- Prueba gratis de 14–30 días sin tarjeta; precio congelado para los 10 primeros; anual con 2 meses de regalo.
+- **Sin comisión por cita** (ventaja frente a Booksy/Fresha). Cobrar aparte los mensajes de WhatsApp automáticos.
 
 ---
+
+## Lo que falta, en orden
+
+**A. Antes de cobrar al primer negocio**
+1. Prueba de oro y pruebas en celulares reales (dueño, barbero invitado, fotos).
+2. **Legal:** términos de uso, política de privacidad (Ley 172-13), casilla de consentimiento al reservar y al registrarse, borrar/exportar datos de un cliente.
+3. **Cobro del servicio:** tablas `planes` y `suscripciones`, prueba gratis, vencimiento con gracia y modo solo lectura (sin borrar datos), cobro manual por transferencia y **panel de administrador** para ti.
+4. **Supabase Pro** (no se pausa, copias diarias) + `pg_dump` semanal + ensayo de restauración.
+5. **Dominio propio** + correo con **Resend** (SPF/DKIM).
+6. **CAPTCHA** (Turnstile) en registro y reserva; **2FA** para dueños.
+7. **Monitoreo de errores** (Sentry) y botón **"Reportar un problema"**.
+8. **Enlace de reservas con vista previa** en WhatsApp (logo y nombre) y rutas limpias `/r/<slug>`.
+9. **Rendimiento** en celulares de gama baja (primera carga de Flutter web).
+10. **Asistente de primer uso** (negocio → horario → servicios → barbero → compartir enlace).
+
+**B. Primeros 3 meses (lo que más pagan los dueños)**
+11. **Recordatorios automáticos por WhatsApp** (API, con cupo incluido y excedente cobrado).
+12. **Comisiones por barbero** en reportes.
+13. **Aviso al dueño** cuando llega una reserva o un pago (Realtime / correo / push).
+14. Pantalla de **historial de auditoría** para el dueño.
+15. Transferir el negocio a otro dueño; correos de bienvenida y fin de prueba; métricas de uso.
+
+**C. Diferenciadores después**
+16. Reseñas, lista de espera, fidelización ("la décima gratis"), cumpleaños y clientes que no vuelven.
+17. Vista de semana, foto de barberos como archivo, color del negocio en la reserva.
+18. Pago con tarjeta del apartado (Azul/CardNET); comprobantes e-CF vía proveedor certificado.
+
+**D. Más adelante**
+19. Apps nativas, multi-sucursal, inventario, marketplace.
 
 ## Comparación con apps parecidas
 
