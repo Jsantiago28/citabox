@@ -73,6 +73,10 @@ class _AgendaPageState extends State<AgendaPage> {
   String? _actualizandoId;
   int _peticion = 0;
 
+  // Filtro por barbero (solo agenda del dueño): id y nombre del elegido.
+  String? _filtroId;
+  String _filtroNombre = '';
+
   // Se crea solo cuando hace falta, para no exigir Supabase en pruebas.
   AgendaRepository get _agenda =>
       widget.agendaRepository ??
@@ -363,6 +367,16 @@ class _AgendaPageState extends State<AgendaPage> {
                 onSiguiente: () => _moverDia(1),
                 onHoy: _irAHoy,
               ),
+              if (widget.empleadoId == null &&
+                  (_citas.isNotEmpty || _filtroId != null))
+                _FiltroBarberos(
+                  barberos: _barberosDelDia(),
+                  seleccionado: _filtroId,
+                  onElegir: (id, nombre) => setState(() {
+                    _filtroId = id;
+                    _filtroNombre = nombre;
+                  }),
+                ),
               const SizedBox(height: 16),
               Expanded(child: _contenido()),
             ],
@@ -370,6 +384,27 @@ class _AgendaPageState extends State<AgendaPage> {
         );
       },
     );
+  }
+
+  /// Barberos con citas en el día cargado. Si el filtro activo no tiene
+  /// citas ese día, se conserva con total 0.
+  List<({String id, String nombre, int total})> _barberosDelDia() {
+    final conteo = <String, ({String nombre, int total})>{};
+    for (final cita in _citas) {
+      final previo = conteo[cita.empleadoId];
+      conteo[cita.empleadoId] = (
+        nombre: previo?.nombre ?? cita.empleadoNombre,
+        total: (previo?.total ?? 0) + 1,
+      );
+    }
+    final id = _filtroId;
+    if (id != null && !conteo.containsKey(id)) {
+      conteo[id] = (nombre: _filtroNombre, total: 0);
+    }
+    return [
+      for (final e in conteo.entries)
+        (id: e.key, nombre: e.value.nombre, total: e.value.total),
+    ]..sort((a, b) => a.nombre.compareTo(b.nombre));
   }
 
   Widget _contenido() {
@@ -386,17 +421,27 @@ class _AgendaPageState extends State<AgendaPage> {
         ),
       );
     }
-    if (_citas.isEmpty) {
-      return const Center(child: Text('No hay citas para este día.'));
+    final filtro = widget.empleadoId == null ? _filtroId : null;
+    final visibles = filtro == null
+        ? _citas
+        : _citas.where((c) => c.empleadoId == filtro).toList();
+    if (visibles.isEmpty) {
+      return Center(
+        child: Text(
+          filtro == null
+              ? 'No hay citas para este día.'
+              : '$_filtroNombre no tiene citas este día.',
+        ),
+      );
     }
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: ListView.separated(
-        itemCount: _citas.length,
+        itemCount: visibles.length,
         separatorBuilder: (_, _) => const Divider(),
         itemBuilder: (context, index) {
-          final cita = _citas[index];
+          final cita = visibles[index];
           return _FilaCita(
             cita: cita,
             moneda: widget.moneda,
@@ -406,6 +451,50 @@ class _AgendaPageState extends State<AgendaPage> {
             onMenu: (accion) => _menu(cita, accion),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Chips horizontales: "Todos" y un chip por barbero con citas ese día.
+class _FiltroBarberos extends StatelessWidget {
+  const _FiltroBarberos({
+    required this.barberos,
+    required this.seleccionado,
+    required this.onElegir,
+  });
+
+  final List<({String id, String nombre, int total})> barberos;
+  final String? seleccionado;
+  final void Function(String? id, String nombre) onElegir;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            ChoiceChip(
+              label: const Text('Todos'),
+              selected: seleccionado == null,
+              showCheckmark: false,
+              selectedColor: Marca.doradoClaro,
+              onSelected: (_) => onElegir(null, ''),
+            ),
+            for (final b in barberos) ...[
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: Text('${b.nombre} · ${b.total}'),
+                selected: seleccionado == b.id,
+                showCheckmark: false,
+                selectedColor: Marca.doradoClaro,
+                onSelected: (_) => onElegir(b.id, b.nombre),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

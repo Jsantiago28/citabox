@@ -332,6 +332,52 @@ void main() {
     expect(agenda.intentos.last.horaFin, '11:45:00');
   });
 
+  testWidgets('owner filters the agenda by barber and keeps it across days', (
+    tester,
+  ) async {
+    final citas = _FakeCitas([
+      _cita('c1', EstadoCita.pendiente, cliente: 'Cliente Uno'),
+      _cita('c2', EstadoCita.pendiente, cliente: 'Cliente Dos'),
+      _cita('c3', EstadoCita.pendiente, cliente: 'Cliente Tres', barbero: 'b2'),
+    ]);
+    await _abrirAgenda(tester, citas, _FakeAgenda());
+
+    expect(find.widgetWithText(ChoiceChip, 'Todos'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Luis · 2'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Miguel · 1'), findsOneWidget);
+    expect(find.text('Cliente Tres'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Miguel · 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cliente Tres'), findsOneWidget);
+    expect(find.text('Cliente Uno'), findsNothing);
+    expect(find.text('Cliente Dos'), findsNothing);
+
+    // El filtro sigue al cambiar de día aunque no haya citas.
+    await tester.tap(find.byTooltip('Día siguiente'));
+    await tester.pumpAndSettle();
+    expect(find.text('Miguel no tiene citas este día.'), findsOneWidget);
+    final chip = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'Miguel · 0'),
+    );
+    expect(chip.selected, isTrue);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Todos'));
+    await tester.pumpAndSettle();
+    expect(find.text('No hay citas para este día.'), findsOneWidget);
+    await tester.tap(find.byTooltip('Día anterior'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cliente Uno'), findsOneWidget);
+    expect(find.text('Cliente Tres'), findsOneWidget);
+  });
+
+  testWidgets('"Mi agenda" has no barber filter', (tester) async {
+    final citas = _FakeCitas([_cita('c1', EstadoCita.pendiente)]);
+    await _abrirAgenda(tester, citas, _FakeAgenda(), empleadoId: 'b1');
+    expect(find.byType(ChoiceChip), findsNothing);
+    expect(find.text('Todos'), findsNothing);
+  });
+
   testWidgets('completing records the final price and can be undone', (
     tester,
   ) async {
@@ -818,6 +864,7 @@ Cita _cita(
   String fin = '10:45:00',
   String cliente = 'Ana López',
   String telefono = '809-555-1111',
+  String barbero = 'b1',
 }) => Cita(
   id: id,
   fecha: '2026-09-18',
@@ -827,12 +874,12 @@ Cita _cita(
   estado: estado,
   clienteId: 'cl1',
   servicioId: 's1',
-  empleadoId: 'b1',
+  empleadoId: barbero,
   notas: 'Trae su propia navaja',
   clienteNombre: cliente,
   clienteTelefono: telefono,
   servicioNombre: 'Corte',
-  empleadoNombre: 'Luis',
+  empleadoNombre: barbero == 'b1' ? 'Luis' : 'Miguel',
 );
 
 class _FakeCitas implements CitasRepository {
