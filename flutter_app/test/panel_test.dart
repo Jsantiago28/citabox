@@ -8,6 +8,88 @@ import 'package:barberiapro/services/citas_repository.dart';
 import 'package:barberiapro/utils/formato.dart';
 
 void main() {
+  test('resumenPorBarbero suma por barbero y ordena por cobrado', () {
+    final filas = resumenPorBarbero(const [
+      Cita(
+        id: 'a',
+        fecha: 'f',
+        horaInicio: 'h',
+        precio: 500,
+        estado: EstadoCita.completada,
+        empleadoNombre: 'Carlos',
+        propina: 50,
+      ),
+      Cita(
+        id: 'b',
+        fecha: 'f',
+        horaInicio: 'h',
+        precio: 700,
+        estado: EstadoCita.llego,
+        empleadoNombre: 'Luis',
+        propina: 100,
+      ),
+      Cita(
+        id: 'c',
+        fecha: 'f',
+        horaInicio: 'h',
+        precio: 300,
+        estado: EstadoCita.llego,
+        empleadoNombre: 'Luis',
+      ),
+      Cita(
+        id: 'd',
+        fecha: 'f',
+        horaInicio: 'h',
+        precio: 999,
+        estado: EstadoCita.pendiente,
+        empleadoNombre: 'Luis',
+      ),
+    ]);
+    expect(filas.map((f) => f.nombre), ['Luis', 'Carlos']);
+    expect(filas.first.atendidas, 2);
+    expect(filas.first.cobrado, 1000);
+    expect(filas.first.propinas, 100);
+    expect(filas.fold<num>(0, (t, f) => t + f.cobrado), 1500);
+    expect(resumenPorBarbero(const []), isEmpty);
+  });
+
+  testWidgets('dashboard shows Hoy por barbero only when enabled', (
+    tester,
+  ) async {
+    _pantallaAncha(tester);
+    Future<void> montar(bool mostrar) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DashboardPage(
+              key: ValueKey(mostrar),
+              negocioId: 'n1',
+              negocioNombre: 'Barbería El Jefe',
+              nombre: 'Juan Rodríguez',
+              repository: _FakeCitasRepository(_citasDeEjemplo()),
+              onVerAgenda: () {},
+              hoy: DateTime(2026, 9, 18),
+              mostrarPorBarbero: mostrar,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await montar(true);
+    expect(find.text('Hoy por barbero'), findsOneWidget);
+    expect(find.text('Total'), findsOneWidget);
+    final tarjeta = find.byKey(const Key('hoy-por-barbero'));
+    expect(
+      find.descendant(of: tarjeta, matching: find.text(r'RD$1,200')),
+      findsOneWidget,
+    );
+
+    await montar(false);
+    expect(find.text('Hoy por barbero'), findsNothing);
+  });
+
   test('formats money, dates and times in Spanish', () {
     expect(formatoMoneda(8450), r'RD$8,450');
     expect(formatoMoneda(1234567.5), r'RD$1,234,567.50');

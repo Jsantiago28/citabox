@@ -20,6 +20,7 @@ class DashboardPage extends StatefulWidget {
     this.hoy,
     this.apartadosRepository,
     this.onVerApartados,
+    this.mostrarPorBarbero = true,
   });
 
   final String negocioId;
@@ -38,6 +39,9 @@ class DashboardPage extends StatefulWidget {
   /// Si se indican, el panel avisa cuántos apartados faltan por validar.
   final ApartadosRepository? apartadosRepository;
   final VoidCallback? onVerApartados;
+
+  /// Muestra la tarjeta "Hoy por barbero" (solo para el dueño).
+  final bool mostrarPorBarbero;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -138,6 +142,13 @@ class _DashboardPageState extends State<DashboardPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _Indicadores(citas: citas, moneda: widget.moneda),
+                      if (widget.mostrarPorBarbero) ...[
+                        const SizedBox(height: 24),
+                        _HoyPorBarbero(
+                          resumen: resumenPorBarbero(citas),
+                          moneda: widget.moneda,
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       _AgendaDeHoy(
                         citas: citas,
@@ -152,6 +163,130 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Una fila del cierre de caja por barbero.
+class FilaBarbero {
+  const FilaBarbero({
+    required this.nombre,
+    required this.atendidas,
+    required this.cobrado,
+    required this.propinas,
+  });
+
+  final String nombre;
+  final int atendidas;
+  final num cobrado;
+  final num propinas;
+}
+
+/// Agrupa las citas atendidas por barbero, ordenado por cobrado (desc).
+List<FilaBarbero> resumenPorBarbero(Iterable<Cita> citas) {
+  final grupos = <String, List<Cita>>{};
+  for (final cita in citas.where((c) => c.estado.atendida)) {
+    final nombre = cita.empleadoNombre.trim();
+    final clave = nombre.isNotEmpty
+        ? nombre
+        : (cita.empleadoId.isNotEmpty ? cita.empleadoId : 'Sin asignar');
+    grupos.putIfAbsent(clave, () => []).add(cita);
+  }
+  final filas = [
+    for (final e in grupos.entries)
+      FilaBarbero(
+        nombre: e.key,
+        atendidas: e.value.length,
+        cobrado: e.value.fold<num>(0, (t, c) => t + c.precio),
+        propinas: e.value.fold<num>(0, (t, c) => t + c.propina),
+      ),
+  ];
+  filas.sort((a, b) => b.cobrado.compareTo(a.cobrado));
+  return filas;
+}
+
+class _HoyPorBarbero extends StatelessWidget {
+  const _HoyPorBarbero({required this.resumen, required this.moneda});
+
+  final List<FilaBarbero> resumen;
+  final String moneda;
+
+  Widget _fila(String a, String b, String c, String d, {bool fuerte = false}) {
+    final estilo = TextStyle(
+      fontWeight: fuerte ? FontWeight.w700 : FontWeight.w400,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(flex: 3, child: Text(a, style: estilo)),
+          Expanded(child: Text(b, style: estilo, textAlign: TextAlign.right)),
+          Expanded(
+            flex: 2,
+            child: Text(c, style: estilo, textAlign: TextAlign.right),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(d, style: estilo, textAlign: TextAlign.right),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const Key('hoy-por-barbero'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Hoy por barbero',
+          style: Theme.of(context).textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: resumen.isEmpty
+                ? const Text('Aún no hay cobros hoy')
+                : Column(
+                    children: [
+                      _fila(
+                        'Barbero',
+                        'Citas',
+                        'Cobrado',
+                        'Propinas',
+                        fuerte: true,
+                      ),
+                      const Divider(),
+                      for (final f in resumen)
+                        _fila(
+                          f.nombre,
+                          '${f.atendidas}',
+                          formatoMoneda(f.cobrado, moneda),
+                          formatoMoneda(f.propinas, moneda),
+                        ),
+                      const Divider(),
+                      _fila(
+                        'Total',
+                        '${resumen.fold<int>(0, (t, f) => t + f.atendidas)}',
+                        formatoMoneda(
+                          resumen.fold<num>(0, (t, f) => t + f.cobrado),
+                          moneda,
+                        ),
+                        formatoMoneda(
+                          resumen.fold<num>(0, (t, f) => t + f.propinas),
+                          moneda,
+                        ),
+                        fuerte: true,
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
     );
   }
 }

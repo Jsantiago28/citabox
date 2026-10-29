@@ -278,6 +278,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         onVerAgenda: () => _ir(_Seccion.agenda),
         apartadosRepository: _apartados,
         onVerApartados: () => _ir(_Seccion.apartados),
+        mostrarPorBarbero: widget.esOwner,
       ),
       _Seccion.agenda => AgendaPage(
         key: ValueKey('agenda-$empleadoId'),
