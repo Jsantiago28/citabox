@@ -6,6 +6,7 @@ import 'package:barberiapro/models/configuracion_negocio.dart';
 import 'package:barberiapro/pages/configuracion_page.dart';
 import 'package:barberiapro/services/configuracion_repository.dart';
 import 'package:barberiapro/utils/enlace_publico.dart';
+import 'package:barberiapro/utils/fotos.dart';
 
 void main() {
   group('enlaceReserva', () {
@@ -94,6 +95,22 @@ void main() {
 
     expect(copiado, [enlace]);
     expect(find.text('Enlace copiado.'), findsOneWidget);
+  });
+
+  testWidgets('uploads the logo and removes the cover', (tester) async {
+    final repository = _FakeConfiguracionRepository();
+    await _abrir(tester, repository);
+
+    await tester.tap(find.byKey(const Key('config-subir-logo')));
+    await tester.pumpAndSettle();
+    expect(repository.imagenesSubidas, [('logo', 'image/png')]);
+    expect(find.text('Logo actualizado.'), findsOneWidget);
+    expect(find.byKey(const Key('config-quitar-logo')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('config-quitar-logo')));
+    await tester.pumpAndSettle();
+    expect(repository.datosGuardados, {'logo': null});
+    expect(find.byKey(const Key('config-quitar-logo')), findsNothing);
   });
 
   testWidgets('saves the business profile', (tester) async {
@@ -216,6 +233,7 @@ Future<void> _abrir(
   WidgetTester tester,
   ConfiguracionRepository repository, {
   Uri? base,
+  ElegirFoto? elegirFoto,
 }) async {
   tester.view.physicalSize = const Size(1200, 3000);
   tester.view.devicePixelRatio = 1;
@@ -227,6 +245,8 @@ Future<void> _abrir(
           negocioId: 'n1',
           repository: repository,
           baseEnlace: base,
+          elegirFoto:
+              elegirFoto ?? () async => FotoElegida(Uint8List(4), 'image/png'),
         ),
       ),
     ),
@@ -238,6 +258,18 @@ class _FakeConfiguracionRepository implements ConfiguracionRepository {
   String? ultimoNegocioId;
   Map<String, Object?>? datosGuardados;
   List<HorarioDia>? horariosGuardados;
+  final imagenesSubidas = <(String, String)>[];
+
+  @override
+  Future<String> subirImagen({
+    required String negocioId,
+    required String campo,
+    required Uint8List bytes,
+    required String tipo,
+  }) async {
+    imagenesSubidas.add((campo, tipo));
+    return 'https://ejemplo.com/$campo.png';
+  }
 
   @override
   Future<ConfiguracionNegocio> cargar(String negocioId) async {

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/servicio.dart';
+import '../utils/fotos.dart';
 import 'sin_permiso.dart';
 
 abstract interface class ServiciosRepository {
@@ -87,28 +88,16 @@ class SupabaseServiciosRepository implements ServiciosRepository {
     required Uint8List bytes,
     required String tipo,
   }) async {
-    // Solo los tipos que acepta el bucket (013); lo demás se sube como JPEG,
-    // que es lo que entrega el navegador al reducir la foto.
-    final (extension, contentType) = switch (tipo) {
-      'image/png' => ('png', 'image/png'),
-      'image/webp' => ('webp', 'image/webp'),
-      _ => ('jpg', 'image/jpeg'),
-    };
-    // Nombre nuevo en cada subida: el navegador nunca muestra la foto vieja.
-    final ruta =
-        '$negocioId/$servicioId-${DateTime.now().millisecondsSinceEpoch}.$extension';
-    final storage = _client.storage.from('servicios');
-    await storage.uploadBinary(
-      ruta,
-      bytes,
-      // Sin upsert: el nombre es único y "upsert" exige además permiso de
-      // lectura sobre storage.objects, que no se concede.
-      fileOptions: FileOptions(contentType: contentType),
+    final url = await subirFotoDelNegocio(
+      _client,
+      negocioId: negocioId,
+      nombre: servicioId,
+      bytes: bytes,
+      tipo: tipo,
     );
-
     final filas = await _client
         .from('servicios')
-        .update({'imagen_url': storage.getPublicUrl(ruta)})
+        .update({'imagen_url': url})
         .eq('negocio_id', negocioId)
         .eq('id', servicioId)
         .select('id');

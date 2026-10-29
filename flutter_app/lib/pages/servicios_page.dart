@@ -1,7 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+
 import 'package:supabase_flutter/supabase_flutter.dart' show StorageException;
 
 import '../models/catalogo_servicios.dart';
@@ -10,32 +8,10 @@ import '../services/servicios_repository.dart';
 import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
+import '../utils/fotos.dart';
 import '../utils/iconos_servicio.dart';
 import '../widgets/etiqueta.dart';
 import '../widgets/reserva_publica.dart' show ImagenRed;
-
-/// Foto elegida por el dueño, ya reducida, lista para subir.
-class FotoElegida {
-  const FotoElegida(this.bytes, this.tipo);
-
-  final Uint8List bytes;
-  final String tipo;
-}
-
-typedef ElegirFoto = Future<FotoElegida?> Function();
-
-/// Galería o cámara del dispositivo; la reduce a 800 px para que pese poco.
-Future<FotoElegida?> elegirFotoDelDispositivo() async {
-  final archivo = await ImagePicker().pickImage(
-    source: ImageSource.gallery,
-    maxWidth: 800,
-    maxHeight: 800,
-    imageQuality: 80,
-  );
-  if (archivo == null) return null;
-  final tipo = archivo.mimeType ?? 'image/jpeg';
-  return FotoElegida(await archivo.readAsBytes(), tipo);
-}
 
 class ServiciosPage extends StatefulWidget {
   const ServiciosPage({

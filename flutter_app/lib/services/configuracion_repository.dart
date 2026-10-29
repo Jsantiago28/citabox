@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/configuracion_negocio.dart';
+import '../utils/fotos.dart';
 import 'sin_permiso.dart';
 
 /// Configuración del negocio. Solo el OWNER puede modificarla (RLS).
@@ -14,6 +17,15 @@ abstract interface class ConfiguracionRepository {
   Future<void> guardarNegocio({
     required String negocioId,
     required Map<String, Object?> datos,
+  });
+
+  /// Sube el logo o la portada ([campo] = 'logo' | 'imagen'), lo guarda en el
+  /// negocio y devuelve su dirección.
+  Future<String> subirImagen({
+    required String negocioId,
+    required String campo,
+    required Uint8List bytes,
+    required String tipo,
   });
 
   /// Deja exactamente [abiertos] como horario: upsert de esos días y
@@ -47,6 +59,25 @@ class SupabaseConfiguracionRepository implements ConfiguracionRepository {
         .eq('negocio_id', negocioId)
         .order('dia_semana');
     return rows.map(HorarioDia.fromMap).toList(growable: false);
+  }
+
+  @override
+  Future<String> subirImagen({
+    required String negocioId,
+    required String campo,
+    required Uint8List bytes,
+    required String tipo,
+  }) async {
+    assert(campo == 'logo' || campo == 'imagen');
+    final url = await subirFotoDelNegocio(
+      _client,
+      negocioId: negocioId,
+      nombre: 'negocio-$campo',
+      bytes: bytes,
+      tipo: tipo,
+    );
+    await guardarNegocio(negocioId: negocioId, datos: {campo: url});
+    return url;
   }
 
   @override

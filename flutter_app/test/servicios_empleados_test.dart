@@ -7,6 +7,7 @@ import 'package:barberiapro/models/empleado.dart';
 import 'package:barberiapro/models/servicio.dart';
 import 'package:barberiapro/pages/empleados_page.dart';
 import 'package:barberiapro/pages/servicios_page.dart';
+import 'package:barberiapro/utils/fotos.dart';
 import 'package:barberiapro/services/empleados_repository.dart';
 import 'package:barberiapro/services/servicios_repository.dart';
 

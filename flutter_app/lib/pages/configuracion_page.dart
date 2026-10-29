@@ -1,12 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show StorageException;
 
 import '../models/configuracion_negocio.dart';
 import '../services/configuracion_repository.dart';
 import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/enlace_publico.dart';
+import '../utils/fotos.dart';
+import '../widgets/reserva_publica.dart' show ImagenRed;
 
 /// Configuración del negocio (solo el dueño): perfil, horario de apertura,
 /// reglas de apartado/reserva y enlace público de reservas.
@@ -16,6 +19,7 @@ class ConfiguracionPage extends StatefulWidget {
     required this.negocioId,
     required this.repository,
     this.baseEnlace,
+    this.elegirFoto = elegirFotoDelDispositivo,
   });
 
   final String negocioId;
@@ -24,6 +28,9 @@ class ConfiguracionPage extends StatefulWidget {
   /// Base para armar el enlace público. Si es null, en web se usa
   /// `Uri.base`; fuera de web se muestra solo la ruta.
   final Uri? baseEnlace;
+
+  /// Inyectable en pruebas; por defecto la galería o cámara del dispositivo.
+  final ElegirFoto elegirFoto;
 
   @override
   State<ConfiguracionPage> createState() => _ConfiguracionPageState();
@@ -435,25 +442,17 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
               ]),
               const SizedBox(height: 12),
               _filas(isWide, [
-                TextFormField(
-                  key: const Key('config-logo'),
+                _campoImagen(
+                  campo: 'logo',
+                  titulo: 'Logo',
+                  ayuda: 'Se ve redondo en tu página de reservas.',
                   controller: _logo,
-                  keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: 'Logo (URL)',
-                    hintText: 'https://…',
-                  ),
-                  validator: _validarUrl,
                 ),
-                TextFormField(
-                  key: const Key('config-imagen'),
+                _campoImagen(
+                  campo: 'imagen',
+                  titulo: 'Imagen de portada',
+                  ayuda: 'Foto de tu local o de tu trabajo.',
                   controller: _imagen,
-                  keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: 'Imagen de portada (URL)',
-                    hintText: 'https://…',
-                  ),
-                  validator: _validarUrl,
                 ),
               ]),
               const SizedBox(height: 12),
@@ -493,14 +492,118 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     );
   }
 
-  static String? _validarUrl(String? value) {
-    final texto = value?.trim() ?? '';
-    if (texto.isEmpty) return null;
-    final uri = Uri.tryParse(texto);
-    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
-      return 'Ingresa una URL válida (https://…).';
+  /// Sube el logo o la portada y lo guarda al momento (no hace falta pulsar
+  /// "Guardar perfil").
+  Future<void> _subirImagen(String campo, TextEditingController destino) async {
+    final FotoElegida? foto;
+    try {
+      foto = await widget.elegirFoto();
+    } catch (_) {
+      _mensaje('No se pudo abrir la foto.');
+      return;
     }
-    return null;
+    if (foto == null || !mounted) return;
+    if (foto.bytes.lengthInBytes > 2 * 1024 * 1024) {
+      _mensaje('La foto pesa más de 2 MB.');
+      return;
+    }
+
+    setState(() => _guardando = campo);
+    try {
+      final url = await widget.repository.subirImagen(
+        negocioId: widget.negocioId,
+        campo: campo,
+        bytes: foto.bytes,
+        tipo: foto.tipo,
+      );
+      destino.text = url;
+      _mensaje(campo == 'logo' ? 'Logo actualizado.' : 'Portada actualizada.');
+    } catch (error) {
+      final motivo = error is StorageException ? ' (${error.message})' : '';
+      _mensaje(mensajeDeError(error, 'No se pudo subir la imagen.$motivo'));
+    } finally {
+      if (mounted) setState(() => _guardando = null);
+    }
+  }
+
+  Future<void> _quitarImagen(String campo, TextEditingController destino) =>
+      _guardar(campo, () async {
+        await widget.repository.guardarNegocio(
+          negocioId: widget.negocioId,
+          datos: {campo: null},
+        );
+        destino.clear();
+      }, campo == 'logo' ? 'Logo quitado.' : 'Portada quitada.');
+
+  Widget _campoImagen({
+    required String campo,
+    required String titulo,
+    required String ayuda,
+    required TextEditingController controller,
+  }) {
+    final ocupado = _guardando == campo;
+    final tiene = controller.text.isNotEmpty;
+    final respaldo = Container(
+      color: Marca.negro,
+      alignment: Alignment.center,
+      child: Icon(
+        campo == 'logo' ? Icons.storefront : Icons.image_outlined,
+        color: Marca.doradoClaro,
+      ),
+    );
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(campo == 'logo' ? 40 : 12),
+          child: SizedBox(
+            width: campo == 'logo' ? 72 : 112,
+            height: 72,
+            child: ImagenRed(url: controller.text, respaldo: respaldo),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(titulo, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                ayuda,
+                style: const TextStyle(color: Marca.textoSuave, fontSize: 12),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  OutlinedButton.icon(
+                    key: Key('config-subir-$campo'),
+                    onPressed: _guardando != null
+                        ? null
+                        : () => _subirImagen(campo, controller),
+                    icon: ocupado
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.photo_camera_outlined, size: 18),
+                    label: Text(tiene ? 'Cambiar' : 'Subir'),
+                  ),
+                  if (tiene)
+                    TextButton(
+                      key: Key('config-quitar-$campo'),
+                      onPressed: _guardando != null
+                          ? null
+                          : () => _quitarImagen(campo, controller),
+                      child: const Text('Quitar'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _horarioCard(bool isWide) {
