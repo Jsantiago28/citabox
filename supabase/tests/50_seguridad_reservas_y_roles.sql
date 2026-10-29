@@ -106,9 +106,12 @@ do $$ begin
 exception when insufficient_privilege then null;
 end $$;
 
+-- Desde 014 ni siquiera la ve (0 filas); antes el trigger daba 42501.
 do $$ begin
   update citas set notas = 'x' where id = '0e000000-0000-0000-0000-000000000002';
-  raise exception 'FALLO: el barbero modificó la cita de otro barbero';
+  if found then
+    raise exception 'FALLO: el barbero modificó la cita de otro barbero';
+  end if;
 exception when insufficient_privilege then null;
 end $$;
 
@@ -227,3 +230,40 @@ do $$ begin
 end $$;
 
 \echo 'Pruebas de fotos de servicios pasaron.'
+
+-- -------------------------------------------------------------------------
+-- 014: el barbero solo ve sus citas y apartados; el dueño ve todo
+-- -------------------------------------------------------------------------
+set role authenticated;
+
+select set_config('request.jwt.claim.sub', 'e0000000-0000-0000-0000-0000000000e1', false);
+do $$ begin
+  if (select count(*) from citas) = 0 then
+    raise exception 'FALLO: el barbero no ve sus propias citas';
+  end if;
+  if (select count(*) from citas where empleado_id <> 'e5555555-0000-0000-0000-000000000001') <> 0 then
+    raise exception 'FALLO: el barbero ve citas de otro barbero';
+  end if;
+  if (select count(*) from apartados a join citas c on c.id = a.cita_id
+       where c.empleado_id <> 'e5555555-0000-0000-0000-000000000001') <> 0
+     or (select count(*) from apartados
+          where cita_id in ('0e000000-0000-0000-0000-000000000002',
+                            '0e000000-0000-0000-0000-0000000000a1',
+                            '0e000000-0000-0000-0000-0000000000a2')) <> 0 then
+    raise exception 'FALLO: el barbero ve apartados de citas de otro barbero';
+  end if;
+  if (select count(*) from clientes) = 0 then
+    raise exception 'FALLO: el barbero ya no ve los clientes del negocio';
+  end if;
+end $$;
+
+select set_config('request.jwt.claim.sub', 'e0000000-0000-0000-0000-00000000000e', false);
+do $$ begin
+  if (select count(distinct empleado_id) from citas) < 2 then
+    raise exception 'FALLO: el dueño no ve las citas de todos sus barberos';
+  end if;
+end $$;
+
+reset role;
+
+\echo 'Pruebas de visibilidad por barbero pasaron.'

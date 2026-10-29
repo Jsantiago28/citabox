@@ -357,3 +357,10 @@ Agrega `servicios.imagen_url` y el bucket público de Storage `servicios`
 (máx. 2 MB, JPEG/PNG/WebP). Solo el dueño activo sube, cambia o borra fotos,
 y solo dentro de la carpeta de su negocio (`servicios/<negocio_id>/…`).
 `reserva_catalogo` devuelve `imagen_url`; sin foto, la app muestra el ícono.
+
+## 014_barbero_solo_sus_citas.sql
+
+El barbero (EMPLOYEE) solo puede leer **sus propias citas** y los apartados
+de esas citas; el dueño sigue viendo todo su negocio. Agrega
+`auth_empleado_id()` (ficha de empleado del usuario actual). Los clientes
+siguen visibles para todo el negocio, para poder darles cita.
