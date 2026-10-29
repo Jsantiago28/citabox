@@ -98,7 +98,7 @@ La app React queda solo como referencia (`src/`).
 ### 4. Servicios ✅
 - ✅ CRUD, "Visible en reservas", catálogo de 20 servicios de salón con precio del dueño.
 - ✅ Íconos por servicio y **foto subida por el dueño** (ícono como respaldo).
-- ⬜ **Catálogo de barbería** (corte, fade, barba, cerquillo, etc.), igual que el de salón.
+- ✅ **Catálogo de barbería** (15 servicios) junto al de salón, con selector Barbería / Salón.
 - ⬜ Elegir el tipo de negocio (barbería / salón / ambos) al registrarse para mostrar el catálogo correcto.
 
 ### 5. Empleados ✅
@@ -112,7 +112,7 @@ La app React queda solo como referencia (`src/`).
 
 ### 7. Agenda ✅
 - ✅ Crear/editar, Completada con cobro (método y propina), Cancelar, "Atender ahora", WhatsApp.
-- ⬜ **Filtro por barbero** en la agenda del dueño (o vista en columnas por barbero).
+- ✅ **Filtro por barbero** en la agenda del dueño (chips "Todos · Luis 4…").
 - ⬜ Vista de semana.
 - ⬜ Avisar al crear una cita fuera del horario o en un día libre del barbero.
 - ⬜ **Actualización en vivo** (Supabase Realtime) y aviso cuando un barbero cobra o llega una reserva.
@@ -134,7 +134,7 @@ La app React queda solo como referencia (`src/`).
 ### 11. Reportes ✅
 - ✅ Hoy, semana, mes, mes anterior y rango; por barbero, servicio, método de pago y clientes frecuentes.
 - ✅ **Descarga en Excel** (.xlsx con 5 hojas). Los totales coinciden con la pantalla (prueba automática).
-- ⬜ Tarjeta **"Hoy por barbero"** en Inicio (cierre de caja rápido).
+- ✅ Tarjeta **"Hoy por barbero"** en Inicio (cierre de caja rápido).
 - ⬜ **Compartir resumen por WhatsApp** (día/semana/mes).
 - ⬜ Resumen automático por correo (requiere dominio y un servicio como Resend).
 
@@ -180,8 +180,8 @@ La app React queda solo como referencia (`src/`).
 **A. Para que un negocio real lo use (prioridad máxima)**
 1. Prueba de oro: un cliente reserva desde su celular sin ayuda.
 2. Probar en celulares reales: dueño, barbero invitado y fotos.
-3. Catálogo de barbería (además del de salón).
-4. Filtro por barbero en la agenda y tarjeta "Hoy por barbero" en Inicio.
+3. ✅ Catálogo de barbería.
+4. ✅ Filtro por barbero en la agenda y tarjeta "Hoy por barbero" en Inicio.
 
 **B. Para el lanzamiento**
 5. Dominio propio y correo con Resend.
