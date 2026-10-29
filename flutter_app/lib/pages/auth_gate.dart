@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/mfa_repository.dart';
 import '../services/password_repository.dart';
 import 'business_home_page.dart';
 import 'login_page.dart';
 import 'recuperar_password_page.dart';
+import 'verificacion_mfa_page.dart';
 
 class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
+  const AuthGate({super.key, this.mfaRepository});
+
+  /// Inyectable en pruebas; por defecto la verificación de Supabase.
+  final MfaRepository? mfaRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +34,14 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        return BusinessHomePage(
-          userId: session.user.id,
-          email: session.user.email ?? '',
+        // Dueño con verificación en dos pasos: pide el código antes del panel.
+        return MfaGate(
+          repository: mfaRepository ?? SupabaseMfaRepository(client),
+          onSalir: client.auth.signOut,
+          child: BusinessHomePage(
+            userId: session.user.id,
+            email: session.user.email ?? '',
+          ),
         );
       },
     );

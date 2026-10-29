@@ -5,11 +5,13 @@ import 'package:supabase_flutter/supabase_flutter.dart' show StorageException;
 
 import '../models/configuracion_negocio.dart';
 import '../services/configuracion_repository.dart';
+import '../services/mfa_repository.dart';
 import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/enlace_publico.dart';
 import '../utils/fotos.dart';
 import '../widgets/reserva_publica.dart' show ImagenRed;
+import '../widgets/seguridad_cuenta_card.dart';
 
 /// Configuración del negocio (solo el dueño): perfil, horario de apertura,
 /// reglas de apartado/reserva y enlace público de reservas.
@@ -20,6 +22,7 @@ class ConfiguracionPage extends StatefulWidget {
     required this.repository,
     this.baseEnlace,
     this.elegirFoto = elegirFotoDelDispositivo,
+    this.mfaRepository,
   });
 
   final String negocioId;
@@ -31,6 +34,10 @@ class ConfiguracionPage extends StatefulWidget {
 
   /// Inyectable en pruebas; por defecto la galería o cámara del dispositivo.
   final ElegirFoto elegirFoto;
+
+  /// Verificación en dos pasos; por defecto la de Supabase (si no hay
+  /// backend iniciado, la tarjeta no se muestra).
+  final MfaRepository? mfaRepository;
 
   @override
   State<ConfiguracionPage> createState() => _ConfiguracionPageState();
@@ -58,6 +65,9 @@ class _DiaEditable {
 }
 
 class _ConfiguracionPageState extends State<ConfiguracionPage> {
+  late final MfaRepository? _mfa =
+      widget.mfaRepository ?? mfaRepositoryPredeterminado();
+
   final _perfilKey = GlobalKey<FormState>();
   final _horarioKey = GlobalKey<FormState>();
   final _reservasKey = GlobalKey<FormState>();
@@ -312,6 +322,10 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
                   _horarioCard(isWide),
                   const SizedBox(height: 16),
                   _reservasCard(isWide),
+                  if (_mfa case final mfa?) ...[
+                    const SizedBox(height: 16),
+                    SeguridadCuentaCard(repository: mfa),
+                  ],
                 ],
               ),
             ),
