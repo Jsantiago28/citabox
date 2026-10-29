@@ -220,7 +220,9 @@ class _HoyPorBarbero extends StatelessWidget {
       child: Row(
         children: [
           Expanded(flex: 3, child: Text(a, style: estilo)),
-          Expanded(child: Text(b, style: estilo, textAlign: TextAlign.right)),
+          Expanded(
+            child: Text(b, style: estilo, textAlign: TextAlign.right),
+          ),
           Expanded(
             flex: 2,
             child: Text(c, style: estilo, textAlign: TextAlign.right),

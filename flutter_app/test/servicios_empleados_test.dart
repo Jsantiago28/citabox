@@ -87,7 +87,10 @@ void main() {
       expect(find.text('Agregar 2'), findsOneWidget);
       await tester.tap(find.text('Barbería'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('precio-Corte + barba')), '150');
+      await tester.enterText(
+        find.byKey(const Key('precio-Corte + barba')),
+        '150',
+      );
       await tester.tap(find.byKey(const Key('agregar-seleccionados')));
       await tester.pumpAndSettle();
 

@@ -383,3 +383,9 @@ Correcciones de la auditoría de seguridad del 29-oct-2026:
 - Sin `TRUNCATE`/`REFERENCES`/`TRIGGER` para `anon` y `authenticated`.
 
 Pruebas: `supabase/tests/50_seguridad_reservas_y_roles.sql`.
+
+## 017 - Suscripciones, administrador de plataforma y soporte
+
+Cobro manual por transferencia. Cada negocio nace en PRUEBA (30 dias); el servicio sigue activo 7 dias despues de vencer. Sin servicio activo no entran citas ni reservas en linea, y el plan limita los barberos activos (planes.max_barberos). Los precios de planes estan en 0: definir.
+
+Alta de administrador (SQL editor): insert into plataforma_admins (user_id) values ('<uuid de auth.users>'); y abrir #/admin. RPC: admin_listar_negocios, admin_activar, admin_suspender, admin_listar_soporte. Job pg_cron barberia-vencer-suscripciones (diario).
