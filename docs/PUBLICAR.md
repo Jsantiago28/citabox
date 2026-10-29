@@ -189,3 +189,7 @@ Necesita un solo secreto en GitHub:
 2. En GitHub → **Settings → Secrets and variables → Actions** crea
    `SUPABASE_ACCESS_TOKEN` con ese token.
 3. Para probarlo: **Actions → "Publicar Supabase…" → Run workflow**.
+
+## Vista previa al compartir (WhatsApp/redes)
+
+El enlace que comparte el dueño es `<sitio>/r/<slug>`. La función de Pages `flutter_app/functions/r/[slug].js` lee el negocio con `reserva_catalogo` y devuelve las etiquetas Open Graph antes de redirigir a `/#/reservar/<slug>`. El workflow publica desde `flutter_app` (para que Pages tome `./functions`) y, antes de publicar, guarda `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` como secretos del proyecto Pages con `wrangler pages secret put`. No hace falta nada más. Copias de seguridad: ver `docs/RESPALDOS.md`.

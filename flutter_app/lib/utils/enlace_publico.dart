@@ -12,9 +12,11 @@ String rutaCita(String token) => '/#/cita/$token';
 ///
 /// En web se pasa `Uri.base` como [base] para usar el origen actual
 /// (respetando la carpeta donde esté publicada la app). Sin [base], o si
-/// la base no es http(s), devuelve solo la ruta `/#/reservar/<slug>`.
-String enlaceReserva(String slug, {Uri? base}) =>
-    _conOrigen(rutaReserva(slug), base);
+/// la base no es http(s), devuelve solo la ruta `/r/<slug>`.
+///
+/// Es `/r/<slug>`: una función de Cloudflare Pages da la vista previa
+/// (WhatsApp/redes) y redirige a [rutaReserva].
+String enlaceReserva(String slug, {Uri? base}) => _conOrigen('/r/$slug', base);
 
 /// Arma el enlace de "Mi cita" (mismas reglas que [enlaceReserva]).
 String enlaceCita(String token, {Uri? base}) =>

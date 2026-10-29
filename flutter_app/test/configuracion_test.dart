@@ -16,14 +16,14 @@ void main() {
           'el-jefe',
           base: Uri.parse('https://app.barberia.pro/#/inicio'),
         ),
-        'https://app.barberia.pro/#/reservar/el-jefe',
+        'https://app.barberia.pro/r/el-jefe',
       );
       expect(
         enlaceReserva(
           'el-jefe',
           base: Uri.parse('http://localhost:8080/index.html'),
         ),
-        'http://localhost:8080/#/reservar/el-jefe',
+        'http://localhost:8080/r/el-jefe',
       );
     });
 
@@ -33,15 +33,15 @@ void main() {
           'el-jefe',
           base: Uri.parse('https://usuario.github.io/barberia/'),
         ),
-        'https://usuario.github.io/barberia/#/reservar/el-jefe',
+        'https://usuario.github.io/barberia/r/el-jefe',
       );
     });
 
     test('returns only the path outside the web', () {
-      expect(enlaceReserva('el-jefe'), '/#/reservar/el-jefe');
+      expect(enlaceReserva('el-jefe'), '/r/el-jefe');
       expect(
         enlaceReserva('el-jefe', base: Uri.parse('file:///C:/app/')),
-        '/#/reservar/el-jefe',
+        '/r/el-jefe',
       );
     });
   });
@@ -88,7 +88,7 @@ void main() {
       base: Uri.parse('https://app.barberia.pro/'),
     );
 
-    const enlace = 'https://app.barberia.pro/#/reservar/el-jefe';
+    const enlace = 'https://app.barberia.pro/r/el-jefe';
     expect(find.text(enlace), findsOneWidget);
     await tester.tap(find.text('Copiar'));
     await tester.pumpAndSettle();
