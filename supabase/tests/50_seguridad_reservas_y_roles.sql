@@ -267,3 +267,92 @@ end $$;
 reset role;
 
 \echo 'Pruebas de visibilidad por barbero pasaron.'
+
+-- -------------------------------------------------------------------------
+-- 015: cobro cerrado para el barbero, auditoría y privilegios
+-- -------------------------------------------------------------------------
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'e0000000-0000-0000-0000-0000000000e1', false);
+
+-- La cita 1 de E1 está COMPLETADA (450): no puede deshacerla ni cambiar el cobro.
+do $$ begin
+  update citas set estado = 'LLEGO' where id = '0e000000-0000-0000-0000-000000000001';
+  raise exception 'FALLO: el barbero deshizo una cita cobrada';
+exception when insufficient_privilege then null;
+end $$;
+
+do $$ begin
+  update citas set propina = 999 where id = '0e000000-0000-0000-0000-000000000001';
+  raise exception 'FALLO: el barbero cambió la propina de una cita cobrada';
+exception when insufficient_privilege then null;
+end $$;
+
+do $$ begin
+  insert into citas (negocio_id, cliente_id, empleado_id, servicio_id, fecha, hora_inicio, hora_fin, precio, estado)
+  values ('55555555-5555-5555-5555-555555555555', 'c5555555-0000-0000-0000-000000000001',
+          'e5555555-0000-0000-0000-000000000001', '55555555-0000-0000-0000-00000000005e',
+          current_date + 9, '15:00', '15:30', 1, 'COMPLETADA');
+  raise exception 'FALLO: el barbero creó una cita ya cobrada';
+exception when insufficient_privilege then null;
+end $$;
+
+-- Al crear, el precio es el del servicio aunque mande otro.
+insert into citas (id, negocio_id, cliente_id, empleado_id, servicio_id, fecha, hora_inicio, hora_fin, precio)
+values ('0e000000-0000-0000-0000-0000000000b9', '55555555-5555-5555-5555-555555555555',
+        'c5555555-0000-0000-0000-000000000001', 'e5555555-0000-0000-0000-000000000001',
+        '55555555-0000-0000-0000-00000000005e', current_date + 9, '16:00', '16:30', 1);
+
+do $$ begin
+  if (select precio from citas where id = '0e000000-0000-0000-0000-0000000000b9') <> 500 then
+    raise exception 'FALLO: el barbero creó una cita con otro precio';
+  end if;
+  update clientes set activo = false where id = 'c5555555-0000-0000-0000-000000000001';
+  raise exception 'FALLO: el barbero desactivó un cliente';
+exception when insufficient_privilege then null;
+end $$;
+
+do $$ begin
+  if (select count(*) from auditoria) <> 0 then
+    raise exception 'FALLO: el barbero puede leer la auditoría';
+  end if;
+end $$;
+
+select set_config('request.jwt.claim.sub', 'e0000000-0000-0000-0000-00000000000e', false);
+do $$ begin
+  if not exists (select 1 from auditoria
+                  where tabla = 'citas' and fila_id = '0e000000-0000-0000-0000-0000000000b9'
+                    and accion = 'INSERT' and usuario_id = 'e0000000-0000-0000-0000-0000000000e1') then
+    raise exception 'FALLO: la auditoría no registró quién creó la cita';
+  end if;
+end $$;
+
+do $$ begin
+  delete from auditoria;
+  if found then
+    raise exception 'FALLO: el dueño pudo borrar la auditoría';
+  end if;
+exception when insufficient_privilege then null;
+end $$;
+
+do $$ begin
+  delete from perfiles where id = 'e0000000-0000-0000-0000-00000000000e';
+  raise exception 'FALLO: el dueño borró su propio perfil';
+exception when insufficient_privilege then null;
+end $$;
+
+do $$ begin
+  update negocios set logo = 'javascript:alert(1)' where id = '55555555-5555-5555-5555-555555555555';
+  raise exception 'FALLO: se aceptó un logo sin https';
+exception when check_violation then null;
+end $$;
+
+reset role;
+
+do $$ begin
+  if has_table_privilege('anon', 'citas', 'truncate')
+     or has_table_privilege('authenticated', 'clientes', 'truncate') then
+    raise exception 'FALLO: los roles de la API tienen TRUNCATE';
+  end if;
+end $$;
+
+\echo 'Pruebas de 015 pasaron.'

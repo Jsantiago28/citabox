@@ -364,3 +364,22 @@ El barbero (EMPLOYEE) solo puede leer **sus propias citas** y los apartados
 de esas citas; el dueño sigue viendo todo su negocio. Agrega
 `auth_empleado_id()` (ficha de empleado del usuario actual). Los clientes
 siguen visibles para todo el negocio, para poder darles cita.
+
+## 015_auditoria_y_cobro_seguro.sql
+
+Correcciones de la auditoría de seguridad del 29-oct-2026:
+
+- **Cobro cerrado para el barbero:** no puede sacar una cita de `COMPLETADA`
+  ni cambiar precio, propina o método después de cobrar; al crear una cita
+  el precio es el del servicio y no puede crearla ya cobrada ni "pública".
+- **`auditoria`:** registro de INSERT/UPDATE/DELETE (antes y después, usuario
+  y fecha) en citas, apartados, clientes, servicios, empleados y perfiles.
+  Solo el dueño la lee; nadie la modifica desde la API.
+- **Reservas públicas:** también vencen las que reportaron pago y el dueño no
+  validó en 24 h; un único mensaje para límite por teléfono y cliente
+  bloqueado (no revela nada).
+- Solo el dueño activa/desactiva clientes; el dueño no puede borrar su perfil.
+- `negocios.logo` e `imagen` solo con `https://`.
+- Sin `TRUNCATE`/`REFERENCES`/`TRIGGER` para `anon` y `authenticated`.
+
+Pruebas: `supabase/tests/50_seguridad_reservas_y_roles.sql`.
