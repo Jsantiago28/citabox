@@ -1022,34 +1022,34 @@ class _FakeAgenda implements AgendaRepository {
 
   @override
   Future<CatalogoAgenda> catalogo(String negocioId) async => CatalogoAgenda(
-        clientes: const [
-          Cliente(id: 'cl1', nombre: 'Ana López', telefono: '809-555-1111'),
-          Cliente(id: 'cl2', nombre: 'Pedro Gómez'),
-        ],
-        servicios: const [
-          ServicioAgenda(
-            id: 's1',
-            nombre: 'Corte',
-            precio: 500,
-            duracionMinutos: 45,
-          ),
-          ServicioAgenda(
-            id: 's2',
-            nombre: 'Barba',
-            precio: 250,
-            duracionMinutos: 20,
-          ),
-        ],
-        barberos: sinBarberos
-            ? const []
-            : const [
-                BarberoAgenda(id: 'b1', nombre: 'Luis'),
-                BarberoAgenda(id: 'b2', nombre: 'Miguel'),
-              ],
-        serviciosPorBarbero: const {
-          'b1': {'s1'},
-        },
-      );
+    clientes: const [
+      Cliente(id: 'cl1', nombre: 'Ana López', telefono: '809-555-1111'),
+      Cliente(id: 'cl2', nombre: 'Pedro Gómez'),
+    ],
+    servicios: const [
+      ServicioAgenda(
+        id: 's1',
+        nombre: 'Corte',
+        precio: 500,
+        duracionMinutos: 45,
+      ),
+      ServicioAgenda(
+        id: 's2',
+        nombre: 'Barba',
+        precio: 250,
+        duracionMinutos: 20,
+      ),
+    ],
+    barberos: sinBarberos
+        ? const []
+        : const [
+            BarberoAgenda(id: 'b1', nombre: 'Luis'),
+            BarberoAgenda(id: 'b2', nombre: 'Miguel'),
+          ],
+    serviciosPorBarbero: const {
+      'b1': {'s1'},
+    },
+  );
 
   @override
   Future<Cliente> crearCliente({

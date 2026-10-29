@@ -8,11 +8,14 @@ import '../services/clientes_repository.dart';
 import '../services/configuracion_repository.dart';
 import '../services/empleados_repository.dart';
 import '../services/registro_repository.dart';
+import '../services/primer_uso_repository.dart';
 import '../services/reportes_repository.dart';
+import '../services/plataforma_repository.dart';
 import '../services/servicios_repository.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../widgets/logo_barberia.dart';
+import '../widgets/reportar_problema_dialog.dart';
 import 'agenda_page.dart';
 import 'apartados_page.dart';
 import 'clientes_page.dart';
@@ -170,6 +173,8 @@ class BusinessWorkspace extends StatefulWidget {
     this.clientesRepository,
     this.reportesRepository,
     this.apartadosRepository,
+    this.suscripcionRepository,
+    this.soporteRepository,
   });
 
   final String userId;
@@ -185,6 +190,8 @@ class BusinessWorkspace extends StatefulWidget {
   final ClientesRepository? clientesRepository;
   final ReportesRepository? reportesRepository;
   final ApartadosRepository? apartadosRepository;
+  final SuscripcionRepository? suscripcionRepository;
+  final SoporteRepository? soporteRepository;
 
   @override
   State<BusinessWorkspace> createState() => _BusinessWorkspaceState();
@@ -204,6 +211,16 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
       widget.apartadosRepository ??
       SupabaseApartadosRepository(Supabase.instance.client);
   late Future<String?> _empleadoId;
+
+  /// Checklist de primeros pasos; null si Supabase no está iniciado (pruebas).
+  late final PrimerUsoRepository? _primerUso = () {
+    try {
+      return SupabasePrimerUsoRepository(Supabase.instance.client);
+    } catch (_) {
+      return null;
+    }
+  }();
+  late Future<AvisoSuscripcion?> _aviso;
   _Seccion _seccion = _Seccion.inicio;
 
   /// Secciones que muestran solo lo del barbero y necesitan su empleado.
@@ -232,6 +249,32 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
   void initState() {
     super.initState();
     _empleadoId = _buscarEmpleado();
+    _aviso = _buscarAviso();
+  }
+
+  /// Aviso de suscripción (solo el dueño). Un fallo no estorba: sin aviso.
+  Future<AvisoSuscripcion?> _buscarAviso() async {
+    if (!widget.esOwner) return null;
+    try {
+      final repo =
+          widget.suscripcionRepository ??
+          SupabaseSuscripcionRepository(Supabase.instance.client);
+      final s = await repo.obtener(widget.negocioId);
+      return s == null ? null : avisoSuscripcion(s, DateTime.now());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _reportar() {
+    mostrarReportarProblema(
+      context,
+      repository:
+          widget.soporteRepository ??
+          SupabaseSoporteRepository(Supabase.instance.client),
+      negocioId: widget.negocioId,
+      pantalla: _etiqueta(_seccion),
+    );
   }
 
   // El dueño ve todo el negocio; el barbero solo sus citas.
@@ -279,6 +322,12 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         apartadosRepository: _apartados,
         onVerApartados: () => _ir(_Seccion.apartados),
         mostrarPorBarbero: widget.esOwner,
+        primerUsoRepository: widget.esOwner ? _primerUso : null,
+        onIr: (paso) => _ir(switch (paso) {
+          'servicios' => _Seccion.servicios,
+          'barberos' => _Seccion.empleados,
+          _ => _Seccion.configuracion,
+        }),
       ),
       _Seccion.agenda => AgendaPage(
         key: ValueKey('agenda-$empleadoId'),
@@ -345,6 +394,17 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         return LayoutBuilder(
           builder: (context, constraints) {
             final ancho = constraints.maxWidth >= 860;
+            final contenido = Column(
+              children: [
+                FutureBuilder<AvisoSuscripcion?>(
+                  future: _aviso,
+                  builder: (_, aviso) => aviso.data == null
+                      ? const SizedBox.shrink()
+                      : _BannerSuscripcion(aviso: aviso.data!),
+                ),
+                Expanded(child: pagina),
+              ],
+            );
             final menu = _MenuLateral(
               secciones: _secciones,
               seleccionada: _seccion,
@@ -356,6 +416,10 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
                 _ir(seccion);
               },
               onSignOut: widget.onSignOut,
+              onReportar: () {
+                if (!ancho) Navigator.of(context).pop();
+                _reportar();
+              },
             );
 
             if (ancho) {
@@ -363,7 +427,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
                 body: Row(
                   children: [
                     menu,
-                    Expanded(child: pagina),
+                    Expanded(child: contenido),
                   ],
                 ),
               );
@@ -380,7 +444,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
                 width: 260,
                 child: menu,
               ),
-              body: pagina,
+              body: contenido,
             );
           },
         );
@@ -398,6 +462,7 @@ class _MenuLateral extends StatelessWidget {
     required this.rol,
     required this.onSeleccionar,
     required this.onSignOut,
+    required this.onReportar,
   });
 
   final List<_Seccion> secciones;
@@ -407,6 +472,7 @@ class _MenuLateral extends StatelessWidget {
   final String rol;
   final ValueChanged<_Seccion> onSeleccionar;
   final VoidCallback onSignOut;
+  final VoidCallback onReportar;
 
   @override
   Widget build(BuildContext context) {
@@ -484,15 +550,59 @@ class _MenuLateral extends StatelessWidget {
             const Divider(color: Colors.white12),
             Padding(
               padding: const EdgeInsets.all(10),
-              child: _ItemMenu(
-                icono: Icons.logout,
-                etiqueta: 'Cerrar sesión',
-                activo: false,
-                onTap: onSignOut,
+              child: Column(
+                children: [
+                  _ItemMenu(
+                    icono: Icons.support_agent_outlined,
+                    etiqueta: 'Reportar un problema',
+                    activo: false,
+                    onTap: onReportar,
+                  ),
+                  _ItemMenu(
+                    icono: Icons.logout,
+                    etiqueta: 'Cerrar sesión',
+                    activo: false,
+                    onTap: onSignOut,
+                  ),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BannerSuscripcion extends StatelessWidget {
+  const _BannerSuscripcion({required this.aviso});
+
+  final AvisoSuscripcion aviso;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = aviso.urgente
+        ? const Color(0xFFB3261E)
+        : const Color(0xFF8A6D1F);
+    return Container(
+      width: double.infinity,
+      color: color.withValues(alpha: 0.12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Icon(
+            aviso.urgente ? Icons.warning_amber_rounded : Icons.info_outline,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              aviso.texto,
+              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -531,11 +641,15 @@ class _ItemMenu extends StatelessWidget {
                   color: activo ? Marca.doradoClaro : Colors.white70,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  etiqueta,
-                  style: TextStyle(
-                    color: activo ? Colors.white : Colors.white70,
-                    fontWeight: activo ? FontWeight.w600 : FontWeight.w400,
+                Flexible(
+                  child: Text(
+                    etiqueta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: activo ? Colors.white : Colors.white70,
+                      fontWeight: activo ? FontWeight.w600 : FontWeight.w400,
+                    ),
                   ),
                 ),
               ],

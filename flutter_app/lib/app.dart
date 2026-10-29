@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'pages/admin_page.dart';
 import 'pages/auth_gate.dart';
 import 'pages/legal_page.dart';
 import 'pages/mi_cita_page.dart';
 import 'pages/reserva_page.dart';
 import 'pages/setup_required_page.dart';
+import 'services/plataforma_repository.dart';
 import 'services/reserva_repository.dart';
 import 'theme.dart';
 import 'utils/enlace_publico.dart';
@@ -17,6 +19,7 @@ class BarberiaApp extends StatelessWidget {
     this.supabaseConfigured = true,
     this.rutaInicial,
     this.reservaRepository,
+    this.adminRepository,
   });
 
   final bool supabaseConfigured;
@@ -27,6 +30,17 @@ class BarberiaApp extends StatelessWidget {
 
   /// Repositorio de la reserva pública (pruebas); por defecto, Supabase.
   final ReservaRepository? reservaRepository;
+
+  /// Repositorio del panel `#/admin` (pruebas); por defecto, Supabase.
+  final AdminRepository? adminRepository;
+
+  static bool _esRutaAdmin(String? ruta) {
+    var limpia = (ruta ?? '').trim();
+    if (limpia.startsWith('#')) limpia = limpia.substring(1);
+    final corte = limpia.indexOf(RegExp(r'[?#]'));
+    if (corte >= 0) limpia = limpia.substring(0, corte);
+    return limpia.replaceAll('/', '') == 'admin';
+  }
 
   ReservaRepository? get _repositorio =>
       reservaRepository ??
@@ -48,6 +62,26 @@ class BarberiaApp extends StatelessWidget {
       return publica.pagina == RutaLegal.terminos
           ? const LegalPage.terminos()
           : const LegalPage.privacidad();
+    }
+    final admin =
+        _esRutaAdmin(nombre) ||
+        (kIsWeb &&
+            (nombre == null || nombre == '/') &&
+            _esRutaAdmin(Uri.base.fragment));
+    if (admin && publica == null) {
+      if (adminRepository != null) {
+        return AdminPage(repository: adminRepository!);
+      }
+      if (supabaseConfigured) {
+        final cliente = Supabase.instance.client;
+        // Sin sesión se pide iniciar; al entrar, se abre el panel.
+        return StreamBuilder<AuthState>(
+          stream: cliente.auth.onAuthStateChange,
+          builder: (_, _) => cliente.auth.currentSession == null
+              ? const AuthGate()
+              : AdminPage(repository: SupabaseAdminRepository(cliente)),
+        );
+      }
     }
 
     final repositorio = publica == null ? null : _repositorio;
