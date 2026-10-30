@@ -412,3 +412,11 @@ Precios de lanzamiento por mes: Solo RD$400 (1 barbero), Barbería RD$900
 transfieren el pago del plan. Las leen solo los dueños con sesión (y el
 administrador); solo el administrador las crea o borra con
 `admin_guardar_cuenta_pago` / `admin_borrar_cuenta_pago`. No se guarda cédula.
+
+## 021_realtime.sql
+
+Añade `citas` y `apartados` a la publicación `supabase_realtime` (solo si
+existe; tolera que ya estén añadidas) y les pone REPLICA IDENTITY FULL. La app
+escucha con postgres_changes y RLS decide qué eventos recibe cada usuario (el
+barbero solo los de sus citas). Avisos: nueva cita/reserva, cita cancelada y
+pago de apartado reportado.

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/registro_negocio.dart';
 import '../services/apartados_repository.dart';
+import '../services/avisos_en_vivo.dart';
 import '../services/citas_repository.dart';
 import '../services/clientes_repository.dart';
 import '../services/configuracion_repository.dart';
@@ -181,6 +184,7 @@ class BusinessWorkspace extends StatefulWidget {
     this.apartadosRepository,
     this.suscripcionRepository,
     this.soporteRepository,
+    this.avisosEnVivo,
   });
 
   final String userId;
@@ -198,6 +202,9 @@ class BusinessWorkspace extends StatefulWidget {
   final ApartadosRepository? apartadosRepository;
   final SuscripcionRepository? suscripcionRepository;
   final SoporteRepository? soporteRepository;
+
+  /// Avisos en vivo; por defecto Supabase Realtime (null si no está iniciado).
+  final AvisosEnVivo? avisosEnVivo;
 
   @override
   State<BusinessWorkspace> createState() => _BusinessWorkspaceState();
@@ -229,6 +236,50 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
   late Future<AvisoSuscripcion?> _aviso;
   _Seccion _seccion = _Seccion.inicio;
 
+  late final AvisosEnVivo? _enVivo = widget.avisosEnVivo ?? _avisosPorDefecto();
+  StreamSubscription<AvisoEnVivo>? _suscripcionAvisos;
+
+  /// Avisos de agenda no vistos (puntito del menú) y contador de recargas.
+  int _sinVer = 0;
+  int _recarga = 0;
+
+  AvisosEnVivo? _avisosPorDefecto() {
+    try {
+      return SupabaseAvisosEnVivo(
+        Supabase.instance.client,
+        negocioId: widget.negocioId,
+        esOwner: widget.esOwner,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _alLlegarAviso(AvisoEnVivo aviso) {
+    if (!mounted) return;
+    final paraApartados = aviso.tipo == TipoAviso.pagoReportado;
+    final destino = paraApartados ? _Seccion.apartados : _Seccion.agenda;
+    setState(() {
+      _recarga++;
+      if (!paraApartados && _seccion != _Seccion.agenda) _sinVer++;
+    });
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(aviso.texto),
+          action: SnackBarAction(label: 'Ver', onPressed: () => _ir(destino)),
+        ),
+      );
+  }
+
+  @override
+  void dispose() {
+    _suscripcionAvisos?.cancel();
+    _enVivo?.cerrar();
+    super.dispose();
+  }
+
   /// Secciones que muestran solo lo del barbero y necesitan su empleado.
   bool get _necesitaEmpleado =>
       _seccion == _Seccion.inicio ||
@@ -256,6 +307,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
     super.initState();
     _empleadoId = _buscarEmpleado();
     _aviso = _buscarAviso();
+    _suscripcionAvisos = _enVivo?.avisos.listen(_alLlegarAviso);
   }
 
   /// Aviso de suscripción (solo el dueño). Un fallo no estorba: sin aviso.
@@ -317,7 +369,10 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
     });
   }
 
-  void _ir(_Seccion seccion) => setState(() => _seccion = seccion);
+  void _ir(_Seccion seccion) => setState(() {
+    _seccion = seccion;
+    if (seccion == _Seccion.agenda) _sinVer = 0;
+  });
 
   Widget _pagina(String? empleadoId, {bool falloEmpleado = false}) {
     // Un fallo de red no es lo mismo que un perfil sin vincular.
@@ -337,7 +392,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
 
     return switch (_seccion) {
       _Seccion.inicio => DashboardPage(
-        key: ValueKey('inicio-$empleadoId'),
+        key: ValueKey('inicio-$empleadoId-$_recarga'),
         negocioId: widget.negocioId,
         negocioNombre: widget.negocioNombre,
         nombre: widget.nombre,
@@ -356,7 +411,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         }),
       ),
       _Seccion.agenda => AgendaPage(
-        key: ValueKey('agenda-$empleadoId'),
+        key: ValueKey('agenda-$empleadoId-$_recarga'),
         negocioId: widget.negocioId,
         titulo: _etiqueta(_Seccion.agenda),
         negocioNombre: widget.negocioNombre,
@@ -366,7 +421,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         repository: _citas,
       ),
       _Seccion.apartados => ApartadosPage(
-        key: ValueKey('apartados-$empleadoId'),
+        key: ValueKey('apartados-$empleadoId-$_recarga'),
         negocioId: widget.negocioId,
         negocioNombre: widget.negocioNombre,
         moneda: widget.moneda,
@@ -438,6 +493,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
               secciones: _secciones,
               seleccionada: _seccion,
               etiqueta: _etiqueta,
+              sinVerAgenda: _sinVer,
               nombre: widget.nombre,
               rol: widget.esOwner ? 'Dueño' : 'Barbero',
               onSeleccionar: (seccion) {
@@ -487,6 +543,7 @@ class _MenuLateral extends StatelessWidget {
     required this.secciones,
     required this.seleccionada,
     required this.etiqueta,
+    required this.sinVerAgenda,
     required this.nombre,
     required this.rol,
     required this.onSeleccionar,
@@ -497,6 +554,7 @@ class _MenuLateral extends StatelessWidget {
   final List<_Seccion> secciones;
   final _Seccion seleccionada;
   final String Function(_Seccion) etiqueta;
+  final int sinVerAgenda;
   final String nombre;
   final String rol;
   final ValueChanged<_Seccion> onSeleccionar;
@@ -571,6 +629,7 @@ class _MenuLateral extends StatelessWidget {
                       icono: seccion.icono,
                       etiqueta: etiqueta(seccion),
                       activo: seccion == seleccionada,
+                      contador: seccion == _Seccion.agenda ? sinVerAgenda : 0,
                       onTap: () => onSeleccionar(seccion),
                     ),
                 ],
@@ -654,8 +713,10 @@ class _ItemMenu extends StatelessWidget {
     required this.etiqueta,
     required this.activo,
     required this.onTap,
+    this.contador = 0,
   });
 
+  final int contador;
   final IconData icono;
   final String etiqueta;
   final bool activo;
@@ -692,6 +753,22 @@ class _ItemMenu extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (contador > 0) ...[
+                  const SizedBox(width: 8),
+                  CircleAvatar(
+                    key: const Key('contador-agenda'),
+                    radius: 10,
+                    backgroundColor: Marca.dorado,
+                    child: Text(
+                      '$contador',
+                      style: const TextStyle(
+                        color: Marca.negro,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
