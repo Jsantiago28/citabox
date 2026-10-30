@@ -115,7 +115,7 @@ La app React queda solo como referencia (`src/`).
 - ✅ **Filtro por barbero** en la agenda del dueño (chips "Todos · Luis 4…").
 - ⬜ Vista de semana.
 - ⬜ Avisar al crear una cita fuera del horario o en un día libre del barbero.
-- ⬜ **Actualización en vivo** (Supabase Realtime) y aviso cuando un barbero cobra o llega una reserva.
+- ✅ **Actualización en vivo** (Supabase Realtime): avisos de reservas, cancelaciones y pagos reportados, con contador (021).
 
 ### 8. Reserva pública 🟡
 - ✅ Pasos: servicio (con foto o ícono) → barbero → fecha y hora → datos → apartado → confirmación.
