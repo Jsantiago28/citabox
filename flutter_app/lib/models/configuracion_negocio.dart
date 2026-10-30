@@ -15,7 +15,6 @@ class ConfiguracionNegocio {
     this.apartadoInstrucciones = '',
     this.cancelacionHorasMinimas = 24,
     this.intervaloReservaMinutos = 15,
-    this.recordatorioWhatsapp = false,
     this.recordatorioHoras = 24,
   });
 
@@ -23,7 +22,7 @@ class ConfiguracionNegocio {
       'id, nombre, slug, telefono, direccion, logo, imagen, color_principal, '
       'apartado_requerido, apartado_monto, apartado_politica, '
       'apartado_instrucciones, cancelacion_horas_minimas, '
-      'intervalo_reserva_minutos, recordatorio_whatsapp, recordatorio_horas';
+      'intervalo_reserva_minutos, recordatorio_horas';
 
   final String id;
   final String nombre;
@@ -40,8 +39,8 @@ class ConfiguracionNegocio {
   final int cancelacionHorasMinimas;
   final int intervaloReservaMinutos;
 
-  /// Recordatorio automático por WhatsApp [recordatorioHoras] antes de la cita.
-  final bool recordatorioWhatsapp;
+  /// Horas antes de la cita en que sale el recordatorio automático (si el
+  /// negocio contrató el servicio).
   final int recordatorioHoras;
 
   factory ConfiguracionNegocio.fromMap(Map<String, dynamic> map) {
@@ -64,45 +63,47 @@ class ConfiguracionNegocio {
       apartadoInstrucciones: texto('apartado_instrucciones'),
       cancelacionHorasMinimas: entero('cancelacion_horas_minimas', 24),
       intervaloReservaMinutos: entero('intervalo_reserva_minutos', 15),
-      recordatorioWhatsapp: map['recordatorio_whatsapp'] == true,
       recordatorioHoras: entero('recordatorio_horas', 24),
     );
   }
 }
 
-/// Recordatorios por WhatsApp enviados en el mes (`uso_whatsapp_mes`).
+/// Recordatorios automáticos por WhatsApp (`uso_whatsapp_mes`): servicio
+/// adicional que activa Barbería PRO, y lo enviado en el mes.
 class UsoWhatsapp {
   const UsoWhatsapp({
-    required this.enviados,
-    required this.cupo,
+    required this.activo,
+    this.enviados = 0,
+    this.cupo = 0,
     this.extra = 0,
+    this.precioMensual = 0,
     this.precioExtra = 0,
     this.montoExtra = 0,
-    this.prueba = false,
   });
 
+  /// El negocio contrató el envío automático.
+  final bool activo;
   final int enviados;
 
-  /// Mensajes incluidos en el plan cada mes.
+  /// Mensajes incluidos cada mes en lo contratado.
   final int cupo;
 
   /// Enviados por encima del cupo (se cobran aparte).
   final int extra;
+  final num precioMensual;
   final num precioExtra;
   final num montoExtra;
-
-  /// En la prueba gratis el cupo es un tope: no se envía más.
-  final bool prueba;
 
   factory UsoWhatsapp.fromMap(Map<String, dynamic> map) {
     int entero(String clave) => (map[clave] as num?)?.toInt() ?? 0;
     return UsoWhatsapp(
+      activo: map['activo'] == true,
       enviados: entero('enviados'),
       cupo: entero('cupo'),
       extra: entero('extra'),
+      precioMensual: (map['precio_mensual'] as num?) ?? 0,
       precioExtra: (map['precio_extra'] as num?) ?? 0,
       montoExtra: (map['monto_extra'] as num?) ?? 0,
-      prueba: map['prueba'] == true,
     );
   }
 }

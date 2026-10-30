@@ -72,28 +72,34 @@ nunca debe ir en la app.
 
 ## `enviar-recordatorios`
 
-Envía a los clientes el recordatorio de su cita por **WhatsApp (API de
-Meta)**. No la usa la app: la llama cada 15 minutos el flujo
-`.github/workflows/recordatorios.yml` con el encabezado `x-cron-secret`.
-Se despliega con `--no-verify-jwt` (lo hace solo `deploy-supabase.yml`).
+Envía el recordatorio de la cita por **WhatsApp (API de Meta)** a los
+clientes de los negocios que contrataron el **envío automático**, un
+servicio adicional. Por defecto los recordatorios los envía el dueño o el
+barbero desde la Agenda (botón de WhatsApp, mensaje listo, sin costo).
+
+No la usa la app: la llama el flujo `.github/workflows/recordatorios.yml`
+con el encabezado `x-cron-secret`. Se despliega con `--no-verify-jwt` (lo
+hace solo `deploy-supabase.yml`).
 
 Qué hace:
 
-1. `recordatorios_pendientes()` (migración 022) devuelve las citas
-   PENDIENTE o CONFIRMADA de negocios con los recordatorios activos que
+1. `recordatorios_pendientes()` (migraciones 022–023) devuelve las citas
+   PENDIENTE o CONFIRMADA de negocios con el servicio contratado que
    empiezan dentro de las horas elegidas por el dueño (1–48, por defecto
-   24). Omite las reservadas ya dentro de esa ventana, las de clientes sin
-   teléfono y, en la prueba gratis, las que pasan del cupo del mes.
+   24). Omite las reservadas ya dentro de esa ventana y las de clientes sin
+   teléfono.
 2. Envía la plantilla a cada cliente y anota el resultado con
    `registrar_recordatorio()`: lo enviado no se repite (salvo que la cita se
    reprograme) y lo fallido se reintenta hasta 3 veces.
 
-Cupo mensual incluido (tabla `planes`): prueba 30, Solo 150, Barbería 400,
-Pro 1000. En los planes pagos lo que pase del cupo se envía igual, se marca
-`extra` y se cobra a RD$3 por mensaje (`planes.whatsapp_precio_extra`). El
-dueño lo ve en Configuración y el administrador en `#/admin`.
+**Contratarlo:** en `#/admin`, botón **Recordatorios** del negocio: se
+enciende y se anotan los mensajes incluidos al mes, el precio al mes y el
+precio por mensaje extra (columnas de `suscripciones`). Lo que pase del
+cupo se envía igual y se marca `extra`. El dueño ve su uso en
+Configuración. Costo de Meta: unos US$0.0113 por mensaje (utilidad, resto
+de América Latina, desde oct-2026).
 
-### Activarla
+### Activarla (cuando el primer negocio lo contrate)
 
 1. **Meta:** crear la app de WhatsApp Business en developers.facebook.com,
    registrar el número y crear un **token permanente** (usuario del sistema
@@ -112,6 +118,12 @@ dueño lo ve en Configuración y el administrador en `#/admin`.
    `WHATSAPP_IDIOMA` (por defecto `es`).
 4. **GitHub** → Settings → Secrets → Actions: `RECORDATORIOS_SECRETO` con
    el mismo valor.
+5. **Programarla.** Hoy el flujo solo corre a mano (Actions → Recordatorios
+   por WhatsApp → Run workflow) porque el repositorio es privado y cada
+   corrida programada gasta al menos 1 minuto de los 2,000 gratis al mes
+   (cada 15 min serían ~2,880). Lo mejor es programarla con `pg_cron` +
+   `pg_net` en Supabase (sin costo); como alternativa, agregar
+   `schedule: - cron: '*/15 * * * *'` al flujo y pagar los minutos.
 
 Mientras falte el token o el número, la función responde
 `{ ok: true, omitido }` sin enviar nada; si falta el secreto en GitHub, el

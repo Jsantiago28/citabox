@@ -111,6 +111,18 @@ class _Admin implements AdminRepository {
   Future<void> suspender({required String negocioId, String? motivo}) async =>
       suspendidos.add('$negocioId/$motivo');
 
+  final recordatorios = <String>[];
+
+  @override
+  Future<void> configurarRecordatorios({
+    required String negocioId,
+    required bool activo,
+    int cupo = 0,
+    num precioMensual = 0,
+    num precioExtra = 0,
+  }) async =>
+      recordatorios.add('$negocioId/$activo/$cupo/$precioMensual/$precioExtra');
+
   @override
   Future<List<MensajeSoporte>> listarSoporte() async => [
     MensajeSoporte(
@@ -272,6 +284,78 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Suspender'));
     await tester.pumpAndSettle();
     expect(repo.suspendidos, ['n1/Sin pago']);
+  });
+
+  testWidgets('#/admin: el admin contrata los recordatorios automáticos', (
+    tester,
+  ) async {
+    _ignorarDesbordes();
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final repo = _Admin();
+    await tester.pumpWidget(MaterialApp(home: AdminPage(repository: repo)));
+    await tester.pumpAndSettle();
+    expect(find.text('No'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Recordatorios'));
+    await tester.tap(find.text('Recordatorios'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('admin-recordatorios-activo')));
+    await tester.enterText(
+      find.byKey(const Key('admin-recordatorios-cupo')),
+      '-3',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Escribe 0 o más.'), findsOneWidget);
+    expect(repo.recordatorios, isEmpty);
+
+    await tester.enterText(
+      find.byKey(const Key('admin-recordatorios-cupo')),
+      '300',
+    );
+    await tester.enterText(
+      find.byKey(const Key('admin-recordatorios-mensual')),
+      '350',
+    );
+    await tester.enterText(
+      find.byKey(const Key('admin-recordatorios-extra')),
+      '2.5',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+    expect(repo.recordatorios, ['n1/true/300/350/2.5']);
+  });
+
+  test('textoRecordatoriosAdmin resume lo contratado', () {
+    const base = NegocioAdmin(
+      id: 'n1',
+      nombre: 'Uno',
+      slug: 'uno',
+      plan: 'solo',
+      estado: 'ACTIVA',
+    );
+    expect(textoRecordatoriosAdmin(base), 'No');
+    expect(
+      textoRecordatoriosAdmin(
+        const NegocioAdmin(
+          id: 'n1',
+          nombre: 'Uno',
+          slug: 'uno',
+          plan: 'solo',
+          estado: 'ACTIVA',
+          recordatoriosAuto: true,
+          whatsappMes: 305,
+          whatsappExtra: 5,
+          whatsappCupo: 300,
+          whatsappPrecioMensual: 350,
+          whatsappPrecioExtra: 2.5,
+        ),
+      ),
+      'Sí · 305/300 (5 extra) · RD\$350 + RD\$2.5',
+    );
   });
 
   testWidgets('#/admin: el admin agrega y borra una cuenta para cobrar', (

@@ -87,6 +87,26 @@ class _AdminPageState extends State<AdminPage> {
     }
   }
 
+  Future<void> _recordatorios(NegocioAdmin n) async {
+    final r = await showDialog<_Recordatorios>(
+      context: context,
+      builder: (_) => _RecordatoriosDialog(negocio: n),
+    );
+    if (r == null) return;
+    try {
+      await widget.repository.configurarRecordatorios(
+        negocioId: n.id,
+        activo: r.activo,
+        cupo: r.cupo,
+        precioMensual: r.precioMensual,
+        precioExtra: r.precioExtra,
+      );
+      _recargar();
+    } catch (_) {
+      _aviso('No se pudieron guardar los recordatorios.');
+    }
+  }
+
   Future<void> _agregarCuenta() async {
     final datos = await showDialog<_NuevaCuenta>(
       context: context,
@@ -178,7 +198,7 @@ class _AdminPageState extends State<AdminPage> {
                     DataColumn(label: Text('Pagado hasta')),
                     DataColumn(label: Text('Barberos'), numeric: true),
                     DataColumn(label: Text('Citas 30d'), numeric: true),
-                    DataColumn(label: Text('WhatsApp mes'), numeric: true),
+                    DataColumn(label: Text('Recordatorios auto')),
                     DataColumn(label: Text('Acciones')),
                   ],
                   rows: [
@@ -193,19 +213,17 @@ class _AdminPageState extends State<AdminPage> {
                           DataCell(Text(_fechaCorta(n.pagadoHasta))),
                           DataCell(Text('${n.barberos}')),
                           DataCell(Text('${n.citas30d}')),
-                          DataCell(
-                            Text(
-                              n.whatsappExtra > 0
-                                  ? '${n.whatsappMes} (${n.whatsappExtra} extra)'
-                                  : '${n.whatsappMes}',
-                            ),
-                          ),
+                          DataCell(Text(textoRecordatoriosAdmin(n))),
                           DataCell(
                             Row(
                               children: [
                                 TextButton(
                                   onPressed: () => _activar(n),
                                   child: const Text('Activar'),
+                                ),
+                                TextButton(
+                                  onPressed: () => _recordatorios(n),
+                                  child: const Text('Recordatorios'),
                                 ),
                                 TextButton(
                                   onPressed: () => _suspender(n),
@@ -386,6 +404,134 @@ class _CuentaDialogState extends State<_CuentaDialog> {
                 _titular.text.trim(),
               ),
             );
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+
+/// 'No' o 'Sí · 12/300 (2 extra) · RD$300 + RD$2'.
+String textoRecordatoriosAdmin(NegocioAdmin n) {
+  if (!n.recordatoriosAuto) {
+    return n.whatsappMes > 0 ? 'No (${n.whatsappMes} este mes)' : 'No';
+  }
+  final extra = n.whatsappExtra > 0 ? ' (${n.whatsappExtra} extra)' : '';
+  return 'Sí · ${n.whatsappMes}/${n.whatsappCupo}$extra · '
+      'RD\$${_monto(n.whatsappPrecioMensual)} + '
+      'RD\$${_monto(n.whatsappPrecioExtra)}';
+}
+
+String _monto(num valor) =>
+    valor == valor.roundToDouble() ? valor.round().toString() : '$valor';
+
+typedef _Recordatorios = ({
+  bool activo,
+  int cupo,
+  num precioMensual,
+  num precioExtra,
+});
+
+class _RecordatoriosDialog extends StatefulWidget {
+  const _RecordatoriosDialog({required this.negocio});
+
+  final NegocioAdmin negocio;
+
+  @override
+  State<_RecordatoriosDialog> createState() => _RecordatoriosDialogState();
+}
+
+class _RecordatoriosDialogState extends State<_RecordatoriosDialog> {
+  final _form = GlobalKey<FormState>();
+  late bool _activo = widget.negocio.recordatoriosAuto;
+  late final _cupo = TextEditingController(
+    text: '${widget.negocio.whatsappCupo}',
+  );
+  late final _mensual = TextEditingController(
+    text: _monto(widget.negocio.whatsappPrecioMensual),
+  );
+  late final _extra = TextEditingController(
+    text: _monto(widget.negocio.whatsappPrecioExtra),
+  );
+
+  @override
+  void dispose() {
+    _cupo.dispose();
+    _mensual.dispose();
+    _extra.dispose();
+    super.dispose();
+  }
+
+  static String? _validar(String? v, {bool entero = false}) {
+    final n = entero ? int.tryParse(v?.trim() ?? '') : num.tryParse(v ?? '');
+    return n == null || n < 0 ? 'Escribe 0 o más.' : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Recordatorios de ${widget.negocio.nombre}'),
+      content: Form(
+        key: _form,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              key: const Key('admin-recordatorios-activo'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Envío automático contratado'),
+              value: _activo,
+              onChanged: (v) => setState(() => _activo = v),
+            ),
+            TextFormField(
+              key: const Key('admin-recordatorios-cupo'),
+              controller: _cupo,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Mensajes incluidos al mes',
+              ),
+              validator: (v) => _validar(v, entero: true),
+            ),
+            TextFormField(
+              key: const Key('admin-recordatorios-mensual'),
+              controller: _mensual,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Precio al mes (RD\$)',
+              ),
+              validator: _validar,
+            ),
+            TextFormField(
+              key: const Key('admin-recordatorios-extra'),
+              controller: _extra,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Precio por mensaje extra (RD\$)',
+              ),
+              validator: _validar,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (!_form.currentState!.validate()) return;
+            Navigator.pop<_Recordatorios>(context, (
+              activo: _activo,
+              cupo: int.parse(_cupo.text.trim()),
+              precioMensual: num.parse(_mensual.text.trim()),
+              precioExtra: num.parse(_extra.text.trim()),
+            ));
           },
           child: const Text('Guardar'),
         ),

@@ -228,49 +228,53 @@ void main() {
     });
   });
 
-  testWidgets('turns on WhatsApp reminders and shows the monthly usage', (
+  testWidgets('without the add-on, reminders are sent by hand', (tester) async {
+    await _abrir(tester, _FakeConfiguracionRepository());
+
+    expect(find.byKey(const Key('config-recordatorio-manual')), findsOneWidget);
+    expect(find.byKey(const Key('config-recordatorio-horas')), findsNothing);
+    expect(find.text('Guardar recordatorios'), findsNothing);
+  });
+
+  testWidgets('with the add-on, the owner picks the hours and sees usage', (
     tester,
   ) async {
-    final repository = _FakeConfiguracionRepository();
+    final repository = _FakeConfiguracionRepository(
+      uso: const UsoWhatsapp(
+        activo: true,
+        enviados: 12,
+        cupo: 150,
+        precioExtra: 3,
+      ),
+    );
     await _abrir(tester, repository);
 
     expect(
       find.text(
-        'Este mes: 12 de 150 mensajes incluidos en tu plan. '
+        'Este mes: 12 de 150 mensajes incluidos. '
         'Los mensajes extra cuestan RD\$3 cada uno.',
       ),
       findsOneWidget,
     );
 
-    final interruptor = find.byKey(const Key('config-recordatorio'));
-    await tester.ensureVisible(interruptor);
-    await tester.tap(interruptor);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('config-recordatorio-horas')));
+    final horas = find.byKey(const Key('config-recordatorio-horas'));
+    await tester.ensureVisible(horas);
+    await tester.tap(horas);
     await tester.pumpAndSettle();
     await tester.tap(find.text('3 horas de anticipación').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar recordatorios'));
     await tester.pumpAndSettle();
 
-    expect(repository.datosGuardados, {
-      'recordatorio_whatsapp': true,
-      'recordatorio_horas': 3,
-    });
+    expect(repository.datosGuardados, {'recordatorio_horas': 3});
     expect(find.text('Recordatorios guardados.'), findsOneWidget);
   });
 
-  test('describes WhatsApp usage for trial, included and extra', () {
-    expect(
-      textoUsoWhatsapp(
-        const UsoWhatsapp(enviados: 30, cupo: 30, prueba: true),
-      ),
-      'Este mes: 30 de 30 mensajes incluidos en tu plan. '
-      'Llegaste al tope de la prueba: no se enviarán más este mes.',
-    );
+  test('describes WhatsApp usage with and without extra messages', () {
     expect(
       textoUsoWhatsapp(
         const UsoWhatsapp(
+          activo: true,
           enviados: 160,
           cupo: 150,
           extra: 10,
@@ -278,20 +282,21 @@ void main() {
           montoExtra: 30,
         ),
       ),
-      'Este mes: 160 de 150 mensajes incluidos en tu plan. '
+      'Este mes: 160 de 150 mensajes incluidos. '
       '10 extra: RD\$30 a pagar con tu plan.',
     );
-    expect(
-      UsoWhatsapp.fromMap({
-        'enviados': 5,
-        'cupo': 30,
-        'extra': 0,
-        'precio_extra': 3.5,
-        'monto_extra': 0,
-        'prueba': true,
-      }).precioExtra,
-      3.5,
-    );
+    final uso = UsoWhatsapp.fromMap({
+      'activo': true,
+      'enviados': 5,
+      'cupo': 30,
+      'extra': 0,
+      'precio_mensual': 350,
+      'precio_extra': 3.5,
+      'monto_extra': 0,
+    });
+    expect(uso.activo, isTrue);
+    expect(uso.precioMensual, 350);
+    expect(uso.precioExtra, 3.5);
   });
 }
 
@@ -321,6 +326,9 @@ Future<void> _abrir(
 }
 
 class _FakeConfiguracionRepository implements ConfiguracionRepository {
+  _FakeConfiguracionRepository({this.uso = const UsoWhatsapp(activo: false)});
+
+  final UsoWhatsapp uso;
   String? ultimoNegocioId;
   Map<String, Object?>? datosGuardados;
   List<HorarioDia>? horariosGuardados;
@@ -374,6 +382,5 @@ class _FakeConfiguracionRepository implements ConfiguracionRepository {
   }
 
   @override
-  Future<UsoWhatsapp> usoWhatsapp(String negocioId) async =>
-      const UsoWhatsapp(enviados: 12, cupo: 150, precioExtra: 3);
+  Future<UsoWhatsapp> usoWhatsapp(String negocioId) async => uso;
 }

@@ -1,5 +1,6 @@
 -- =========================================================================
--- Pruebas de 022: recordatorios por WhatsApp. Negocio propio (prefijo a2).
+-- Pruebas de 022–023: recordatorios automáticos por WhatsApp como servicio
+-- adicional que activa el administrador. Negocio propio (prefijo a2).
 -- Las citas son "mañana a las 10:00" en la zona del negocio con 48 h de
 -- anticipación, así siempre caen en la ventana sin depender de la hora.
 -- =========================================================================
@@ -10,14 +11,17 @@ select set_config('request.jwt.claim.sub', '', false);
 
 insert into auth.users (id) values
   ('a2000000-0000-0000-0000-00000000000a'),
-  ('a2000000-0000-0000-0000-0000000000b1');
+  ('a2000000-0000-0000-0000-0000000000b1'),
+  ('a2000000-0000-0000-0000-0000000000ad');
 
-insert into negocios (id, nombre, slug, recordatorio_whatsapp, recordatorio_horas) values
-  ('a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', 'Negocio Recordatorios', 'negocio-recordatorios', true, 48);
+insert into negocios (id, nombre, slug, recordatorio_horas) values
+  ('a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', 'Negocio Recordatorios', 'negocio-recordatorios', 48);
 
 insert into perfiles (id, negocio_id, nombre, rol) values
   ('a2000000-0000-0000-0000-00000000000a', 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', 'Dueño R', 'OWNER'),
   ('a2000000-0000-0000-0000-0000000000b1', 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', 'Barbero R', 'EMPLOYEE');
+
+insert into plataforma_admins (user_id) values ('a2000000-0000-0000-0000-0000000000ad');
 
 insert into servicios (id, negocio_id, nombre, precio, duracion_minutos) values
   ('a2000000-0000-0000-0000-0000000000a1', 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', 'Corte', 500, 30);
@@ -30,8 +34,8 @@ insert into clientes (id, negocio_id, nombre, telefono) values
   ('a2000000-0000-0000-0000-0000000000c1', 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', 'Con teléfono', '809-555-0001'),
   ('a2000000-0000-0000-0000-0000000000c2', 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', 'Sin teléfono', null);
 
--- c1: reservada hace días (debe salir). c2: reservada ahora, ya dentro de la
--- ventana (no). c3: cancelada (no). c4: cliente sin teléfono (no).
+-- d1: reservada hace días (debe salir). d2: reservada ahora, ya dentro de
+-- la ventana (no). d3: cancelada (no). d4: cliente sin teléfono (no).
 insert into citas (id, negocio_id, cliente_id, empleado_id, servicio_id,
                    fecha, hora_inicio, hora_fin, precio, created_at)
 select v.id::uuid, 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', v.cliente::uuid, v.empleado::uuid,
@@ -53,6 +57,46 @@ returns setof uuid language sql as $$
    where (x ->> 'cita_id') like 'a2000000-%';
 $$;
 
+-- Sin el servicio contratado no sale nada (es lo normal).
+do $$ begin
+  if exists (select pg_temp.pendientes()) then
+    raise exception 'FALLO: sin el servicio contratado salieron pendientes';
+  end if;
+end $$;
+
+-- Horas fuera de rango.
+do $$ begin
+  update negocios set recordatorio_horas = 0 where id = 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2';
+  raise exception 'FALLO: aceptó 0 horas';
+exception when check_violation then null;
+end $$;
+
+-- El dueño no puede activarlo; el administrador sí (cupo 1, RD$300, RD$2).
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'a2000000-0000-0000-0000-00000000000a', false);
+do $$ begin
+  perform admin_recordatorios('a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', true, 1000, 0, 0);
+  raise exception 'FALLO: el dueño activó los recordatorios';
+exception when insufficient_privilege then null;
+end $$;
+do $$ declare n int; begin
+  update suscripciones set recordatorios_auto = true
+   where negocio_id = 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2';
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FALLO: el dueño cambió su suscripción'; end if;
+exception when insufficient_privilege then null;
+end $$;
+
+select set_config('request.jwt.claim.sub', 'a2000000-0000-0000-0000-0000000000ad', false);
+do $$ begin
+  perform admin_recordatorios('a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', true, -1, 0, 0);
+  raise exception 'FALLO: aceptó un cupo negativo';
+exception when sqlstate 'P0001' then null;
+end $$;
+select admin_recordatorios('a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', true, 1, 300, 2);
+reset role;
+select set_config('request.jwt.claim.sub', '', false);
+
 do $$
 declare
   v uuid[] := array(select pg_temp.pendientes());
@@ -60,22 +104,6 @@ begin
   if v is distinct from array['a2000000-0000-0000-0000-0000000000d1'::uuid] then
     raise exception 'FALLO: pendientes esperadas solo d1, salió %', v;
   end if;
-end $$;
-
--- Apagado: no sale nada.
-update negocios set recordatorio_whatsapp = false where id = 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2';
-do $$ begin
-  if exists (select pg_temp.pendientes()) then
-    raise exception 'FALLO: con recordatorios apagados salieron pendientes';
-  end if;
-end $$;
-update negocios set recordatorio_whatsapp = true where id = 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2';
-
--- Horas fuera de rango.
-do $$ begin
-  update negocios set recordatorio_horas = 0 where id = 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2';
-  raise exception 'FALLO: aceptó 0 horas';
-exception when check_violation then null;
 end $$;
 
 -- Tres fallos: se deja de intentar.
@@ -111,23 +139,12 @@ do $$ begin
   end if;
 end $$;
 
--- Prueba con cupo 1 (ya usado): otra cita no sale.
-update planes set whatsapp_cupo = 1 where codigo = 'prueba';
+-- Pasado el cupo se envía igual y cuenta como extra.
 update citas set hora_inicio = '12:00', hora_fin = '12:30', created_at = now() - interval '5 days'
  where id = 'a2000000-0000-0000-0000-0000000000d2';
 do $$ begin
-  if exists (select pg_temp.pendientes()) then
-    raise exception 'FALLO: la prueba no debería pasar del cupo';
-  end if;
-end $$;
-
--- En un plan pago sí sale y cuenta como extra.
-update suscripciones set plan = 'solo', estado = 'ACTIVA', pagado_hasta = current_date + 30
- where negocio_id = 'a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2';
-update planes set whatsapp_cupo = 1 where codigo = 'solo';
-do $$ begin
   if not exists (select pg_temp.pendientes()) then
-    raise exception 'FALLO: un plan pago debería enviar pasado el cupo';
+    raise exception 'FALLO: pasado el cupo debería seguir enviando';
   end if;
 end $$;
 select registrar_recordatorio('a2000000-0000-0000-0000-0000000000d2',
@@ -138,8 +155,6 @@ do $$ begin
     raise exception 'FALLO: pasado el cupo debería ser extra';
   end if;
 end $$;
-update planes set whatsapp_cupo = 30 where codigo = 'prueba';
-update planes set whatsapp_cupo = 150 where codigo = 'solo';
 
 -- El dueño ve su uso; el barbero no.
 set role authenticated;
@@ -148,7 +163,10 @@ do $$
 declare
   u jsonb := uso_whatsapp_mes('a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2');
 begin
-  if (u ->> 'enviados')::int <> 2 or (u ->> 'cupo')::int <> 150 or (u ->> 'extra')::int <> 0 then
+  if not (u ->> 'activo')::boolean or (u ->> 'enviados')::int <> 2
+     or (u ->> 'cupo')::int <> 1 or (u ->> 'extra')::int <> 1
+     or (u ->> 'precio_mensual')::numeric <> 300
+     or (u ->> 'monto_extra')::numeric <> 2 then
     raise exception 'FALLO: uso del mes inesperado: %', u;
   end if;
   if (select count(*) from recordatorios_whatsapp) <> 3 then
@@ -186,5 +204,15 @@ do $$ begin
   end if;
 end $$;
 
+-- El administrador lo quita: deja de enviarse.
+select set_config('request.jwt.claim.sub', 'a2000000-0000-0000-0000-0000000000ad', false);
+select admin_recordatorios('a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', false);
 reset role;
 select set_config('request.jwt.claim.sub', '', false);
+update citas set hora_inicio = '13:00', hora_fin = '13:30'
+ where id = 'a2000000-0000-0000-0000-0000000000d2';
+do $$ begin
+  if exists (select pg_temp.pendientes()) then
+    raise exception 'FALLO: sin el servicio no debería enviar';
+  end if;
+end $$;

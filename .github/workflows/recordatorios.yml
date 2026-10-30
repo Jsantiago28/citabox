@@ -1,13 +1,13 @@
 name: Recordatorios por WhatsApp
 
-# Cada 15 minutos (y a mano): llama a la Edge Function enviar-recordatorios,
-# que envía los recordatorios de las citas que tocan. Si falta el secreto
-# RECORDATORIOS_SECRETO, termina en verde con aviso. Ver
-# supabase/functions/README.md.
+# Llama a la Edge Function enviar-recordatorios, que envía los recordatorios
+# automáticos de los negocios que contrataron ese servicio adicional.
+# Por ahora solo a mano: cada corrida programada consume minutos de GitHub
+# (repositorio privado). Cuando el primer negocio lo contrate, programarla
+# (ver supabase/functions/README.md). Si falta el secreto
+# RECORDATORIOS_SECRETO, termina en verde con aviso.
 
 on:
-  schedule:
-    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 permissions:

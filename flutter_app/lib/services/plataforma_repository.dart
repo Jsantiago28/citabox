@@ -154,6 +154,10 @@ class NegocioAdmin {
     this.citas30d = 0,
     this.whatsappMes = 0,
     this.whatsappExtra = 0,
+    this.recordatoriosAuto = false,
+    this.whatsappCupo = 0,
+    this.whatsappPrecioMensual = 0,
+    this.whatsappPrecioExtra = 0,
   });
 
   final String id;
@@ -171,6 +175,13 @@ class NegocioAdmin {
   final int whatsappMes;
   final int whatsappExtra;
 
+  /// Recordatorios automáticos contratados (servicio adicional) y sus
+  /// condiciones: mensajes incluidos, precio al mes y por mensaje extra.
+  final bool recordatoriosAuto;
+  final int whatsappCupo;
+  final num whatsappPrecioMensual;
+  final num whatsappPrecioExtra;
+
   factory NegocioAdmin.fromMap(Map<String, dynamic> map) => NegocioAdmin(
     id: map['negocio_id'].toString(),
     nombre: map['nombre']?.toString() ?? '',
@@ -184,6 +195,10 @@ class NegocioAdmin {
     citas30d: (map['citas_30d'] as num?)?.toInt() ?? 0,
     whatsappMes: (map['whatsapp_mes'] as num?)?.toInt() ?? 0,
     whatsappExtra: (map['whatsapp_extra'] as num?)?.toInt() ?? 0,
+    recordatoriosAuto: map['recordatorios_auto'] == true,
+    whatsappCupo: (map['whatsapp_cupo'] as num?)?.toInt() ?? 0,
+    whatsappPrecioMensual: (map['whatsapp_precio_mensual'] as num?) ?? 0,
+    whatsappPrecioExtra: (map['whatsapp_precio_extra'] as num?) ?? 0,
   );
 }
 
@@ -275,6 +290,15 @@ abstract interface class AdminRepository {
     required DateTime hasta,
   });
   Future<void> suspender({required String negocioId, String? motivo});
+
+  /// Activa o quita los recordatorios automáticos (servicio adicional).
+  Future<void> configurarRecordatorios({
+    required String negocioId,
+    required bool activo,
+    int cupo = 0,
+    num precioMensual = 0,
+    num precioExtra = 0,
+  });
   Future<List<MensajeSoporte>> listarSoporte();
 }
 
@@ -343,6 +367,26 @@ class SupabaseAdminRepository implements AdminRepository {
     await _client.rpc(
       'admin_suspender',
       params: {'p_negocio': negocioId, 'p_motivo': motivo},
+    );
+  }
+
+  @override
+  Future<void> configurarRecordatorios({
+    required String negocioId,
+    required bool activo,
+    int cupo = 0,
+    num precioMensual = 0,
+    num precioExtra = 0,
+  }) async {
+    await _client.rpc(
+      'admin_recordatorios',
+      params: {
+        'p_negocio': negocioId,
+        'p_activo': activo,
+        'p_cupo': cupo,
+        'p_precio_mensual': precioMensual,
+        'p_precio_extra': precioExtra,
+      },
     );
   }
 

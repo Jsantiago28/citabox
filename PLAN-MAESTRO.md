@@ -232,7 +232,7 @@ La app React queda solo como referencia (`src/`).
 10. ✅ Tarjeta "Configura tu negocio" con los primeros pasos en Inicio.
 
 **B. Primeros 3 meses (lo que más pagan los dueños)**
-11. 🟡 ✅ **Recordatorios automáticos por WhatsApp** (022): el dueño los activa en Configuración (1–48 h antes); cupo al mes por plan (prueba 30 tope, Solo 150, Barbería 400, Pro 1000) y RD$3 por mensaje extra, visible en Configuración y `#/admin`; cron cada 15 min. ⬜ Activar: cuenta de Meta, plantilla `recordatorio_cita` y secretos (`supabase/functions/README.md`).
+11. 🟡 **Recordatorios por WhatsApp**: ✅ por defecto los envía el dueño o el barbero desde la Agenda (botón de WhatsApp). ✅ El envío automático es un **servicio adicional**: el admin lo activa por negocio en `#/admin` con cupo, precio al mes y precio por extra (022–023); el dueño elige las horas y ve su uso. ⬜ Cuando alguien lo contrate: cuenta de Meta, plantilla `recordatorio_cita`, secretos y programar el envío con pg_cron (`supabase/functions/README.md`).
 12. ✅ **Comisiones por barbero**: % en Empleados; comisión y total a pagar en Reportes y Excel (020).
 13. ✅ **Avisos en vivo** de reservas, cancelaciones y pagos reportados, con contador en la Agenda (021). ⬜ Push y correo.
 14. ✅ **Historial de cambios** para el dueño (Configuración → Historial de cambios).
