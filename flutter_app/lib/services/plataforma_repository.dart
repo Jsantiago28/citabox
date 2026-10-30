@@ -152,6 +152,8 @@ class NegocioAdmin {
     this.pagadoHasta,
     this.barberos = 0,
     this.citas30d = 0,
+    this.whatsappMes = 0,
+    this.whatsappExtra = 0,
   });
 
   final String id;
@@ -165,6 +167,10 @@ class NegocioAdmin {
   final int barberos;
   final int citas30d;
 
+  /// Recordatorios por WhatsApp enviados este mes y cuántos pasan del cupo.
+  final int whatsappMes;
+  final int whatsappExtra;
+
   factory NegocioAdmin.fromMap(Map<String, dynamic> map) => NegocioAdmin(
     id: map['negocio_id'].toString(),
     nombre: map['nombre']?.toString() ?? '',
@@ -176,6 +182,8 @@ class NegocioAdmin {
     pagadoHasta: _fecha(map['pagado_hasta']),
     barberos: (map['barberos'] as num?)?.toInt() ?? 0,
     citas30d: (map['citas_30d'] as num?)?.toInt() ?? 0,
+    whatsappMes: (map['whatsapp_mes'] as num?)?.toInt() ?? 0,
+    whatsappExtra: (map['whatsapp_extra'] as num?)?.toInt() ?? 0,
   );
 }
 

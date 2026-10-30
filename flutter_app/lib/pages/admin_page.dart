@@ -178,6 +178,7 @@ class _AdminPageState extends State<AdminPage> {
                     DataColumn(label: Text('Pagado hasta')),
                     DataColumn(label: Text('Barberos'), numeric: true),
                     DataColumn(label: Text('Citas 30d'), numeric: true),
+                    DataColumn(label: Text('WhatsApp mes'), numeric: true),
                     DataColumn(label: Text('Acciones')),
                   ],
                   rows: [
@@ -192,6 +193,13 @@ class _AdminPageState extends State<AdminPage> {
                           DataCell(Text(_fechaCorta(n.pagadoHasta))),
                           DataCell(Text('${n.barberos}')),
                           DataCell(Text('${n.citas30d}')),
+                          DataCell(
+                            Text(
+                              n.whatsappExtra > 0
+                                  ? '${n.whatsappMes} (${n.whatsappExtra} extra)'
+                                  : '${n.whatsappMes}',
+                            ),
+                          ),
                           DataCell(
                             Row(
                               children: [

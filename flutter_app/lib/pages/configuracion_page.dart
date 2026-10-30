@@ -96,6 +96,12 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
   final _intervalo = TextEditingController();
   bool _apartadoRequerido = true;
 
+  bool _recordatorio = false;
+  int _recordatorioHoras = 24;
+
+  /// Uso de WhatsApp del mes; null si no se pudo cargar.
+  UsoWhatsapp? _uso;
+
   List<_DiaEditable> _dias = [];
   ConfiguracionNegocio? _config;
   bool _loading = true;
@@ -146,6 +152,7 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
       final horarios = await widget.repository.horarios(widget.negocioId);
       if (!mounted) return;
       setState(() => _aplicar(config, horarios));
+      _cargarUso();
     } catch (_) {
       if (mounted) {
         setState(() => _error = 'No se pudo cargar la configuración.');
@@ -153,6 +160,14 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// El uso del mes es informativo: si falla, la tarjeta no lo muestra.
+  Future<void> _cargarUso() async {
+    try {
+      final uso = await widget.repository.usoWhatsapp(widget.negocioId);
+      if (mounted) setState(() => _uso = uso);
+    } catch (_) {}
   }
 
   void _aplicar(ConfiguracionNegocio config, List<HorarioDia> horarios) {
@@ -170,6 +185,8 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     _instrucciones.text = config.apartadoInstrucciones;
     _cancelacion.text = config.cancelacionHorasMinimas.toString();
     _intervalo.text = config.intervaloReservaMinutos.toString();
+    _recordatorio = config.recordatorioWhatsapp;
+    _recordatorioHoras = config.recordatorioHoras;
 
     for (final dia in _dias) {
       dia.dispose();
@@ -275,6 +292,20 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     );
   }
 
+  Future<void> _guardarRecordatorios() async {
+    await _guardar(
+      'recordatorios',
+      () => widget.repository.guardarNegocio(
+        negocioId: widget.negocioId,
+        datos: {
+          'recordatorio_whatsapp': _recordatorio,
+          'recordatorio_horas': _recordatorioHoras,
+        },
+      ),
+      'Recordatorios guardados.',
+    );
+  }
+
   String get _enlace {
     final base = widget.baseEnlace ?? (kIsWeb ? Uri.base : null);
     return enlaceReserva(_config?.slug ?? '', base: base);
@@ -332,6 +363,8 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
                   _horarioCard(isWide),
                   const SizedBox(height: 16),
                   _reservasCard(isWide),
+                  const SizedBox(height: 16),
+                  _recordatoriosCard(),
                   if (_mfa case final mfa?) ...[
                     const SizedBox(height: 16),
                     SeguridadCuentaCard(repository: mfa),
@@ -905,6 +938,62 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     );
   }
 
+  /// Horas de anticipación que se pueden elegir.
+  static const _opcionesHoras = [2, 3, 6, 12, 24, 48];
+
+  Widget _recordatoriosCard() {
+    final opciones = {..._opcionesHoras, _recordatorioHoras}.toList()..sort();
+    return _Seccion(
+      titulo: 'Recordatorios por WhatsApp',
+      descripcion:
+          'Barbería PRO avisa al cliente antes de su cita, sin que hagas nada.',
+      icono: Icons.notifications_active_outlined,
+      children: [
+        SwitchListTile(
+          key: const Key('config-recordatorio'),
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Enviar recordatorio automático'),
+          subtitle: const Text(
+            'Solo a clientes con teléfono. Si la cita se reprograma, se envía '
+            'otro.',
+          ),
+          value: _recordatorio,
+          onChanged: (valor) => setState(() => _recordatorio = valor),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<int>(
+          key: const Key('config-recordatorio-horas'),
+          initialValue: _recordatorioHoras,
+          decoration: const InputDecoration(labelText: 'Enviar con'),
+          items: [
+            for (final horas in opciones)
+              DropdownMenuItem(
+                value: horas,
+                child: Text('$horas horas de anticipación'),
+              ),
+          ],
+          onChanged: _recordatorio
+              ? (valor) => setState(() => _recordatorioHoras = valor ?? 24)
+              : null,
+        ),
+        if (_uso case final uso?) ...[
+          const SizedBox(height: 12),
+          Text(
+            textoUsoWhatsapp(uso),
+            key: const Key('config-uso-whatsapp'),
+            style: const TextStyle(color: Marca.textoSuave, fontSize: 13),
+          ),
+        ],
+        const SizedBox(height: 16),
+        _botonGuardar(
+          'recordatorios',
+          'Guardar recordatorios',
+          _guardarRecordatorios,
+        ),
+      ],
+    );
+  }
+
   static String? _validarEntero(
     String? value,
     int minimo,
@@ -916,6 +1005,27 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     return null;
   }
 }
+
+/// 'Este mes: 12 de 150 mensajes incluidos.' y, si aplica, lo extra o el
+/// tope de la prueba.
+String textoUsoWhatsapp(UsoWhatsapp uso) {
+  final base =
+      'Este mes: ${uso.enviados} de ${uso.cupo} mensajes incluidos en tu plan.';
+  if (uso.prueba) {
+    return uso.enviados >= uso.cupo
+        ? '$base Llegaste al tope de la prueba: no se enviarán más este mes.'
+        : base;
+  }
+  if (uso.extra == 0) {
+    return '$base Los mensajes extra cuestan RD\$${_monto(uso.precioExtra)} '
+        'cada uno.';
+  }
+  return '$base ${uso.extra} extra: RD\$${_monto(uso.montoExtra)} '
+      'a pagar con tu plan.';
+}
+
+String _monto(num valor) =>
+    valor == valor.roundToDouble() ? valor.round().toString() : '$valor';
 
 /// '#C9A24B' o 'C9A24B' → Color. Devuelve null si el formato no es válido.
 Color? colorDesdeHex(String texto) {

@@ -34,6 +34,9 @@ abstract interface class ConfiguracionRepository {
     required String negocioId,
     required List<HorarioDia> abiertos,
   });
+
+  /// Recordatorios por WhatsApp enviados este mes y cupo del plan.
+  Future<UsoWhatsapp> usoWhatsapp(String negocioId);
 }
 
 class SupabaseConfiguracionRepository implements ConfiguracionRepository {
@@ -116,5 +119,14 @@ class SupabaseConfiguracionRepository implements ConfiguracionRepository {
           .eq('negocio_id', negocioId)
           .inFilter('dia_semana', cerrados);
     }
+  }
+
+  @override
+  Future<UsoWhatsapp> usoWhatsapp(String negocioId) async {
+    final uso = await _client.rpc(
+      'uso_whatsapp_mes',
+      params: {'p_negocio': negocioId},
+    );
+    return UsoWhatsapp.fromMap(Map<String, dynamic>.from(uso as Map));
   }
 }

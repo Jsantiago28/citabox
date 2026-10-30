@@ -1,0 +1,39 @@
+name: Recordatorios por WhatsApp
+
+# Cada 15 minutos (y a mano): llama a la Edge Function enviar-recordatorios,
+# que envía los recordatorios de las citas que tocan. Si falta el secreto
+# RECORDATORIOS_SECRETO, termina en verde con aviso. Ver
+# supabase/functions/README.md.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recordatorios
+  cancel-in-progress: false
+
+env:
+  PROJECT_REF: ncieqndyjqwkgxrbqcee
+
+jobs:
+  enviar:
+    name: Enviar recordatorios
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RECORDATORIOS_SECRETO: ${{ secrets.RECORDATORIOS_SECRETO }}
+    steps:
+      - name: Llamar a la función
+        run: |
+          if [ -z "$RECORDATORIOS_SECRETO" ]; then
+            echo "::notice title=Recordatorios omitidos::Falta el secreto RECORDATORIOS_SECRETO. Ver supabase/functions/README.md."
+            exit 0
+          fi
+          curl --fail-with-body -sS -X POST \
+            -H "x-cron-secret: $RECORDATORIOS_SECRETO" \
+            "https://$PROJECT_REF.supabase.co/functions/v1/enviar-recordatorios"

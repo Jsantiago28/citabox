@@ -15,13 +15,15 @@ class ConfiguracionNegocio {
     this.apartadoInstrucciones = '',
     this.cancelacionHorasMinimas = 24,
     this.intervaloReservaMinutos = 15,
+    this.recordatorioWhatsapp = false,
+    this.recordatorioHoras = 24,
   });
 
   static const columnas =
       'id, nombre, slug, telefono, direccion, logo, imagen, color_principal, '
       'apartado_requerido, apartado_monto, apartado_politica, '
       'apartado_instrucciones, cancelacion_horas_minimas, '
-      'intervalo_reserva_minutos';
+      'intervalo_reserva_minutos, recordatorio_whatsapp, recordatorio_horas';
 
   final String id;
   final String nombre;
@@ -37,6 +39,10 @@ class ConfiguracionNegocio {
   final String apartadoInstrucciones;
   final int cancelacionHorasMinimas;
   final int intervaloReservaMinutos;
+
+  /// Recordatorio automático por WhatsApp [recordatorioHoras] antes de la cita.
+  final bool recordatorioWhatsapp;
+  final int recordatorioHoras;
 
   factory ConfiguracionNegocio.fromMap(Map<String, dynamic> map) {
     String texto(String clave) => map[clave]?.toString() ?? '';
@@ -58,6 +64,45 @@ class ConfiguracionNegocio {
       apartadoInstrucciones: texto('apartado_instrucciones'),
       cancelacionHorasMinimas: entero('cancelacion_horas_minimas', 24),
       intervaloReservaMinutos: entero('intervalo_reserva_minutos', 15),
+      recordatorioWhatsapp: map['recordatorio_whatsapp'] == true,
+      recordatorioHoras: entero('recordatorio_horas', 24),
+    );
+  }
+}
+
+/// Recordatorios por WhatsApp enviados en el mes (`uso_whatsapp_mes`).
+class UsoWhatsapp {
+  const UsoWhatsapp({
+    required this.enviados,
+    required this.cupo,
+    this.extra = 0,
+    this.precioExtra = 0,
+    this.montoExtra = 0,
+    this.prueba = false,
+  });
+
+  final int enviados;
+
+  /// Mensajes incluidos en el plan cada mes.
+  final int cupo;
+
+  /// Enviados por encima del cupo (se cobran aparte).
+  final int extra;
+  final num precioExtra;
+  final num montoExtra;
+
+  /// En la prueba gratis el cupo es un tope: no se envía más.
+  final bool prueba;
+
+  factory UsoWhatsapp.fromMap(Map<String, dynamic> map) {
+    int entero(String clave) => (map[clave] as num?)?.toInt() ?? 0;
+    return UsoWhatsapp(
+      enviados: entero('enviados'),
+      cupo: entero('cupo'),
+      extra: entero('extra'),
+      precioExtra: (map['precio_extra'] as num?) ?? 0,
+      montoExtra: (map['monto_extra'] as num?) ?? 0,
+      prueba: map['prueba'] == true,
     );
   }
 }

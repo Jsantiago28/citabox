@@ -227,6 +227,72 @@ void main() {
       'intervalo_reserva_minutos': 30,
     });
   });
+
+  testWidgets('turns on WhatsApp reminders and shows the monthly usage', (
+    tester,
+  ) async {
+    final repository = _FakeConfiguracionRepository();
+    await _abrir(tester, repository);
+
+    expect(
+      find.text(
+        'Este mes: 12 de 150 mensajes incluidos en tu plan. '
+        'Los mensajes extra cuestan RD\$3 cada uno.',
+      ),
+      findsOneWidget,
+    );
+
+    final interruptor = find.byKey(const Key('config-recordatorio'));
+    await tester.ensureVisible(interruptor);
+    await tester.tap(interruptor);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('config-recordatorio-horas')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('3 horas de anticipación').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Guardar recordatorios'));
+    await tester.pumpAndSettle();
+
+    expect(repository.datosGuardados, {
+      'recordatorio_whatsapp': true,
+      'recordatorio_horas': 3,
+    });
+    expect(find.text('Recordatorios guardados.'), findsOneWidget);
+  });
+
+  test('describes WhatsApp usage for trial, included and extra', () {
+    expect(
+      textoUsoWhatsapp(
+        const UsoWhatsapp(enviados: 30, cupo: 30, prueba: true),
+      ),
+      'Este mes: 30 de 30 mensajes incluidos en tu plan. '
+      'Llegaste al tope de la prueba: no se enviarán más este mes.',
+    );
+    expect(
+      textoUsoWhatsapp(
+        const UsoWhatsapp(
+          enviados: 160,
+          cupo: 150,
+          extra: 10,
+          precioExtra: 3,
+          montoExtra: 30,
+        ),
+      ),
+      'Este mes: 160 de 150 mensajes incluidos en tu plan. '
+      '10 extra: RD\$30 a pagar con tu plan.',
+    );
+    expect(
+      UsoWhatsapp.fromMap({
+        'enviados': 5,
+        'cupo': 30,
+        'extra': 0,
+        'precio_extra': 3.5,
+        'monto_extra': 0,
+        'prueba': true,
+      }).precioExtra,
+      3.5,
+    );
+  });
 }
 
 Future<void> _abrir(
@@ -306,4 +372,8 @@ class _FakeConfiguracionRepository implements ConfiguracionRepository {
     ultimoNegocioId = negocioId;
     horariosGuardados = abiertos;
   }
+
+  @override
+  Future<UsoWhatsapp> usoWhatsapp(String negocioId) async =>
+      const UsoWhatsapp(enviados: 12, cupo: 150, precioExtra: 3);
 }

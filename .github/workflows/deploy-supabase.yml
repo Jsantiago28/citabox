@@ -64,5 +64,8 @@ jobs:
           for dir in supabase/functions/*/; do
             nombre=$(basename "$dir")
             echo "== $nombre"
-            supabase functions deploy "$nombre" --use-api --project-ref "$PROJECT_REF"
+            # La llama el cron con su propio secreto, no un usuario con JWT.
+            sin_jwt=""
+            [ "$nombre" = "enviar-recordatorios" ] && sin_jwt="--no-verify-jwt"
+            supabase functions deploy "$nombre" --use-api --project-ref "$PROJECT_REF" $sin_jwt
           done
