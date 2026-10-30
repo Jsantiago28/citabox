@@ -601,6 +601,11 @@ class _EmpleadoDetalleState extends State<_EmpleadoDetalle> {
                         : empleado.telefono,
                     style: const TextStyle(color: Marca.textoSuave),
                   ),
+                  Text(
+                    'Comisión: ${textoPorcentaje(empleado.comisionPct)}',
+                    key: const Key('empleado-comision-ficha'),
+                    style: const TextStyle(color: Marca.textoSuave),
+                  ),
                 ],
               ),
             ),
@@ -949,6 +954,7 @@ class _EmpleadoFormDialogState extends State<_EmpleadoFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nombreController;
   late final TextEditingController _telefonoController;
+  late final TextEditingController _comisionController;
   late bool _activo;
 
   @override
@@ -960,6 +966,11 @@ class _EmpleadoFormDialogState extends State<_EmpleadoFormDialog> {
     _telefonoController = TextEditingController(
       text: widget.empleado?.telefono ?? '',
     );
+    _comisionController = TextEditingController(
+      text: widget.empleado == null || widget.empleado!.comisionPct == 0
+          ? ''
+          : textoNumero(widget.empleado!.comisionPct),
+    );
     _activo = widget.empleado?.activo ?? true;
   }
 
@@ -967,7 +978,13 @@ class _EmpleadoFormDialogState extends State<_EmpleadoFormDialog> {
   void dispose() {
     _nombreController.dispose();
     _telefonoController.dispose();
+    _comisionController.dispose();
     super.dispose();
+  }
+
+  num? _comision() {
+    final texto = _comisionController.text.trim().replaceAll(',', '.');
+    return texto.isEmpty ? 0 : num.tryParse(texto);
   }
 
   void _guardar() {
@@ -977,6 +994,7 @@ class _EmpleadoFormDialogState extends State<_EmpleadoFormDialog> {
       'nombre': _nombreController.text.trim(),
       'telefono': telefono.isEmpty ? null : telefono,
       'activo': _activo,
+      'comision_pct': _comision() ?? 0,
     });
   }
 
@@ -1009,6 +1027,24 @@ class _EmpleadoFormDialogState extends State<_EmpleadoFormDialog> {
                   controller: _telefonoController,
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(labelText: 'Teléfono'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  key: const Key('empleado-comision'),
+                  controller: _comisionController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Comisión (%)',
+                    hintText: '0',
+                  ),
+                  validator: (value) {
+                    final pct = _comision();
+                    return pct == null || pct < 0 || pct > 100
+                        ? 'Escribe un porcentaje entre 0 y 100.'
+                        : null;
+                  },
                 ),
                 const SizedBox(height: 4),
                 SwitchListTile(

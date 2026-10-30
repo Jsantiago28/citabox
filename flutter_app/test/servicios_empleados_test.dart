@@ -254,6 +254,47 @@ void main() {
       expect(repository.ultimoNegocio, 'negocio-2');
     });
 
+    testWidgets('guarda la comisión del barbero y la muestra en su ficha', (
+      tester,
+    ) async {
+      final repository = _FakeEmpleadosRepository([]);
+      _pantallaAncha(tester);
+      await tester.pumpWidget(
+        _app(
+          EmpleadosPage(
+            negocioId: 'negocio-1',
+            repository: repository,
+            serviciosRepository: _FakeServiciosRepository([]),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nuevo empleado'));
+      await tester.pumpAndSettle();
+      expect(find.text('Comisión (%)'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('empleado-nombre')),
+        'Luis Pérez',
+      );
+
+      await tester.enterText(find.byKey(const Key('empleado-comision')), '101');
+      await tester.tap(find.text('Crear empleado'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('entre 0 y 100'), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('empleado-comision')),
+        '12.5',
+      );
+      await tester.tap(find.text('Crear empleado'));
+      await tester.pumpAndSettle();
+      expect(repository.empleados.single.comisionPct, 12.5);
+
+      await tester.tap(find.text('Luis Pérez'));
+      await tester.pumpAndSettle();
+      expect(find.text('Comisión: 12.5%'), findsOneWidget);
+    });
+
     testWidgets('asigna servicios a un empleado', (tester) async {
       final repository = _FakeEmpleadosRepository([
         const Empleado(id: 'e1', nombre: 'Pedro Gómez'),
@@ -597,6 +638,7 @@ class _FakeEmpleadosRepository implements EmpleadosRepository {
       nombre: datos['nombre']?.toString() ?? '',
       telefono: datos['telefono']?.toString() ?? '',
       activo: datos['activo'] as bool,
+      comisionPct: datos['comision_pct'] as num? ?? 0,
     );
     if (empleadoId == null) {
       empleados.add(empleado);

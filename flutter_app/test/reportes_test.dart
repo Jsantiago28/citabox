@@ -122,6 +122,72 @@ void main() {
       expect(reporte.ingresosPorDia, hasLength(31));
     });
 
+    test('comisión = ingresos x % y total a pagar = comisión + propinas', () {
+      final citas = [
+        _cita(
+          'a',
+          _hoy,
+          600,
+          EstadoCita.completada,
+          propina: 100,
+          comisionPct: 30,
+        ),
+        _cita('b', _hoy, 400, EstadoCita.llego, comisionPct: 30),
+        _cita(
+          'c',
+          _hoy,
+          500.55,
+          EstadoCita.completada,
+          empleado: ('e2', 'Carlos'),
+          propina: 20,
+          comisionPct: 12.5,
+        ),
+        _cita(
+          'd',
+          _hoy,
+          300,
+          EstadoCita.completada,
+          empleado: ('e3', 'Sin comisión'),
+          propina: 5,
+        ),
+        _cita('x', _hoy, 900, EstadoCita.cancelada, comisionPct: 30),
+      ];
+      final reporte = Reporte.calcular(citas, Periodo(_hoy, _hoy));
+      final luis = reporte.porBarbero.firstWhere((f) => f.empleadoId == 'e1');
+      expect(luis.ingresos, 1000);
+      expect(luis.comisionPct, 30);
+      expect(luis.comision, 300);
+      expect(luis.propinas, 100);
+      expect(luis.totalAPagar, 400);
+
+      final carlos = reporte.porBarbero.firstWhere((f) => f.empleadoId == 'e2');
+      expect(carlos.comision, 62.57); // 500.55 x 12.5% = 62.56875
+      expect(carlos.totalAPagar, 82.57);
+
+      final sin = reporte.porBarbero.firstWhere((f) => f.empleadoId == 'e3');
+      expect(sin.comision, 0);
+      expect(sin.totalAPagar, 5); // solo la propina
+
+      expect(
+        reporte.totalComisiones,
+        reporte.porBarbero.fold<num>(0, (s, f) => s + f.comision),
+      );
+      expect(reporte.totalComisiones, 362.57);
+      expect(reporte.totalAPagar, 487.57);
+      expect(reporte.propinas, 125);
+    });
+
+    test('CitaReporte.fromMap lee comision_pct del barbero', () {
+      final cita = CitaReporte.fromMap({
+        'id': 'c1',
+        'fecha': '2026-10-27',
+        'precio': 100,
+        'estado': 'COMPLETADA',
+        'empleados': {'nombre': 'Luis', 'comision_pct': '25.50'},
+      });
+      expect(cita.comisionPct, 25.5);
+    });
+
     test('empty period has no rates nor averages', () {
       final reporte = Reporte.calcular(const [], Periodo(_hoy, _hoy));
       expect(reporte.totalCitas, 0);
@@ -315,6 +381,48 @@ void main() {
       expect(_indicador('Ingresos'), r'RD$999');
     });
 
+    testWidgets('owner sees comisión and total a pagar per barber', (
+      tester,
+    ) async {
+      final repository = _FakeReportesRepository([
+        _cita(
+          'a',
+          _hoy,
+          1000,
+          EstadoCita.completada,
+          propina: 100,
+          comisionPct: 30,
+        ),
+        _cita(
+          'b',
+          _hoy,
+          200,
+          EstadoCita.completada,
+          empleado: ('e2', 'Carlos'),
+        ),
+      ]);
+      _pantalla(tester, const Size(1280, 1000));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ReportesPage(
+              negocioId: 'n1',
+              repository: repository,
+              hoy: _hoy,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Comisión'), findsOneWidget);
+      expect(find.text('Total a pagar'), findsOneWidget);
+      expect(find.text(r'RD$300 (30%)'), findsOneWidget);
+      expect(find.text(r'RD$400'), findsNWidgets(2)); // Luis y el total
+      expect(find.text('—'), findsWidgets); // Carlos sin comisión
+      expect(find.text('Total'), findsOneWidget);
+    });
+
     testWidgets('barber on a phone only sees his own appointments', (
       tester,
     ) async {
@@ -387,6 +495,7 @@ CitaReporte _cita(
   num apartado = 0,
   MetodoPago? metodo,
   num propina = 0,
+  num comisionPct = 0,
 }) => CitaReporte(
   id: id,
   fecha: fecha,
@@ -401,6 +510,7 @@ CitaReporte _cita(
   apartadoPagado: apartado,
   metodoPago: metodo,
   propina: propina,
+  comisionPct: comisionPct,
 );
 
 List<CitaReporte> _citasDeEjemplo() {

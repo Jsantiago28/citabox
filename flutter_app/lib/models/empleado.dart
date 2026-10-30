@@ -5,6 +5,7 @@ class Empleado {
     this.telefono = '',
     this.activo = true,
     this.perfilId,
+    this.comisionPct = 0,
   });
 
   final String id;
@@ -15,6 +16,9 @@ class Empleado {
   /// Cuenta de la app ligada a la ficha; null si aún no tiene cuenta.
   final String? perfilId;
 
+  /// Comisión del barbero en porcentaje (0 a 100).
+  final num comisionPct;
+
   bool get tieneCuenta => perfilId != null && perfilId!.isNotEmpty;
 
   factory Empleado.fromMap(Map<String, dynamic> map) {
@@ -24,6 +28,7 @@ class Empleado {
       telefono: map['telefono']?.toString() ?? '',
       activo: map['activo'] == true,
       perfilId: map['perfil_id']?.toString(),
+      comisionPct: num.tryParse(map['comision_pct']?.toString() ?? '') ?? 0,
     );
   }
 }
