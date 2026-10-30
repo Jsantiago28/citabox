@@ -222,7 +222,7 @@ La app React queda solo como referencia (`src/`).
 **A. Antes de cobrar al primer negocio**
 1. Prueba de oro y pruebas en celulares reales (dueño, barbero invitado, fotos).
 2. 🟡 **Legal:** ✅ términos, privacidad, consentimiento al reservar y registrar, exportar/anonimizar cliente (016). ⬜ Revisión de un abogado.
-3. 🟡 **Cobro del servicio:** ✅ planes, suscripciones, prueba de 30 días, pausa con 7 días de gracia, límite de barberos, panel `#/admin` y soporte (017). ⬜ Definir precios y darte de alta como administrador.
+3. ✅ **Cobro del servicio:** planes (Solo RD$400, Barbería RD$900, Pro RD$1,600), prueba de 30 días, pausa con 7 días de gracia, límite de barberos, panel `#/admin` (admin: humanogestion@gmail.com), cuentas para cobrar, botón "Ya pagué" con recibo y aviso por WhatsApp (017–019). Sin pasarela por ahora (no hay RNC): transferencia.
 4. 🟡 ✅ Respaldo semanal cifrado listo (`docs/RESPALDOS.md`). ⬜ Supabase Pro, secretos del respaldo y ensayo de restauración.
 5. **Dominio propio** + correo con **Resend** (SPF/DKIM).
 6. 🟡 ✅ 2FA para dueños. ⬜ CAPTCHA (Turnstile, requiere clave de Cloudflare).
