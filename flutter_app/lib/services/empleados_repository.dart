@@ -87,7 +87,7 @@ class SupabaseEmpleadosRepository implements EmpleadosRepository {
   Future<List<Empleado>> listar(String negocioId) async {
     final rows = await _client
         .from('empleados')
-        .select('id, nombre, telefono, activo, perfil_id')
+        .select('id, nombre, telefono, activo, perfil_id, comision_pct')
         .eq('negocio_id', negocioId)
         .order('nombre');
 

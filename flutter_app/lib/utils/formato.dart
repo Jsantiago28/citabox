@@ -106,3 +106,11 @@ String iniciales(String nombre) {
   if (partes.length == 1) return partes.first[0].toUpperCase();
   return '${partes.first[0]}${partes.last[0]}'.toUpperCase();
 }
+
+/// 30 -> '30', 12.5 -> '12.5'.
+String textoNumero(num valor) =>
+    valor == valor.roundToDouble() ? valor.toInt().toString() : '$valor';
+
+/// 30 -> '30%'; 0 -> 'Sin comisión'.
+String textoPorcentaje(num pct) =>
+    pct == 0 ? 'Sin comisión' : '${textoNumero(pct)}%';

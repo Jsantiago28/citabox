@@ -57,28 +57,37 @@ Uint8List generarExcelReporte({
   );
 
   if (incluirBarberos) {
-    final propinas = <String, num>{};
-    for (final cita in atendidas) {
-      propinas[cita.empleadoId] =
-          (propinas[cita.empleadoId] ?? 0) + cita.propina;
-    }
     _hoja(
       libro,
       'Por barbero',
-      const ['Barbero', 'Atendidas', 'Ingresos', 'Propinas'],
+      const [
+        'Barbero',
+        'Atendidas',
+        'Ingresos',
+        'Propinas',
+        'Comisión %',
+        'Comisión',
+        'Total a pagar',
+      ],
       [
         for (final fila in reporte.porBarbero)
           [
             _texto(fila.nombre),
             IntCellValue(fila.atendidas),
             _monto(fila.ingresos),
-            _monto(propinas[fila.empleadoId] ?? 0),
+            _monto(fila.propinas),
+            _monto(fila.comisionPct),
+            _monto(fila.comision),
+            _monto(fila.totalAPagar),
           ],
         [
           _texto('Total'),
           IntCellValue(reporte.porBarbero.fold(0, (s, f) => s + f.atendidas)),
           _monto(reporte.ingresos),
           _monto(reporte.propinas),
+          _texto(''),
+          _monto(reporte.totalComisiones),
+          _monto(reporte.totalAPagar),
         ],
       ],
     );

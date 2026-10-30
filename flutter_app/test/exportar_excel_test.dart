@@ -26,6 +26,7 @@ final _citas = [
     servicioNombre: 'Corte',
     metodoPago: MetodoPago.efectivo,
     propina: 100,
+    comisionPct: 30,
   ),
   CitaReporte(
     id: 'c2',
@@ -98,6 +99,15 @@ void main() {
     final barberos = libro.tables['Por barbero']!;
     expect(_valor(barberos, 'Luis', 2), 500);
     expect(_valor(barberos, 'Luis', 3), 100);
+    expect(_valor(barberos, 'Luis', 4), 30); // Comisión %
+    expect(_valor(barberos, 'Luis', 5), 150); // 30% de 500
+    expect(_valor(barberos, 'Luis', 6), 250); // comisión + propinas
+    expect(_valor(barberos, 'Miguel', 4), 0);
+    expect(_valor(barberos, 'Miguel', 6), 0);
+    expect(_valor(barberos, 'Total', 5), 150);
+    expect(_valor(barberos, 'Total', 6), 250);
+    expect(barberos.rows.first[4]?.value.toString(), 'Comisión %');
+    expect(barberos.rows.first[6]?.value.toString(), 'Total a pagar');
     expect(_valor(barberos, 'Miguel', 2), 700);
     expect(_valor(barberos, 'Total', 2), 1200);
 

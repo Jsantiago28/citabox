@@ -32,6 +32,7 @@ class CitaReporte {
     this.metodoPago,
     this.propina = 0,
     this.horaInicio = '',
+    this.comisionPct = 0,
   });
 
   final String id;
@@ -56,6 +57,9 @@ class CitaReporte {
   /// null si no se registró al cobrar.
   final MetodoPago? metodoPago;
   final num propina;
+
+  /// Comisión actual (%) del barbero de la cita.
+  final num comisionPct;
 
   factory CitaReporte.fromMap(Map<String, dynamic> map) {
     String nombreDe(String relacion) =>
@@ -83,6 +87,13 @@ class CitaReporte {
       metodoPago: MetodoPago.desde(map['metodo_pago']?.toString()),
       propina: numero(map['propina']),
       horaInicio: map['hora_inicio']?.toString() ?? '',
+      comisionPct:
+          num.tryParse(
+            (map['empleados'] as Map<String, dynamic>?)?['comision_pct']
+                    ?.toString() ??
+                '',
+          ) ??
+          0,
     );
   }
 }
@@ -172,12 +183,33 @@ class FilaBarbero {
     required this.nombre,
     required this.atendidas,
     required this.ingresos,
+    this.comisionPct = 0,
+    this.propinas = 0,
+    this.comision = 0,
   });
 
   final String empleadoId;
   final String nombre;
   final int atendidas;
   final num ingresos;
+
+  /// Porcentaje de comisión actual del barbero.
+  final num comisionPct;
+
+  /// Propinas de sus citas atendidas (son del barbero).
+  final num propinas;
+
+  /// [ingresos] × [comisionPct] / 100.
+  final num comision;
+
+  /// Comisión + propinas.
+  num get totalAPagar => _monto(_centavos(comision) + _centavos(propinas));
+}
+
+/// Comisión en centavos: [centavosIngresos] × [pct] / 100, redondeada.
+int comisionCentavos(int centavosIngresos, num pct) {
+  final pct100 = (pct * 100).round(); // centésimas de por ciento
+  return (centavosIngresos * pct100 / 10000).round();
 }
 
 class FilaServicio {
@@ -240,6 +272,8 @@ class Reporte {
     required this.propinas,
     required this.porMetodoPago,
     required this.porBarbero,
+    required this.totalComisiones,
+    required this.totalAPagar,
     required this.porServicio,
     required this.topClientes,
     required this.ingresosPorDia,
@@ -279,12 +313,13 @@ class Reporte {
           .sumar(precio);
 
       String clave(String id, String nombre) => id.isNotEmpty ? id : nombre;
-      barberos
-          .putIfAbsent(
-            clave(cita.empleadoId, cita.empleadoNombre),
-            () => _Acumulado(cita.empleadoNombre),
-          )
-          .sumar(precio);
+      barberos.putIfAbsent(
+          clave(cita.empleadoId, cita.empleadoNombre),
+          () => _Acumulado(cita.empleadoNombre),
+        )
+        ..comisionPct = cita.comisionPct
+        ..propinas += _centavos(cita.propina)
+        ..sumar(precio);
       servicios
           .putIfAbsent(
             clave(cita.servicioId, cita.servicioNombre),
@@ -315,6 +350,26 @@ class Reporte {
       return orden != 0 ? orden : porIngresos(a, b);
     }
 
+    var totalComision = 0;
+    var totalPropinasBarbero = 0;
+    final filasBarbero = <FilaBarbero>[];
+    for (final e in ordenar(barberos, porIngresos)) {
+      final comision = comisionCentavos(e.value.centavos, e.value.comisionPct);
+      totalComision += comision;
+      totalPropinasBarbero += e.value.propinas;
+      filasBarbero.add(
+        FilaBarbero(
+          empleadoId: e.key,
+          nombre: e.value.nombre,
+          atendidas: e.value.cantidad,
+          ingresos: _monto(e.value.centavos),
+          comisionPct: e.value.comisionPct,
+          propinas: _monto(e.value.propinas),
+          comision: _monto(comision),
+        ),
+      );
+    }
+
     return Reporte._(
       periodo: periodo,
       totalCitas: citas.length,
@@ -332,15 +387,9 @@ class Reporte {
               ingresos: _monto(grupo.centavos),
             ),
       ],
-      porBarbero: [
-        for (final e in ordenar(barberos, porIngresos))
-          FilaBarbero(
-            empleadoId: e.key,
-            nombre: e.value.nombre,
-            atendidas: e.value.cantidad,
-            ingresos: _monto(e.value.centavos),
-          ),
-      ],
+      porBarbero: filasBarbero,
+      totalComisiones: _monto(totalComision),
+      totalAPagar: _monto(totalComision + totalPropinasBarbero),
       porServicio: [
         for (final e in ordenar(servicios, porIngresos))
           FilaServicio(
@@ -378,6 +427,12 @@ class Reporte {
   /// Desglose de [ingresos] por método de pago (suma exactamente lo mismo).
   final List<FilaMetodoPago> porMetodoPago;
   final List<FilaBarbero> porBarbero;
+
+  /// Suma de las comisiones de todos los barberos.
+  final num totalComisiones;
+
+  /// Comisiones + propinas de los barberos.
+  final num totalAPagar;
   final List<FilaServicio> porServicio;
 
   /// Hasta 10 clientes con más visitas atendidas.
@@ -410,6 +465,8 @@ class _Acumulado {
   final String nombre;
   int cantidad = 0;
   int centavos = 0;
+  int propinas = 0;
+  num comisionPct = 0;
 
   void sumar(int monto) {
     cantidad++;

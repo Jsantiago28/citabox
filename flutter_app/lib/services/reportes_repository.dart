@@ -34,7 +34,7 @@ class SupabaseReportesRepository implements ReportesRepository {
           .select(
             'id, fecha, hora_inicio, precio, estado, metodo_pago, propina, '
             'cliente_id, empleado_id, servicio_id, '
-            'clientes(nombre), servicios(nombre), empleados(nombre), '
+            'clientes(nombre), servicios(nombre), empleados(nombre, comision_pct), '
             'apartados(monto, estado)',
           )
           .eq('negocio_id', negocioId)

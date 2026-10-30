@@ -244,7 +244,13 @@ class _Contenido extends StatelessWidget {
     final barberos = mostrarBarberos
         ? _Tabla(
             titulo: 'Por barbero',
-            columnas: const ['Barbero', 'Atendidas', 'Ingresos'],
+            columnas: const [
+              'Barbero',
+              'Atendidas',
+              'Ingresos',
+              'Comisión',
+              'Total a pagar',
+            ],
             vacio: 'Sin citas atendidas.',
             filas: [
               for (final fila in reporte.porBarbero)
@@ -252,8 +258,21 @@ class _Contenido extends StatelessWidget {
                   _o(fila.nombre, 'Sin asignar'),
                   '${fila.atendidas}',
                   _dinero(fila.ingresos),
+                  fila.comisionPct == 0
+                      ? '—'
+                      : '${_dinero(fila.comision)} (${textoPorcentaje(fila.comisionPct)})',
+                  _dinero(fila.totalAPagar),
                 ],
             ],
+            total: reporte.porBarbero.isEmpty
+                ? null
+                : [
+                    'Total',
+                    '${reporte.porBarbero.fold(0, (s, f) => s + f.atendidas)}',
+                    _dinero(reporte.ingresos),
+                    _dinero(reporte.totalComisiones),
+                    _dinero(reporte.totalAPagar),
+                  ],
           )
         : null;
     final servicios = _Tabla(
@@ -493,7 +512,11 @@ class _Tabla extends StatelessWidget {
     required this.filas,
     required this.vacio,
     this.numerar = false,
+    this.total,
   });
+
+  /// Fila final opcional (mismo número de celdas que [columnas]).
+  final List<String>? total;
 
   final String titulo;
 
@@ -536,6 +559,11 @@ class _Tabla extends StatelessWidget {
               flex: 2,
               child: Text(celdas[2], style: estilo, textAlign: TextAlign.end),
             ),
+            for (final extra in celdas.skip(3))
+              Expanded(
+                flex: 2,
+                child: Text(extra, style: estilo, textAlign: TextAlign.end),
+              ),
           ],
         ),
       );
@@ -558,6 +586,10 @@ class _Tabla extends StatelessWidget {
               if (i > 0) const Divider(),
               fila(filas[i], prefijo: '${i + 1}'),
             ],
+          if (total != null && filas.isNotEmpty) ...[
+            const Divider(),
+            fila(total!, estilo: const TextStyle(fontWeight: FontWeight.w700)),
+          ],
         ],
       ),
     );
