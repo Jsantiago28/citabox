@@ -5,12 +5,14 @@ import 'package:supabase_flutter/supabase_flutter.dart' show StorageException;
 
 import '../models/configuracion_negocio.dart';
 import '../services/configuracion_repository.dart';
+import '../services/historial_repository.dart';
 import '../services/mfa_repository.dart';
 import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/enlace_publico.dart';
 import '../utils/fotos.dart';
 import '../widgets/reserva_publica.dart' show ImagenRed;
+import 'historial_page.dart';
 import '../widgets/seguridad_cuenta_card.dart';
 
 /// Configuración del negocio (solo el dueño): perfil, horario de apertura,
@@ -23,6 +25,7 @@ class ConfiguracionPage extends StatefulWidget {
     this.baseEnlace,
     this.elegirFoto = elegirFotoDelDispositivo,
     this.mfaRepository,
+    this.historialRepository,
   });
 
   final String negocioId;
@@ -38,6 +41,10 @@ class ConfiguracionPage extends StatefulWidget {
   /// Verificación en dos pasos; por defecto la de Supabase (si no hay
   /// backend iniciado, la tarjeta no se muestra).
   final MfaRepository? mfaRepository;
+
+  /// Historial de cambios; por defecto el de Supabase (si no hay backend
+  /// iniciado, la tarjeta no se muestra).
+  final HistorialRepository? historialRepository;
 
   @override
   State<ConfiguracionPage> createState() => _ConfiguracionPageState();
@@ -67,6 +74,9 @@ class _DiaEditable {
 class _ConfiguracionPageState extends State<ConfiguracionPage> {
   late final MfaRepository? _mfa =
       widget.mfaRepository ?? mfaRepositoryPredeterminado();
+
+  late final HistorialRepository? _historial =
+      widget.historialRepository ?? historialRepositoryPredeterminado();
 
   final _perfilKey = GlobalKey<FormState>();
   final _horarioKey = GlobalKey<FormState>();
@@ -326,12 +336,42 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
                     const SizedBox(height: 16),
                     SeguridadCuentaCard(repository: mfa),
                   ],
+                  if (_historial case final historial?) ...[
+                    const SizedBox(height: 16),
+                    _historialCard(historial),
+                  ],
                 ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _historialCard(HistorialRepository historial) {
+    return _Seccion(
+      titulo: 'Historial de cambios',
+      descripcion: 'Quién creó, cambió o canceló citas, clientes y más.',
+      icono: Icons.history,
+      children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.tonalIcon(
+            key: const Key('config-ver-historial'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => HistorialPage(
+                  negocioId: widget.negocioId,
+                  repository: historial,
+                ),
+              ),
+            ),
+            icon: const Icon(Icons.history, size: 18),
+            label: const Text('Ver historial'),
+          ),
+        ),
+      ],
     );
   }
 
