@@ -44,6 +44,9 @@ const seccionesPrivacidad = <SeccionLegal>[
   SeccionLegal('Dónde se almacenan', [
     'Los datos se guardan en servidores de Supabase, con acceso restringido '
         'al personal autorizado del negocio y conexiones cifradas.',
+    'Para detectar y corregir fallos usamos Sentry, que recibe información '
+        'técnica del error (pantalla, navegador y versión de la app). No le '
+        'enviamos tu nombre, teléfono, correo ni dirección IP.',
   ]),
   SeccionLegal('Cookies y almacenamiento local', [
     'Usamos únicamente almacenamiento técnico en tu navegador (por ejemplo, '
