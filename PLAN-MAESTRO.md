@@ -233,9 +233,9 @@ La app React queda solo como referencia (`src/`).
 
 **B. Primeros 3 meses (lo que más pagan los dueños)**
 11. **Recordatorios automáticos por WhatsApp** (API, con cupo incluido y excedente cobrado).
-12. **Comisiones por barbero** en reportes.
-13. **Aviso al dueño** cuando llega una reserva o un pago (Realtime / correo / push).
-14. Pantalla de **historial de auditoría** para el dueño.
+12. ✅ **Comisiones por barbero**: % en Empleados; comisión y total a pagar en Reportes y Excel (020).
+13. ✅ **Avisos en vivo** de reservas, cancelaciones y pagos reportados, con contador en la Agenda (021). ⬜ Push y correo.
+14. ✅ **Historial de cambios** para el dueño (Configuración → Historial de cambios).
 15. Transferir el negocio a otro dueño; correos de bienvenida y fin de prueba; métricas de uso.
 
 **C. Diferenciadores después**
