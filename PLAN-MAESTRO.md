@@ -226,7 +226,7 @@ La app React queda solo como referencia (`src/`).
 4. ⬜ **Supabase Pro** (copias diarias de 7 días, no se pausa). Decisión (29-oct): el respaldo semanal externo queda listo pero sin activar; se activa creando sus 2 secretos si hiciera falta (`docs/RESPALDOS.md`).
 5. **Dominio propio** + correo con **Resend** (SPF/DKIM).
 6. 🟡 ✅ 2FA para dueños. ⬜ CAPTCHA (Turnstile, requiere clave de Cloudflare).
-7. 🟡 ✅ Botón "Reportar un problema". ⬜ Sentry (requiere cuenta).
+7. ✅ Botón "Reportar un problema" y monitoreo de errores con **Sentry** (org `barberia-pro`, sin datos personales).
 8. ✅ Enlace `/r/<slug>` con vista previa (nombre y portada) en WhatsApp.
 9. **Rendimiento** en celulares de gama baja (primera carga de Flutter web).
 10. ✅ Tarjeta "Configura tu negocio" con los primeros pasos en Inicio.
