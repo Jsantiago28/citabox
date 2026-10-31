@@ -115,7 +115,7 @@ La app React queda solo como referencia (`src/`).
 - ✅ Crear/editar, Completada con cobro (método y propina), Cancelar, "Atender ahora", WhatsApp.
 - ✅ **Filtro por barbero** en la agenda del dueño (chips "Todos · Luis 4…").
 - ⬜ Vista de semana.
-- ⬜ Avisar al crear una cita fuera del horario o en un día libre del barbero.
+- ✅ Aviso al crear o editar una cita fuera del horario del negocio, del horario de quien atiende o en su día libre (solo avisa, se puede guardar).
 - ✅ **Actualización en vivo** (Supabase Realtime): avisos de reservas, cancelaciones y pagos reportados, con contador (021).
 
 ### 8. Reserva pública 🟡

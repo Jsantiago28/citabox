@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../utils/citas_reglas.dart';
 import '../utils/formato.dart';
 import '../utils/vocabulario.dart';
+import '../utils/horario_cita.dart';
 
 /// Abre el formulario para crear (sin [cita]) o editar una cita.
 ///
@@ -230,6 +231,28 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
     return null;
   }
 
+  /// Aviso si la cita cae fuera del horario del negocio o de quien atiende
+  /// (no impide guardarla). Null mientras falten datos.
+  String? get _avisoHorario {
+    final catalogo = _catalogo;
+    final empleadoId = _empleadoId;
+    final inicio = minutosDesdeHora(_hora.text);
+    if (catalogo == null || empleadoId == null || inicio == null) return null;
+    final fin = minutosDesdeHora(_horaFin ?? '');
+    final persona = catalogo.barberos
+        .where((b) => b.id == empleadoId)
+        .firstOrNull;
+    return avisoFueraDeHorario(
+      fecha: _fecha,
+      inicio: inicio,
+      fin: fin ?? inicio,
+      negocio: catalogo.horarioNegocio,
+      empleado: catalogo.horariosEmpleado[empleadoId] ?? const {},
+      bloqueos: catalogo.bloqueos[empleadoId] ?? const [],
+      persona: persona?.nombre ?? '',
+    );
+  }
+
   String? get _horaFin {
     final servicio = _servicio;
     if (servicio == null) return null;
@@ -362,6 +385,33 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
               ),
               const SizedBox(height: 16),
               Flexible(child: _cuerpo()),
+              if (_avisoHorario case final aviso?) ...[
+                const SizedBox(height: 8),
+                Container(
+                  key: const Key('aviso-horario'),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Marca.naranja.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Marca.naranja,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '$aviso Puedes guardarla igual.',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (_error != null) ...[
                 const SizedBox(height: 8),
                 Text(_error!, style: const TextStyle(color: Marca.rojo)),

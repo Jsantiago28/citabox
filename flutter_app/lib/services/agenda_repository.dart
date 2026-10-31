@@ -2,7 +2,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/cita.dart';
 import '../models/cliente.dart';
+import '../utils/citas_reglas.dart';
 import '../utils/formato.dart';
+import '../utils/horario_cita.dart';
 import 'paginacion.dart';
 import 'sin_permiso.dart';
 
@@ -47,11 +49,20 @@ class CatalogoAgenda {
     this.servicios = const [],
     this.barberos = const [],
     this.serviciosPorBarbero = const {},
+    this.horarioNegocio = const {},
+    this.horariosEmpleado = const {},
+    this.bloqueos = const {},
   });
 
   final List<Cliente> clientes;
   final List<ServicioAgenda> servicios;
   final List<BarberoAgenda> barberos;
+
+  /// Para avisar de citas fuera de horario (ver `horario_cita.dart`). Vacíos
+  /// si no se pudieron leer: entonces no se avisa.
+  final Map<int, Rango> horarioNegocio;
+  final Map<String, Map<int, Rango>> horariosEmpleado;
+  final Map<String, List<Bloqueo>> bloqueos;
 
   /// Filas de `empleado_servicios`. Un barbero sin filas hace todos.
   final Map<String, Set<String>> serviciosPorBarbero;
@@ -221,6 +232,8 @@ class SupabaseAgendaRepository implements AgendaRepository {
           .add(row['servicio_id'].toString());
     }
 
+    final horarios = await _horarios(negocioId);
+
     return CatalogoAgenda(
       clientes: resultados[0].map(Cliente.fromMap).toList(growable: false),
       servicios: resultados[1]
@@ -235,7 +248,81 @@ class SupabaseAgendaRepository implements AgendaRepository {
           )
           .toList(growable: false),
       serviciosPorBarbero: serviciosPorBarbero,
+      horarioNegocio: horarios.negocio,
+      horariosEmpleado: horarios.empleado,
+      bloqueos: horarios.bloqueos,
     );
+  }
+
+  /// Horarios y días libres desde ayer. Solo sirven para avisar: si fallan,
+  /// el formulario sigue funcionando sin avisos.
+  Future<
+    ({
+      Map<int, Rango> negocio,
+      Map<String, Map<int, Rango>> empleado,
+      Map<String, List<Bloqueo>> bloqueos,
+    })
+  >
+  _horarios(String negocioId) async {
+    Rango? rango(Object? desde, Object? hasta) {
+      final d = minutosDesdeHora('${desde ?? ''}');
+      final h = minutosDesdeHora('${hasta ?? ''}');
+      return d == null || h == null ? null : (desde: d, hasta: h);
+    }
+
+    try {
+      final ayer = DateTime.now().subtract(const Duration(days: 1));
+      final filas = await Future.wait([
+        _client
+            .from('horarios_negocio')
+            .select('dia_semana, hora_apertura, hora_cierre')
+            .eq('negocio_id', negocioId),
+        _client
+            .from('horarios_empleado')
+            .select('empleado_id, dia_semana, hora_inicio, hora_fin')
+            .eq('negocio_id', negocioId),
+        _client
+            .from('bloqueos_empleado')
+            .select('empleado_id, fecha_inicio, fecha_fin, motivo')
+            .eq('negocio_id', negocioId)
+            .gte('fecha_fin', formatoFechaIso(ayer)),
+      ]);
+
+      final negocio = <int, Rango>{
+        for (final f in filas[0])
+          (f['dia_semana'] as num).toInt(): ?rango(
+            f['hora_apertura'],
+            f['hora_cierre'],
+          ),
+      };
+      final empleado = <String, Map<int, Rango>>{};
+      for (final f in filas[1]) {
+        final r = rango(f['hora_inicio'], f['hora_fin']);
+        if (r == null) continue;
+        empleado.putIfAbsent(
+          f['empleado_id'].toString(),
+          () => {},
+        )[(f['dia_semana'] as num).toInt()] = r;
+      }
+      final bloqueos = <String, List<Bloqueo>>{};
+      for (final f in filas[2]) {
+        final desde = DateTime.tryParse('${f['fecha_inicio']}');
+        final hasta = DateTime.tryParse('${f['fecha_fin']}');
+        if (desde == null || hasta == null) continue;
+        bloqueos.putIfAbsent(f['empleado_id'].toString(), () => []).add((
+          desde: desde,
+          hasta: hasta,
+          motivo: '${f['motivo'] ?? ''}',
+        ));
+      }
+      return (negocio: negocio, empleado: empleado, bloqueos: bloqueos);
+    } catch (_) {
+      return (
+        negocio: const <int, Rango>{},
+        empleado: const <String, Map<int, Rango>>{},
+        bloqueos: const <String, List<Bloqueo>>{},
+      );
+    }
   }
 
   @override

@@ -243,6 +243,48 @@ void main() {
     expect(find.text('Cita creada.'), findsOneWidget);
   });
 
+  testWidgets('warns when the appointment is outside working hours', (
+    tester,
+  ) async {
+    final citas = _FakeCitas([]);
+    final agenda = _FakeAgenda(conHorarios: true);
+    await _abrirAgenda(tester, citas, agenda);
+
+    await tester.tap(find.text('Nueva cita'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ana López'));
+    await tester.pumpAndSettle();
+    await _elegir(tester, 'Servicio', 'Barba · 20 min');
+    await _elegir(tester, 'Barbero', 'Miguel');
+
+    final hora = find.widgetWithText(TextFormField, 'Hora de inicio');
+    await tester.enterText(hora, '10:00');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('aviso-horario')), findsNothing);
+
+    await tester.enterText(hora, '16:00');
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Fuera del horario de Miguel (9:00 AM – 3:00 PM). '
+        'Puedes guardarla igual.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.enterText(hora, '19:00');
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Fuera del horario del negocio (9:00 AM – 6:00 PM).'),
+      findsOneWidget,
+    );
+
+    // Solo avisa: se puede guardar igual.
+    await tester.tap(find.text('Guardar cita'));
+    await tester.pumpAndSettle();
+    expect(agenda.creadas.single.horaInicio, '19:00:00');
+  });
+
   testWidgets('owner without barbers can attend the appointment himself', (
     tester,
   ) async {
@@ -988,7 +1030,11 @@ class _FakeAgenda implements AgendaRepository {
     this.apartado,
     this.errorAlEditar,
     this.sinBarberos = false,
+    this.conHorarios = false,
   });
+
+  /// Viernes de 9 AM a 6 PM; Miguel (b2) trabaja ese día hasta las 3 PM.
+  final bool conHorarios;
 
   /// Negocio sin barberos hasta que el dueño pulsa "Atiendo yo".
   bool sinBarberos;
@@ -1049,6 +1095,14 @@ class _FakeAgenda implements AgendaRepository {
     serviciosPorBarbero: const {
       'b1': {'s1'},
     },
+    horarioNegocio: conHorarios
+        ? const {5: (desde: 540, hasta: 1080)}
+        : const {},
+    horariosEmpleado: conHorarios
+        ? const {
+            'b2': {5: (desde: 540, hasta: 900)},
+          }
+        : const {},
   );
 
   @override
