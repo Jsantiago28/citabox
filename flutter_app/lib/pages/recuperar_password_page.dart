@@ -298,7 +298,7 @@ class _RecuperarPasswordPageState extends State<RecuperarPasswordPage> {
               validator: (value) =>
                   RegExp(r'^\d{6,10}$').hasMatch(value?.trim() ?? '')
                   ? null
-                  : 'Escribe el código de 6 dígitos que te enviamos.',
+                  : 'Escribe el código que te enviamos por correo.',
             ),
             const SizedBox(height: 16),
           ],

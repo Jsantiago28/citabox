@@ -109,7 +109,7 @@ void main() {
     await tester.tap(find.text('Guardar contraseña'));
     await tester.pumpAndSettle();
     expect(
-      find.text('Escribe el código de 6 dígitos que te enviamos.'),
+      find.text('Escribe el código que te enviamos por correo.'),
       findsOneWidget,
     );
     expect(find.text('Las contraseñas no coinciden.'), findsOneWidget);
