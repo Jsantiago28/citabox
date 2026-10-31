@@ -185,9 +185,19 @@ jobs:
           printf '/* https://citabox.pages.dev/:splat 301\n' > redireccion/_redirects
           printf '<!doctype html><meta charset="utf-8"><title>Citabox</title><script>location.replace("https://citabox.pages.dev"+location.pathname+location.search+location.hash)</script><a href="https://citabox.pages.dev">Citabox se mudó a citabox.pages.dev</a>\n' > redireccion/index.html
 
+      # Cloudflare a veces responde un error interno pasajero (10500): hasta
+      # 3 intentos antes de dar la publicación por fallida.
       - name: Publicar la redirección
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ env.CF_TOKEN }}
-          accountId: ${{ env.CF_ACCOUNT }}
-          command: pages deploy redireccion --project-name=barberia-pro --branch=master --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ env.CF_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_ACCOUNT }}
+        run: |
+          for intento in 1 2 3; do
+            if npx --yes wrangler@3 pages deploy redireccion \
+                 --project-name=barberia-pro --branch=master --commit-dirty=true; then
+              exit 0
+            fi
+            echo "Intento $intento falló; reintento en 15 s."
+            sleep 15
+          done
+          exit 1
