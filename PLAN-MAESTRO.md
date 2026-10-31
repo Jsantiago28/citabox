@@ -237,7 +237,7 @@ La app React queda solo como referencia (`src/`).
 12. ✅ **Comisiones por barbero**: % en Empleados; comisión y total a pagar en Reportes y Excel (020).
 13. ✅ **Avisos en vivo** de reservas, cancelaciones y pagos reportados, con contador en la Agenda (021). ⬜ Push y correo.
 14. ✅ **Historial de cambios** para el dueño (Configuración → Historial de cambios).
-15. Transferir el negocio a otro dueño; correos de bienvenida y fin de prueba; métricas de uso.
+15. ✅ Métricas de uso en `#/admin` (resumen de la plataforma; por negocio: último acceso, citas en línea, clientes y última cita) (026). ⬜ Transferir el negocio a otro dueño; correos de bienvenida y fin de prueba (requieren dominio).
 
 **C. Diferenciadores después**
 16. Reseñas, lista de espera, fidelización ("la décima gratis") y cumpleaños. ✅ Clientes que no vuelven (45 días sin venir y sin cita): filtro en Clientes con invitación por WhatsApp y enlace de reservas.

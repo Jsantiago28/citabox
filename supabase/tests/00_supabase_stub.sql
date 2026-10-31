@@ -10,7 +10,7 @@ create role service_role nologin bypassrls;
 create schema auth;
 grant usage on schema auth to anon, authenticated, service_role;
 
-create table auth.users (id uuid primary key, email text);
+create table auth.users (id uuid primary key, email text, last_sign_in_at timestamptz);
 
 -- Igual que en Supabase: el id del usuario sale del JWT de la petición.
 create function auth.uid()

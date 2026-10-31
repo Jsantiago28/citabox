@@ -53,6 +53,18 @@ class _Soporte implements SoporteRepository {
 
 class _Admin implements AdminRepository {
   _Admin({this.admin = true});
+
+  @override
+  Future<ResumenUso> resumenUso() async => const ResumenUso(
+    negocios: 4,
+    activos7d: 3,
+    enPrueba: 2,
+    pagando: 1,
+    pausados: 1,
+    nuevos30d: 2,
+    citas30d: 57,
+    citasEnLinea30d: 21,
+  );
   final bool admin;
   final activados = <String>[];
   final suspendidos = <String>[];
@@ -97,6 +109,8 @@ class _Admin implements AdminRepository {
       duenoCorreo: 'uno@ejemplo.com',
       barberos: 2,
       citas30d: 17,
+      citasEnLinea30d: 9,
+      clientes: 40,
     ),
   ];
 
@@ -144,6 +158,75 @@ void _ignorarDesbordes() {
 }
 
 void main() {
+  test('haceCuanto describe el último acceso', () {
+    final ahora = DateTime(2026, 10, 31, 12);
+    expect(haceCuanto(null, ahora), 'Nunca');
+    expect(
+      haceCuanto(ahora.subtract(const Duration(seconds: 20)), ahora),
+      'Ahora',
+    );
+    expect(
+      haceCuanto(ahora.subtract(const Duration(minutes: 5)), ahora),
+      'hace 5 min',
+    );
+    expect(
+      haceCuanto(ahora.subtract(const Duration(hours: 3)), ahora),
+      'hace 3 h',
+    );
+    expect(
+      haceCuanto(ahora.subtract(const Duration(days: 1)), ahora),
+      'hace 1 día',
+    );
+    expect(
+      haceCuanto(ahora.subtract(const Duration(days: 9)), ahora),
+      'hace 9 días',
+    );
+  });
+
+  test('ResumenUso y NegocioAdmin leen las métricas de uso', () {
+    final r = ResumenUso.fromMap({
+      'negocios': 5,
+      'activos_7d': 2,
+      'citas_en_linea_30d': 7,
+    });
+    expect(
+      (r.negocios, r.activos7d, r.citasEnLinea30d, r.pagando),
+      (5, 2, 7, 0),
+    );
+    final n = NegocioAdmin.fromMap({
+      'negocio_id': 'n1',
+      'tipo': 'spa',
+      'clientes': 12,
+      'citas_en_linea_30d': 4,
+      'ultimo_acceso': '2026-10-30T10:00:00Z',
+      'ultima_cita': null,
+    });
+    expect((n.tipo, n.clientes, n.citasEnLinea30d), ('spa', 12, 4));
+    expect(n.ultimoAcceso, DateTime.utc(2026, 10, 30, 10).toLocal());
+    expect(n.ultimaCita, isNull);
+  });
+
+  testWidgets('#/admin muestra el resumen de uso y las columnas nuevas', (
+    tester,
+  ) async {
+    _ignorarDesbordes();
+    tester.view.physicalSize = const Size(2200, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MaterialApp(home: AdminPage(repository: _Admin())));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Uso'), findsOneWidget);
+    expect(find.text('57'), findsOneWidget);
+    expect(find.text('21 en línea'), findsOneWidget);
+    expect(find.text('2 en prueba'), findsOneWidget);
+    expect(find.text('En línea 30d'), findsOneWidget);
+    expect(find.text('Último acceso'), findsOneWidget);
+    expect(find.text('40'), findsOneWidget);
+    expect(find.text('Nunca'), findsNWidgets(2));
+  });
+
   final hoy = DateTime(2026, 10, 29);
 
   test('avisoSuscripcion cubre prueba, gracia y pausa', () {

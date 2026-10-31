@@ -29,9 +29,10 @@ class _AdminPageState extends State<AdminPage> {
   Future<_Datos?> _cargar() async {
     if (!await widget.repository.esAdmin()) return null;
     final negocios = await widget.repository.listarNegocios();
+    final resumen = await widget.repository.resumenUso();
     final soporte = await widget.repository.listarSoporte();
     final cuentas = await widget.repository.listarCuentas();
-    return _Datos(negocios, soporte, cuentas);
+    return _Datos(negocios, soporte, cuentas, resumen);
   }
 
   void _recargar() {
@@ -175,12 +176,17 @@ class _AdminPageState extends State<AdminPage> {
             );
           }
           final datos = snap.data;
+          final ahora = DateTime.now();
           if (datos == null) {
             return const Center(child: Text('No autorizado'));
           }
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Text('Uso', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              _ResumenUso(resumen: datos.resumen),
+              const SizedBox(height: 24),
               Text(
                 'Negocios (${datos.negocios.length})',
                 style: Theme.of(context).textTheme.titleLarge,
@@ -198,6 +204,10 @@ class _AdminPageState extends State<AdminPage> {
                     DataColumn(label: Text('Pagado hasta')),
                     DataColumn(label: Text('Equipo'), numeric: true),
                     DataColumn(label: Text('Citas 30d'), numeric: true),
+                    DataColumn(label: Text('En línea 30d'), numeric: true),
+                    DataColumn(label: Text('Clientes'), numeric: true),
+                    DataColumn(label: Text('Último acceso')),
+                    DataColumn(label: Text('Última cita')),
                     DataColumn(label: Text('Recordatorios auto')),
                     DataColumn(label: Text('Acciones')),
                   ],
@@ -213,6 +223,10 @@ class _AdminPageState extends State<AdminPage> {
                           DataCell(Text(_fechaCorta(n.pagadoHasta))),
                           DataCell(Text('${n.barberos}')),
                           DataCell(Text('${n.citas30d}')),
+                          DataCell(Text('${n.citasEnLinea30d}')),
+                          DataCell(Text('${n.clientes}')),
+                          DataCell(Text(haceCuanto(n.ultimoAcceso, ahora))),
+                          DataCell(Text(haceCuanto(n.ultimaCita, ahora))),
                           DataCell(Text(textoRecordatoriosAdmin(n))),
                           DataCell(
                             Row(
@@ -302,7 +316,9 @@ class _AdminPageState extends State<AdminPage> {
 }
 
 class _Datos {
-  const _Datos(this.negocios, this.soporte, this.cuentas);
+  const _Datos(this.negocios, this.soporte, this.cuentas, this.resumen);
+
+  final ResumenUso resumen;
 
   final List<NegocioAdmin> negocios;
   final List<MensajeSoporte> soporte;
@@ -600,6 +616,60 @@ class _ActivarDialogState extends State<_ActivarDialog> {
           onPressed: () => Navigator.pop(context, (_plan, _hasta)),
           child: const Text('Activar'),
         ),
+      ],
+    );
+  }
+}
+
+/// Fichas con los totales de la plataforma.
+class _ResumenUso extends StatelessWidget {
+  const _ResumenUso({required this.resumen});
+
+  final ResumenUso resumen;
+
+  @override
+  Widget build(BuildContext context) {
+    final fichas = [
+      ('Negocios', resumen.negocios, '${resumen.nuevos30d} nuevos en 30 días'),
+      ('Activos', resumen.activos7d, 'con citas en 7 días'),
+      ('Pagando', resumen.pagando, '${resumen.enPrueba} en prueba'),
+      ('Pausados', resumen.pausados, 'vencidos o suspendidos'),
+      (
+        'Citas 30 días',
+        resumen.citas30d,
+        '${resumen.citasEnLinea30d} en línea',
+      ),
+    ];
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        for (final (titulo, valor, detalle) in fichas)
+          SizedBox(
+            width: 180,
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(titulo, style: const TextStyle(fontSize: 13)),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$valor',
+                      key: Key('uso-$titulo'),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      detalle,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

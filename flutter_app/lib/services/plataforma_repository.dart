@@ -158,6 +158,11 @@ class NegocioAdmin {
     this.whatsappCupo = 0,
     this.whatsappPrecioMensual = 0,
     this.whatsappPrecioExtra = 0,
+    this.tipo = 'barberia',
+    this.clientes = 0,
+    this.citasEnLinea30d = 0,
+    this.ultimaCita,
+    this.ultimoAcceso,
   });
 
   final String id;
@@ -182,6 +187,14 @@ class NegocioAdmin {
   final num whatsappPrecioMensual;
   final num whatsappPrecioExtra;
 
+  /// Uso (026): tipo de negocio, clientes activos, citas reservadas en
+  /// línea en 30 días, última cita creada y último acceso de su gente.
+  final String tipo;
+  final int clientes;
+  final int citasEnLinea30d;
+  final DateTime? ultimaCita;
+  final DateTime? ultimoAcceso;
+
   factory NegocioAdmin.fromMap(Map<String, dynamic> map) => NegocioAdmin(
     id: map['negocio_id'].toString(),
     nombre: map['nombre']?.toString() ?? '',
@@ -199,7 +212,63 @@ class NegocioAdmin {
     whatsappCupo: (map['whatsapp_cupo'] as num?)?.toInt() ?? 0,
     whatsappPrecioMensual: (map['whatsapp_precio_mensual'] as num?) ?? 0,
     whatsappPrecioExtra: (map['whatsapp_precio_extra'] as num?) ?? 0,
+    tipo: map['tipo']?.toString() ?? 'barberia',
+    clientes: (map['clientes'] as num?)?.toInt() ?? 0,
+    citasEnLinea30d: (map['citas_en_linea_30d'] as num?)?.toInt() ?? 0,
+    ultimaCita: DateTime.tryParse(map['ultima_cita']?.toString() ?? '')
+        ?.toLocal(),
+    ultimoAcceso: DateTime.tryParse(map['ultimo_acceso']?.toString() ?? '')
+        ?.toLocal(),
   );
+}
+
+/// Totales de la plataforma para el encabezado del panel (026).
+class ResumenUso {
+  const ResumenUso({
+    this.negocios = 0,
+    this.activos7d = 0,
+    this.enPrueba = 0,
+    this.pagando = 0,
+    this.pausados = 0,
+    this.nuevos30d = 0,
+    this.citas30d = 0,
+    this.citasEnLinea30d = 0,
+  });
+
+  final int negocios;
+
+  /// Negocios que crearon al menos una cita en los últimos 7 días.
+  final int activos7d;
+  final int enPrueba;
+  final int pagando;
+  final int pausados;
+  final int nuevos30d;
+  final int citas30d;
+  final int citasEnLinea30d;
+
+  factory ResumenUso.fromMap(Map<String, dynamic> map) {
+    int n(String clave) => (map[clave] as num?)?.toInt() ?? 0;
+    return ResumenUso(
+      negocios: n('negocios'),
+      activos7d: n('activos_7d'),
+      enPrueba: n('en_prueba'),
+      pagando: n('pagando'),
+      pausados: n('pausados'),
+      nuevos30d: n('nuevos_30d'),
+      citas30d: n('citas_30d'),
+      citasEnLinea30d: n('citas_en_linea_30d'),
+    );
+  }
+}
+
+/// 'hace 5 min', 'hace 3 h', 'hace 2 días', 'Nunca'.
+String haceCuanto(DateTime? momento, DateTime ahora) {
+  if (momento == null) return 'Nunca';
+  final d = ahora.difference(momento);
+  if (d.inMinutes < 1) return 'Ahora';
+  if (d.inHours < 1) return 'hace ${d.inMinutes} min';
+  if (d.inDays < 1) return 'hace ${d.inHours} h';
+  return d.inDays == 1 ? 'hace 1 día' : 'hace ${d.inDays} días';
 }
 
 /// Mensaje de soporte visto por el administrador.
@@ -284,6 +353,9 @@ abstract interface class AdminRepository {
   });
   Future<void> borrarCuenta(String id);
   Future<List<NegocioAdmin>> listarNegocios();
+
+  /// Totales de uso de toda la plataforma.
+  Future<ResumenUso> resumenUso();
   Future<void> activar({
     required String negocioId,
     required String plan,
@@ -336,6 +408,11 @@ class SupabaseAdminRepository implements AdminRepository {
   @override
   Future<void> borrarCuenta(String id) =>
       _client.rpc('admin_borrar_cuenta_pago', params: {'p_id': id});
+
+  @override
+  Future<ResumenUso> resumenUso() async => ResumenUso.fromMap(
+    Map<String, dynamic>.from(await _client.rpc('admin_resumen_uso') as Map),
+  );
 
   @override
   Future<List<NegocioAdmin>> listarNegocios() async {
