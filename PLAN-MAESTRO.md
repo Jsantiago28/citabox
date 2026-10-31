@@ -33,7 +33,7 @@ El modelo visual de referencia está en [docs/modelo-visual.png](docs/modelo-vis
 | 9 | Apartado | ✅ | Transferencia + validación del dueño; vencen solas a las 3 h sin reporte. Tarjeta ⏸️ |
 | 10 | Estados de la cita | ✅ | Transiciones validadas en el servidor; pagar confirma; cancelar libera el horario y el apartado |
 | 11 | Reportes | ✅ | Por período y por barbero; descarga en **Excel** |
-| 12 | QA | 🟡 | 143 pruebas Flutter + 6 archivos SQL en CI y revisión de seguridad. Falta probar en celulares reales |
+| 12 | QA | 🟡 | 205 pruebas Flutter + 10 archivos SQL en CI y revisión de seguridad. Falta probar en celulares reales |
 | 13 | Lanzamiento | 🟡 | Publicada en https://citabox.pages.dev (la dirección anterior redirige). Falta dominio propio y primer negocio real |
 
 **Avance de la V1:** 11 fases completas y 3 parciales. Lo que falta de la V1 es sobre todo **probar con un negocio real**.
@@ -140,7 +140,7 @@ La app React queda solo como referencia (`src/`).
 - ⬜ Resumen automático por correo (requiere dominio y un servicio como Resend).
 
 ### 12. QA 🟡
-- ✅ 143 pruebas de Flutter, 6 archivos de pruebas SQL y revisión de seguridad.
+- ✅ 205 pruebas de Flutter, 10 archivos de pruebas SQL y revisión de seguridad.
 - ✅ Probado en la web real: registro, recuperar contraseña, correo, servicios.
 - ⬜ Probar en **celulares reales** (Android y iPhone) y en Safari.
 - ⬜ Probar el flujo completo del barbero invitado con una cuenta real.
@@ -264,7 +264,7 @@ Referencias: Booksy, Fresha, Vagaro, Square Appointments, AgendaPro, Setmore.
 | Catálogo de servicios con fotos | ✅ | ✅ (salón; barbería ⬜) |
 | Exportar reportes | ✅ | ✅ Excel |
 | App instalable | ✅ nativas | ✅ PWA (nativas ⬜) |
-| Agenda en tiempo real | ✅ | ⬜ V1.1 |
+| Agenda en tiempo real | ✅ | ✅ avisos en vivo (021) |
 | Reseñas, lista de espera | ✅ | ⬜ V2+ |
 | Comisiones, inventario, membresías | ✅ | ⬜ V3–V4 |
 
