@@ -145,6 +145,18 @@ class SupabaseRegistroRepository implements RegistroRepository {
       );
     }
 
+    // Tipo de negocio: bootstrap_negocio_owner() no lo recibe y el negocio
+    // nace como barbería; el dueño ya puede cambiarlo (RLS). Si falla, lo
+    // puede elegir después en Configuración.
+    if (datos.tipo != 'barberia') {
+      try {
+        await _client
+            .from('negocios')
+            .update({'tipo': datos.tipo})
+            .eq('slug', datos.slug);
+      } catch (_) {}
+    }
+
     // Limpieza opcional: el perfil ya existe y la función no permite
     // un segundo bootstrap, así que un fallo aquí no es crítico.
     try {

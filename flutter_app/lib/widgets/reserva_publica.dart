@@ -11,6 +11,7 @@ import '../theme.dart';
 import '../utils/enlaces_cita.dart';
 import '../utils/formato.dart';
 import '../utils/navegador.dart';
+import '../utils/vocabulario.dart';
 
 /// Las reservas públicas sin transferencia reportada vencen a las 3 horas
 /// (vencer_reservas_sin_pago, 010_seguridad_reservas_y_roles.sql).
@@ -311,7 +312,7 @@ class DetalleCita extends StatelessWidget {
           if (cita.barberoNombre.isNotEmpty)
             FilaDato(
               icono: Icons.person_outline,
-              etiqueta: 'Barbero',
+              etiqueta: Vocabulario.of(context).profesional,
               valor: cita.barberoNombre,
             ),
           FilaDato(

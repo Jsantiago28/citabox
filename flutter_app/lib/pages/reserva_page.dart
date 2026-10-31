@@ -10,6 +10,7 @@ import '../utils/iconos_servicio.dart';
 import '../utils/navegador.dart';
 import '../widgets/consentimiento_check.dart';
 import '../widgets/reserva_publica.dart';
+import '../utils/vocabulario.dart';
 import 'mi_cita_page.dart';
 
 /// Clave de localStorage con el token de la última cita reservada en un negocio.
@@ -52,6 +53,9 @@ class _ReservaPageState extends State<ReservaPage> {
   final _nota = TextEditingController();
 
   CatalogoReserva? _catalogo;
+
+  /// Palabras del negocio (barbero, estilista…) según el catálogo.
+  TipoNegocio get _tipo => TipoNegocio.desdeCodigo(_catalogo?.negocio.tipo);
   String? _errorCarga;
   bool _cargando = true;
 
@@ -91,6 +95,10 @@ class _ReservaPageState extends State<ReservaPage> {
       final catalogo = await widget.repository.catalogo(widget.slug);
       if (!mounted) return;
       setState(() => _catalogo = catalogo);
+      TipoNegocioHost.fijar(
+        context,
+        TipoNegocio.desdeCodigo(catalogo.negocio.tipo),
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() => _errorCarga = errorDeReserva(error).mensaje);
@@ -471,7 +479,7 @@ class _ReservaPageState extends State<ReservaPage> {
         _ResumenCorto(
           texto: [
             _servicio!.nombre,
-            _barbero?.nombre ?? 'Cualquier barbero',
+            _barbero?.nombre ?? 'Cualquier ${_tipo.profesionalMin}',
           ].join(' · '),
         ),
         const SizedBox(height: 16),
@@ -560,7 +568,7 @@ class _ReservaPageState extends State<ReservaPage> {
             maxLines: 3,
             maxLength: 500,
             decoration: const InputDecoration(
-              labelText: 'Nota para el barbero (opcional)',
+              labelText: 'Nota para quien te atiende (opcional)',
               alignLabelWithHint: true,
             ),
           ),
@@ -606,7 +614,7 @@ class _ReservaPageState extends State<ReservaPage> {
               ),
               FilaDato(
                 icono: Icons.person_outline,
-                etiqueta: 'Barbero',
+                etiqueta: _tipo.profesional,
                 valor: barberoHora?.nombre ?? 'Cualquiera disponible',
               ),
               FilaDato(

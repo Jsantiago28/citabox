@@ -16,14 +16,14 @@ const tituloTerminos = 'Términos de uso';
 
 const seccionesPrivacidad = <SeccionLegal>[
   SeccionLegal('Quién es responsable de tus datos', [
-    'El negocio (barbería o salón) donde reservas tu cita es el responsable '
+    'El negocio donde reservas tu cita es el responsable '
         'del tratamiento de tus datos personales. Citabox es la '
         'plataforma que los almacena y procesa por cuenta del negocio '
         '(encargado del tratamiento).',
   ]),
   SeccionLegal('Qué datos guardamos', [
     'Tu nombre, tu teléfono, tu correo electrónico (si lo escribes), las '
-        'notas que dejes y el historial de tus citas (servicio, barbero, '
+        'notas que dejes y el historial de tus citas (servicio, quién te atiende, '
         'fecha, hora, estado y apartado).',
   ]),
   SeccionLegal('Para qué los usamos', [

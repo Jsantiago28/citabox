@@ -4,6 +4,7 @@ import '../models/registro_negocio.dart';
 import '../services/registro_repository.dart';
 import '../theme.dart';
 import '../utils/slug.dart';
+import '../utils/vocabulario.dart';
 import '../widgets/consentimiento_check.dart';
 import '../widgets/logo_marca.dart';
 
@@ -61,6 +62,7 @@ class _RegistroPageState extends State<RegistroPage> {
       _negocioTelefono.text = pendiente.negocioTelefono;
       _ownerNombre.text = pendiente.ownerNombre;
       _ownerTelefono.text = pendiente.ownerTelefono;
+      _tipo = TipoNegocio.desdeCodigo(pendiente.tipo);
       _slugEditadoManualmente = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _crearNegocio());
     }
@@ -89,7 +91,10 @@ class _RegistroPageState extends State<RegistroPage> {
     negocioTelefono: _negocioTelefono.text.trim(),
     ownerNombre: _ownerNombre.text.trim(),
     ownerTelefono: _ownerTelefono.text.trim(),
+    tipo: _tipo.codigo,
   );
+
+  TipoNegocio _tipo = TipoNegocio.barberia;
 
   void _onNegocioNombreChanged(String value) {
     if (!_slugEditadoManualmente) setState(() => _slug.text = slugify(value));
@@ -366,6 +371,18 @@ class _RegistroPageState extends State<RegistroPage> {
             validator: (value) => (value?.trim() ?? '').isEmpty
                 ? 'El nombre del negocio es obligatorio.'
                 : null,
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<TipoNegocio>(
+            key: const Key('registro-tipo'),
+            initialValue: _tipo,
+            decoration: const InputDecoration(labelText: 'Tipo de negocio'),
+            items: [
+              for (final tipo in TipoNegocio.values)
+                DropdownMenuItem(value: tipo, child: Text(tipo.nombre)),
+            ],
+            onChanged: (tipo) =>
+                setState(() => _tipo = tipo ?? TipoNegocio.barberia),
           ),
           const SizedBox(height: 16),
           TextFormField(

@@ -41,6 +41,7 @@ class NegocioPublico {
     this.apartadoPolitica = '',
     this.apartadoInstrucciones = '',
     this.cancelacionHorasMinimas = 24,
+    this.tipo = 'barberia',
   });
 
   final String nombre;
@@ -57,12 +58,16 @@ class NegocioPublico {
   final String apartadoInstrucciones;
   final int cancelacionHorasMinimas;
 
+  /// Código de `TipoNegocio`: decide si dice barbero, estilista…
+  final String tipo;
+
   /// Igual que reserva_crear: hay apartado si se exige y el monto es > 0.
   bool get conApartado => apartadoRequerido && apartadoMonto > 0;
 
   factory NegocioPublico.fromMap(Map<String, dynamic> map) => NegocioPublico(
     nombre: _texto(map['nombre']),
     slug: _texto(map['slug']),
+    tipo: _texto(map['tipo']).isEmpty ? 'barberia' : _texto(map['tipo']),
     telefono: _texto(map['telefono']),
     direccion: _texto(map['direccion']),
     logo: _texto(map['logo']),

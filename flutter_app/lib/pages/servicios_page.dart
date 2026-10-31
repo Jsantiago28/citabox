@@ -12,6 +12,7 @@ import '../utils/fotos.dart';
 import '../utils/iconos_servicio.dart';
 import '../widgets/etiqueta.dart';
 import '../widgets/reserva_publica.dart' show ImagenRed;
+import '../utils/vocabulario.dart';
 
 class ServiciosPage extends StatefulWidget {
   const ServiciosPage({
@@ -786,7 +787,8 @@ class _SeleccionarServiciosDialogState
     extends State<_SeleccionarServiciosDialog> {
   final _formKey = GlobalKey<FormState>();
   final _precios = <String, TextEditingController>{};
-  bool _verSalon = false;
+  // Salón, uñas y spa empiezan en el catálogo de salón.
+  late bool _verSalon = Vocabulario.of(context).catalogoSalon;
 
   @override
   void dispose() {

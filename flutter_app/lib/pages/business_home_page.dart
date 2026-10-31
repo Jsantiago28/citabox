@@ -18,6 +18,7 @@ import '../services/servicios_repository.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../utils/fotos.dart';
+import '../utils/vocabulario.dart';
 import '../widgets/logo_marca.dart';
 import '../widgets/reportar_problema_dialog.dart';
 import '../widgets/ya_pague_dialog.dart';
@@ -57,7 +58,9 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
   Future<Map<String, dynamic>?> _loadProfile() async {
     final result = await Supabase.instance.client
         .from('perfiles')
-        .select('negocio_id, nombre, rol, activo, negocios(id, nombre, moneda)')
+        .select(
+          'negocio_id, nombre, rol, activo, negocios(id, nombre, moneda, tipo)',
+        )
         .eq('id', widget.userId)
         .maybeSingle();
     return result;
@@ -143,6 +146,7 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
           negocioId: negocioId,
           negocioNombre: business?['nombre']?.toString() ?? 'Citabox',
           moneda: business?['moneda']?.toString() ?? 'DOP',
+          tipo: TipoNegocio.desdeCodigo(business?['tipo']),
           nombre: profile['nombre']?.toString() ?? widget.email,
           esOwner: profile['rol'] == 'OWNER',
           onSignOut: _signOut,
@@ -175,6 +179,7 @@ class BusinessWorkspace extends StatefulWidget {
     required this.negocioId,
     required this.negocioNombre,
     required this.moneda,
+    this.tipo = TipoNegocio.barberia,
     required this.nombre,
     required this.esOwner,
     required this.onSignOut,
@@ -191,6 +196,9 @@ class BusinessWorkspace extends StatefulWidget {
   final String negocioId;
   final String negocioNombre;
   final String moneda;
+
+  /// Tipo de negocio: decide las palabras de la app (barbero, estilista…).
+  final TipoNegocio tipo;
   final String nombre;
   final bool esOwner;
   final VoidCallback onSignOut;
@@ -458,12 +466,24 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
       _Seccion.configuracion => ConfiguracionPage(
         negocioId: widget.negocioId,
         repository: SupabaseConfiguracionRepository(Supabase.instance.client),
+        onTipoCambiado: (tipo) => setState(() => _tipo = tipo),
       ),
     };
   }
 
+  /// Cambia al guardar el tipo en Configuración, sin recargar la app.
+  late TipoNegocio _tipo = widget.tipo;
+
   @override
   Widget build(BuildContext context) {
+    // También arriba del Navigator, para diálogos y pantallas apiladas.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) TipoNegocioHost.fijar(context, _tipo);
+    });
+    return Vocabulario(tipo: _tipo, child: _contenido(context));
+  }
+
+  Widget _contenido(BuildContext context) {
     return FutureBuilder<String?>(
       future: _empleadoId,
       builder: (context, snapshot) {
@@ -495,7 +515,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
               etiqueta: _etiqueta,
               sinVerAgenda: _sinVer,
               nombre: widget.nombre,
-              rol: widget.esOwner ? 'Dueño' : 'Barbero',
+              rol: widget.esOwner ? 'Dueño' : _tipo.profesional,
               onSeleccionar: (seccion) {
                 if (!ancho) Navigator.of(context).pop();
                 _ir(seccion);

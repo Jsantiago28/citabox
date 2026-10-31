@@ -11,6 +11,7 @@ import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/enlace_publico.dart';
 import '../utils/fotos.dart';
+import '../utils/vocabulario.dart';
 import '../widgets/reserva_publica.dart' show ImagenRed;
 import 'historial_page.dart';
 import '../widgets/seguridad_cuenta_card.dart';
@@ -26,6 +27,7 @@ class ConfiguracionPage extends StatefulWidget {
     this.elegirFoto = elegirFotoDelDispositivo,
     this.mfaRepository,
     this.historialRepository,
+    this.onTipoCambiado,
   });
 
   final String negocioId;
@@ -45,6 +47,9 @@ class ConfiguracionPage extends StatefulWidget {
   /// Historial de cambios; por defecto el de Supabase (si no hay backend
   /// iniciado, la tarjeta no se muestra).
   final HistorialRepository? historialRepository;
+
+  /// Avisa el tipo de negocio guardado, para cambiar las palabras de la app.
+  final ValueChanged<TipoNegocio>? onTipoCambiado;
 
   @override
   State<ConfiguracionPage> createState() => _ConfiguracionPageState();
@@ -97,6 +102,7 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
   bool _apartadoRequerido = true;
 
   int _recordatorioHoras = 24;
+  TipoNegocio _tipo = TipoNegocio.barberia;
 
   /// Recordatorios automáticos (servicio adicional); null si no se pudo
   /// cargar, y entonces se trata como no contratado.
@@ -186,6 +192,7 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     _cancelacion.text = config.cancelacionHorasMinimas.toString();
     _intervalo.text = config.intervaloReservaMinutos.toString();
     _recordatorioHoras = config.recordatorioHoras;
+    _tipo = TipoNegocio.desdeCodigo(config.tipo);
 
     for (final dia in _dias) {
       dia.dispose();
@@ -207,7 +214,8 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     return texto.isEmpty ? null : texto;
   }
 
-  Future<void> _guardar(
+  /// Devuelve si se guardó.
+  Future<bool> _guardar(
     String seccion,
     Future<void> Function() accion,
     String exito,
@@ -216,10 +224,12 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     try {
       await accion();
       if (mounted) _mensaje(exito);
+      return true;
     } catch (error) {
       if (mounted) {
         _mensaje(mensajeDeError(error, 'No se pudieron guardar los cambios.'));
       }
+      return false;
     } finally {
       if (mounted) setState(() => _guardando = null);
     }
@@ -234,7 +244,7 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
   Future<void> _guardarPerfil() async {
     if (!_perfilKey.currentState!.validate()) return;
     final color = _opcional(_color)?.toUpperCase();
-    await _guardar(
+    final guardado = await _guardar(
       'perfil',
       () => widget.repository.guardarNegocio(
         negocioId: widget.negocioId,
@@ -245,10 +255,12 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
           'logo': _opcional(_logo),
           'imagen': _opcional(_imagen),
           'color_principal': color,
+          'tipo': _tipo.codigo,
         },
       ),
       'Perfil guardado.',
     );
+    if (guardado) widget.onTipoCambiado?.call(_tipo);
   }
 
   Future<void> _guardarHorario() async {
@@ -482,7 +494,7 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
   Widget _perfilCard(bool isWide) {
     return _Seccion(
       titulo: 'Perfil del negocio',
-      descripcion: 'Así verán tus clientes tu barbería.',
+      descripcion: 'Así verán tus clientes tu negocio.',
       icono: Icons.storefront_outlined,
       children: [
         Form(
@@ -564,7 +576,19 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
                     return 'Usa el formato #RRGGBB.';
                   },
                 ),
-                if (isWide) const SizedBox.shrink(),
+                DropdownButtonFormField<TipoNegocio>(
+                  key: const Key('config-tipo'),
+                  initialValue: _tipo,
+                  decoration: const InputDecoration(
+                    labelText: 'Tipo de negocio',
+                  ),
+                  items: [
+                    for (final tipo in TipoNegocio.values)
+                      DropdownMenuItem(value: tipo, child: Text(tipo.nombre)),
+                  ],
+                  onChanged: (tipo) =>
+                      setState(() => _tipo = tipo ?? TipoNegocio.barberia),
+                ),
               ]),
               const SizedBox(height: 16),
               _botonGuardar('perfil', 'Guardar perfil', _guardarPerfil),

@@ -11,6 +11,7 @@ class RegistroNegocio {
     this.negocioTelefono = '',
     required this.ownerNombre,
     this.ownerTelefono = '',
+    this.tipo = 'barberia',
   });
 
   static const metadataKey = 'registro_pendiente';
@@ -20,6 +21,9 @@ class RegistroNegocio {
   final String negocioTelefono;
   final String ownerNombre;
   final String ownerTelefono;
+
+  /// Código de `TipoNegocio` (barberia, salon, spa…).
+  final String tipo;
 
   static RegistroNegocio? fromMetadata(Map<String, dynamic>? metadata) {
     final raw = metadata?[metadataKey];
@@ -38,6 +42,7 @@ class RegistroNegocio {
       negocioTelefono: raw['negocio_telefono']?.toString() ?? '',
       ownerNombre: ownerNombre,
       ownerTelefono: raw['owner_telefono']?.toString() ?? '',
+      tipo: raw['tipo']?.toString() ?? 'barberia',
     );
   }
 
@@ -48,6 +53,7 @@ class RegistroNegocio {
       'negocio_telefono': negocioTelefono,
       'owner_nombre': ownerNombre,
       'owner_telefono': ownerTelefono,
+      'tipo': tipo,
     },
   };
 }

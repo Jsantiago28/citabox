@@ -93,7 +93,7 @@ class _FakeReservaRepository implements ReservaRepository {
   Future<CatalogoReserva> catalogo(String slug) async {
     if (slug != 'el-jefe') {
       throw const ReservaError(
-        'No encontramos esta barbería. Revisa el enlace.',
+        'No encontramos este negocio. Revisa el enlace.',
       );
     }
     return CatalogoReserva.fromMap(_catalogo());
@@ -305,7 +305,7 @@ void main() {
     ) async {
       await _abrir(tester, '/reservar/otro', _FakeReservaRepository());
       expect(
-        find.text('No encontramos esta barbería. Revisa el enlace.'),
+        find.text('No encontramos este negocio. Revisa el enlace.'),
         findsOneWidget,
       );
     });

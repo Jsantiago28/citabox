@@ -12,6 +12,7 @@ import 'services/plataforma_repository.dart';
 import 'services/reserva_repository.dart';
 import 'theme.dart';
 import 'utils/enlace_publico.dart';
+import 'utils/vocabulario.dart';
 
 class BarberiaApp extends StatelessWidget {
   const BarberiaApp({
@@ -117,6 +118,10 @@ class BarberiaApp extends StatelessWidget {
       // Una sola página inicial (sin apilar '/', '/reservar', ...).
       onGenerateInitialRoutes: (nombre) => [_ruta(nombre)],
       onGenerateRoute: (settings) => _ruta(settings.name),
+      // Encima del Navigator: diálogos y pantallas apiladas también ven el
+      // tipo de negocio.
+      builder: (context, child) =>
+          TipoNegocioHost(child: child ?? const SizedBox.shrink()),
     );
   }
 }

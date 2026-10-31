@@ -48,7 +48,7 @@ String tituloEventoCita(CitaPublica cita) =>
     '${cita.servicioNombre} en ${cita.negocio.nombre}';
 
 String _detallesEvento(CitaPublica cita, String? enlaceMiCita) => [
-  if (cita.barberoNombre.isNotEmpty) 'Barbero: ${cita.barberoNombre}',
+  if (cita.barberoNombre.isNotEmpty) 'Te atiende: ${cita.barberoNombre}',
   'Precio: ${formatoMoneda(cita.precio, cita.negocio.moneda)}',
   if (cita.negocio.telefono.isNotEmpty) 'Teléfono: ${cita.negocio.telefono}',
   if (enlaceMiCita != null && enlaceMiCita.isNotEmpty)

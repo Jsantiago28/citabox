@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../utils/formato.dart';
 import '../utils/navegador.dart';
 import '../widgets/estado_cita_badge.dart';
+import '../utils/vocabulario.dart';
 
 class ReportesPage extends StatefulWidget {
   const ReportesPage({
@@ -243,9 +244,9 @@ class _Contenido extends StatelessWidget {
 
     final barberos = mostrarBarberos
         ? _Tabla(
-            titulo: 'Por barbero',
-            columnas: const [
-              'Barbero',
+            titulo: 'Por ${Vocabulario.of(context).profesionalMin}',
+            columnas: [
+              Vocabulario.of(context).profesional,
               'Atendidas',
               'Ingresos',
               'Comisión',

@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../utils/enlace_publico.dart';
 import '../utils/formato.dart';
 import '../widgets/estado_cita_badge.dart';
+import '../utils/vocabulario.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({
@@ -161,7 +162,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                       _Paso(
                         'barberos',
-                        'Agrega al menos un barbero',
+                        'Agrega al menos un ${Vocabulario.of(context).profesionalMin}',
                         estado.barbero,
                       ),
                       _Paso('logo', 'Sube tu logo', estado.logo),
@@ -415,7 +416,7 @@ class _HoyPorBarbero extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Hoy por barbero',
+          'Hoy por ${Vocabulario.of(context).profesionalMin}',
           style: Theme.of(context).textTheme.titleMedium
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
@@ -428,7 +429,7 @@ class _HoyPorBarbero extends StatelessWidget {
                 : Column(
                     children: [
                       _fila(
-                        'Barbero',
+                        Vocabulario.of(context).profesional,
                         'Citas',
                         'Cobrado',
                         'Propinas',

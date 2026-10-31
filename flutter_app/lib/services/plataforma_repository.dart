@@ -48,7 +48,7 @@ class AvisoSuscripcion {
 AvisoSuscripcion? avisoSuscripcion(Suscripcion s, DateTime ahora) {
   final hoy = DateTime(ahora.year, ahora.month, ahora.day);
   const pausado =
-      'El servicio de tu barbería está pausado. '
+      'El servicio de tu negocio está pausado. '
       'Contacta a Citabox para pagar y reactivarlo.';
 
   if (s.estado == 'SUSPENDIDA' || s.estado == 'VENCIDA') {

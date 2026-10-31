@@ -6,6 +6,7 @@ import '../services/agenda_repository.dart';
 import '../theme.dart';
 import '../utils/citas_reglas.dart';
 import '../utils/formato.dart';
+import '../utils/vocabulario.dart';
 
 /// Abre el formulario para crear (sin [cita]) o editar una cita.
 ///
@@ -162,7 +163,7 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('No se pudo registrarte como barbero.')),
+          const SnackBar(content: Text('No se pudo agregarte al equipo.')),
         );
       }
     } finally {
@@ -448,7 +449,9 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
             const SizedBox(height: 14),
             if (widget.empleadoFijo != null)
               InputDecorator(
-                decoration: const InputDecoration(labelText: 'Barbero'),
+                decoration: InputDecoration(
+                  labelText: Vocabulario.of(context).profesional,
+                ),
                 child: Text(barberoFijo ?? 'Tú'),
               )
             else
@@ -458,7 +461,9 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
                     ? _empleadoId
                     : null,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Barbero'),
+                decoration: InputDecoration(
+                  labelText: Vocabulario.of(context).profesional,
+                ),
                 items: [
                   for (final barbero in barberos)
                     DropdownMenuItem(
@@ -470,13 +475,16 @@ class _CitaFormDialogState extends State<CitaFormDialog> {
                     ? null
                     : (id) => setState(() => _empleadoId = id),
                 validator: (valor) =>
-                    valor == null ? 'Elige un barbero.' : null,
+                    valor == null ? 'Elige quién atiende.' : null,
               ),
             if (widget.empleadoFijo == null &&
                 widget.esOwner &&
                 _catalogo!.barberos.isEmpty) ...[
               const SizedBox(height: 8),
-              const Text('Aún no tienes barberos. Si atiendes tú mismo:'),
+              Text(
+                'Aún no tienes ${Vocabulario.of(context).profesionalesMin}. '
+                'Si atiendes tú mismo:',
+              ),
               const SizedBox(height: 6),
               OutlinedButton.icon(
                 key: const Key('atiendo-yo'),

@@ -138,6 +138,7 @@ void main() {
       'logo': null,
       'imagen': null,
       'color_principal': '#112233',
+      'tipo': 'barberia',
     });
     expect(find.text('Perfil guardado.'), findsOneWidget);
   });

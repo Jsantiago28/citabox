@@ -16,13 +16,14 @@ class ConfiguracionNegocio {
     this.cancelacionHorasMinimas = 24,
     this.intervaloReservaMinutos = 15,
     this.recordatorioHoras = 24,
+    this.tipo = 'barberia',
   });
 
   static const columnas =
       'id, nombre, slug, telefono, direccion, logo, imagen, color_principal, '
       'apartado_requerido, apartado_monto, apartado_politica, '
       'apartado_instrucciones, cancelacion_horas_minimas, '
-      'intervalo_reserva_minutos, recordatorio_horas';
+      'intervalo_reserva_minutos, recordatorio_horas, tipo';
 
   final String id;
   final String nombre;
@@ -42,6 +43,9 @@ class ConfiguracionNegocio {
   /// Horas antes de la cita en que sale el recordatorio automático (si el
   /// negocio contrató el servicio).
   final int recordatorioHoras;
+
+  /// Código de `TipoNegocio` (barberia, salon, spa…).
+  final String tipo;
 
   factory ConfiguracionNegocio.fromMap(Map<String, dynamic> map) {
     String texto(String clave) => map[clave]?.toString() ?? '';
@@ -64,6 +68,7 @@ class ConfiguracionNegocio {
       cancelacionHorasMinimas: entero('cancelacion_horas_minimas', 24),
       intervaloReservaMinutos: entero('intervalo_reserva_minutos', 15),
       recordatorioHoras: entero('recordatorio_horas', 24),
+      tipo: texto('tipo').isEmpty ? 'barberia' : texto('tipo'),
     );
   }
 }

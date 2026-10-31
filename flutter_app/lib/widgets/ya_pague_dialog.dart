@@ -12,14 +12,14 @@ const whatsappPlataforma = String.fromEnvironment('WHATSAPP_PLATAFORMA');
 
 /// Planes que se pagan (migraciones 017 y 018).
 const planesDePago = [
-  (codigo: 'solo', nombre: 'Solo', precio: 400, detalle: '1 barbero'),
+  (codigo: 'solo', nombre: 'Solo', precio: 400, detalle: '1 persona'),
   (
     codigo: 'barberia',
-    nombre: 'Barbería',
+    nombre: 'Equipo',
     precio: 900,
-    detalle: 'hasta 5 barberos',
+    detalle: 'hasta 5 personas',
   ),
-  (codigo: 'pro', nombre: 'Pro', precio: 1600, detalle: 'barberos sin límite'),
+  (codigo: 'pro', nombre: 'Pro', precio: 1600, detalle: 'equipo sin límite'),
 ];
 
 /// Texto del aviso de pago (WhatsApp y panel de administrador).

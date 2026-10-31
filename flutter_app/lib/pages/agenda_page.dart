@@ -12,6 +12,7 @@ import '../utils/whatsapp.dart';
 import '../widgets/atender_ahora_dialog.dart';
 import '../widgets/cita_form_dialog.dart';
 import '../widgets/estado_cita_badge.dart';
+import '../utils/vocabulario.dart';
 
 /// Abre un enlace externo (WhatsApp). Devuelve false si no se pudo.
 typedef AbrirEnlace = Future<bool> Function(Uri enlace);
@@ -27,7 +28,7 @@ class AgendaPage extends StatefulWidget {
     this.agendaRepository,
     this.titulo = 'Agenda',
     this.moneda = 'DOP',
-    this.negocioNombre = 'la barbería',
+    this.negocioNombre = 'el negocio',
     this.empleadoId,
     this.esOwner = true,
     this.fechaInicial,
@@ -902,7 +903,7 @@ class _DialogoDetalle extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _Dato('Servicio', cita.servicioNombre),
-            _Dato('Barbero', cita.empleadoNombre),
+            _Dato(Vocabulario.of(context).profesional, cita.empleadoNombre),
             _Dato(
               'Fecha',
               fecha == null ? cita.fecha : formatoFechaLarga(fecha),

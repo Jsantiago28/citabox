@@ -202,7 +202,7 @@ String _cita(
         );
       case 'empleado_id':
         detalles.add(
-          'con ${empleados['${despues?['empleado_id']}'] ?? 'otro barbero'}',
+          'con ${empleados['${despues?['empleado_id']}'] ?? 'otra persona'}',
         );
     }
   }

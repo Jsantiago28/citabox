@@ -59,9 +59,9 @@ Uint8List generarExcelReporte({
   if (incluirBarberos) {
     _hoja(
       libro,
-      'Por barbero',
+      'Por profesional',
       const [
-        'Barbero',
+        'Profesional',
         'Atendidas',
         'Ingresos',
         'Propinas',
@@ -129,7 +129,7 @@ Uint8List generarExcelReporte({
       'Hora',
       'Cliente',
       'Servicio',
-      'Barbero',
+      'Profesional',
       'Estado',
       'Precio',
       'Método de pago',

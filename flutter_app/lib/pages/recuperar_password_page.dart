@@ -217,7 +217,7 @@ class _RecuperarPasswordPageState extends State<RecuperarPasswordPage> {
           const SizedBox(height: 6),
           Text(
             widget.invitacion
-                ? 'Escribe el correo donde recibiste la invitación de tu barbería.'
+                ? 'Escribe el correo donde recibiste la invitación de tu negocio.'
                 : 'Escribe el correo de tu cuenta y te enviaremos un código para '
                       'crear una contraseña nueva.',
           ),

@@ -82,7 +82,7 @@ void main() {
       libro.tables.keys,
       containsAll([
         'Resumen',
-        'Por barbero',
+        'Por profesional',
         'Por servicio',
         'Por método de pago',
         'Detalle de citas',
@@ -96,7 +96,7 @@ void main() {
     expect(_valor(resumen, 'Propinas'), 100);
     expect(_valor(resumen, 'Citas'), 3);
 
-    final barberos = libro.tables['Por barbero']!;
+    final barberos = libro.tables['Por profesional']!;
     expect(_valor(barberos, 'Luis', 2), 500);
     expect(_valor(barberos, 'Luis', 3), 100);
     expect(_valor(barberos, 'Luis', 4), 30); // Comisión %
@@ -126,7 +126,7 @@ void main() {
         incluirBarberos: false,
       ),
     );
-    expect(libro.tables.keys, isNot(contains('Por barbero')));
+    expect(libro.tables.keys, isNot(contains('Por profesional')));
   });
 
   testWidgets('el botón descarga el reporte del período', (tester) async {

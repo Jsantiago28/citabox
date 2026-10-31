@@ -7,6 +7,7 @@ import '../services/agenda_repository.dart';
 import '../theme.dart';
 import '../utils/citas_reglas.dart';
 import '../utils/formato.dart';
+import '../utils/vocabulario.dart';
 
 /// Abre "Atender ahora": crea una cita de hoy, que empieza ya y queda en
 /// LLEGO. Devuelve true si se creó.
@@ -399,7 +400,9 @@ class _AtenderAhoraDialogState extends State<AtenderAhoraDialog> {
             const SizedBox(height: 14),
             if (widget.empleadoFijo != null)
               InputDecorator(
-                decoration: const InputDecoration(labelText: 'Barbero'),
+                decoration: InputDecoration(
+                  labelText: Vocabulario.of(context).profesional,
+                ),
                 child: Text(barberoFijo ?? 'Tú'),
               )
             else
@@ -409,7 +412,9 @@ class _AtenderAhoraDialogState extends State<AtenderAhoraDialog> {
                     ? _empleadoId
                     : null,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Barbero'),
+                decoration: InputDecoration(
+                  labelText: Vocabulario.of(context).profesional,
+                ),
                 items: [
                   for (final b in _barberos)
                     DropdownMenuItem(value: b.id, child: Text(b.nombre)),
@@ -421,7 +426,7 @@ class _AtenderAhoraDialogState extends State<AtenderAhoraDialog> {
                         _reiniciarHora();
                       }),
                 validator: (valor) =>
-                    valor == null ? 'Elige un barbero.' : null,
+                    valor == null ? 'Elige quién atiende.' : null,
               ),
             const SizedBox(height: 14),
             Row(

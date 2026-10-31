@@ -13,6 +13,7 @@ import '../utils/navegador.dart';
 import '../utils/whatsapp.dart';
 import '../widgets/estado_cita_badge.dart';
 import '../widgets/etiqueta.dart';
+import '../utils/vocabulario.dart';
 
 /// Abre un enlace externo (llamada, WhatsApp, correo).
 typedef AbrirEnlace = Future<bool> Function(Uri uri);
@@ -523,7 +524,10 @@ class _ClienteFichaState extends State<ClienteFicha> {
         children: [
           _fila('Servicio favorito', _ficha.servicioFavorito ?? '—'),
           const SizedBox(height: 6),
-          _fila('Barbero favorito', _ficha.barberoFavorito ?? '—'),
+          _fila(
+            '${Vocabulario.of(context).profesional} favorito',
+            _ficha.barberoFavorito ?? '—',
+          ),
         ],
       ),
     );

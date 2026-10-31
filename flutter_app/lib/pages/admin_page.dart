@@ -4,7 +4,7 @@ import '../services/plataforma_repository.dart';
 
 const _planes = <String, String>{
   'solo': 'Solo',
-  'barberia': 'Barbería',
+  'barberia': 'Equipo',
   'pro': 'Pro',
 };
 
@@ -196,7 +196,7 @@ class _AdminPageState extends State<AdminPage> {
                     DataColumn(label: Text('Estado')),
                     DataColumn(label: Text('Prueba hasta')),
                     DataColumn(label: Text('Pagado hasta')),
-                    DataColumn(label: Text('Barberos'), numeric: true),
+                    DataColumn(label: Text('Equipo'), numeric: true),
                     DataColumn(label: Text('Citas 30d'), numeric: true),
                     DataColumn(label: Text('Recordatorios auto')),
                     DataColumn(label: Text('Acciones')),

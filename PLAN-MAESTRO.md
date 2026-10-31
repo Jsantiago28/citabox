@@ -6,7 +6,7 @@ El modelo visual de referencia está en [docs/modelo-visual.png](docs/modelo-vis
 
 **Objetivo de la V1:** organizar citas, reducir no-shows, cobrar un apartado y darle al dueño visibilidad del negocio.
 **Primer objetivo:** que una barbería o salón real use la V1.
-**Nombre (30-oct):** la app pasa a llamarse **Citabox** para servir a cualquier negocio con citas (barberías, salones, spas, consultorios…). Logo: calendario dorado con visto sobre negro. ✅ Nombre, logo e íconos en la app y la web. ⬜ Palabras generales según el tipo de negocio ("barbero" → profesional). ✅ Dirección nueva `citabox.pages.dev`; la vieja redirige con la misma ruta. ⬜ Revisar la marca en ONAPI y el dominio `citabox.do` / `.app`.
+**Nombre (30-oct):** la app pasa a llamarse **Citabox** para servir a cualquier negocio con citas (barberías, salones, spas, consultorios…). Logo: calendario dorado con visto sobre negro. ✅ Nombre, logo e íconos en la app y la web. ✅ Tipo de negocio (barbería, salón, uñas, spa, consultorio, otro) al registrarse y en Configuración; la app y la reserva usan sus palabras (barbero, estilista, manicurista, terapeuta, profesional) (025). Plan intermedio renombrado a "Equipo". ✅ Dirección nueva `citabox.pages.dev`; la vieja redirige con la misma ruta. ⬜ Revisar la marca en ONAPI y el dominio `citabox.do` / `.app`.
 
 | Símbolo | Significado |
 |---|---|
@@ -100,7 +100,7 @@ La app React queda solo como referencia (`src/`).
 - ✅ CRUD, "Visible en reservas", catálogo de 20 servicios de salón con precio del dueño.
 - ✅ Íconos por servicio y **foto subida por el dueño** (ícono como respaldo).
 - ✅ **Catálogo de barbería** (15 servicios) junto al de salón, con selector Barbería / Salón.
-- ⬜ Elegir el tipo de negocio (barbería / salón / ambos) al registrarse para mostrar el catálogo correcto.
+- ✅ Elegir el tipo de negocio al registrarse; el catálogo sugerido abre en el que le toca (025).
 
 ### 5. Empleados ✅
 - ✅ CRUD, servicios por barbero, horario, días libres, invitación a la app.

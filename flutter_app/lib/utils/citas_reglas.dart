@@ -61,7 +61,7 @@ int? siguienteHoraLibre({
   return inicio + duracionMinutos >= 24 * 60 ? null : inicio;
 }
 
-const mensajeSolapamiento = 'Ese barbero ya tiene una cita en ese horario.';
+const mensajeSolapamiento = 'Esa persona ya tiene una cita en ese horario.';
 const mensajeEstadoNoPermitido = 'Ese cambio de estado no está permitido.';
 const mensajeRevisaPrecioYHorario = 'Revisa el precio y el horario de la cita.';
 const mensajeSinPermisoAccion = 'No tienes permiso para esta acción.';

@@ -27,7 +27,7 @@ void main() {
   test('Postgres errors become clear messages', () {
     expect(
       mensajeErrorCita(const PostgrestException(message: 'x', code: '23P01')),
-      'Ese barbero ya tiene una cita en ese horario.',
+      'Esa persona ya tiene una cita en ese horario.',
     );
     expect(
       mensajeErrorCita(
@@ -319,7 +319,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Ese barbero ya tiene una cita en ese horario.'),
+      find.text('Esa persona ya tiene una cita en ese horario.'),
       findsOneWidget,
     );
     expect(agenda.clientesCreados, ['Rafael Núñez|809-555-0000']);
@@ -537,7 +537,7 @@ void main() {
     await tester.tap(find.text('Empezar'));
     await tester.pumpAndSettle();
     expect(
-      find.text('Ese barbero ya tiene una cita en ese horario.'),
+      find.text('Esa persona ya tiene una cita en ese horario.'),
       findsOneWidget,
     );
     expect(agenda.intentos.single.horaInicio, '14:20:00');
