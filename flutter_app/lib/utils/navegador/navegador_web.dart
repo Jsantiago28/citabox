@@ -67,3 +67,71 @@ void guardarLocal(String clave, String valor) {
     // Sin almacenamiento: el enlace "Mi cita" sigue en pantalla.
   }
 }
+
+/// Cómo se puede instalar la app en la pantalla de inicio.
+enum Instalacion { instalada, conBoton, iphone, menuDelNavegador }
+
+extension type _Citabox._(JSObject _) implements JSObject {
+  external JSObject? get aviso;
+  external bool? get instalada;
+}
+
+@JS('citabox')
+external _Citabox? get _citabox;
+
+@JS('citaboxInstalar')
+external JSPromise<JSString> _instalar();
+
+@JS('matchMedia')
+external _ConsultaMedia _matchMedia(String consulta);
+
+extension type _ConsultaMedia._(JSObject _) implements JSObject {
+  external bool get matches;
+}
+
+@JS('navigator.userAgent')
+external String get _agente;
+
+@JS('navigator.maxTouchPoints')
+external int? get _puntosTactiles;
+
+@JS('navigator.standalone')
+external bool? get _standaloneIos;
+
+@JS('window.addEventListener')
+external void _escuchar(String evento, JSFunction funcion);
+
+Instalacion estadoInstalacion() {
+  try {
+    if (_matchMedia('(display-mode: standalone)').matches ||
+        _standaloneIos == true ||
+        _citabox?.instalada == true) {
+      return Instalacion.instalada;
+    }
+    if (_citabox?.aviso != null) return Instalacion.conBoton;
+    final agente = _agente;
+    // iPadOS se presenta como Mac; se distingue por la pantalla táctil.
+    final esIos =
+        RegExp('iPhone|iPad|iPod').hasMatch(agente) ||
+        (agente.contains('Macintosh') && (_puntosTactiles ?? 0) > 1);
+    if (esIos) return Instalacion.iphone;
+    if (agente.contains('Android')) return Instalacion.menuDelNavegador;
+    return Instalacion.instalada; // computadora sin botón: no se insiste
+  } catch (_) {
+    return Instalacion.instalada;
+  }
+}
+
+Future<bool> instalarApp() async {
+  try {
+    return (await _instalar().toDart).toDart == 'accepted';
+  } catch (_) {
+    return false;
+  }
+}
+
+void alCambiarInstalacion(void Function() alCambiar) {
+  try {
+    _escuchar('citabox-instalacion', alCambiar.toJS);
+  } catch (_) {}
+}

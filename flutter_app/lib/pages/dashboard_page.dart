@@ -11,6 +11,7 @@ import '../utils/enlace_publico.dart';
 import '../utils/formato.dart';
 import '../widgets/estado_cita_badge.dart';
 import '../utils/vocabulario.dart';
+import '../widgets/instalar_app.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({
@@ -147,6 +148,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 mostrarNegocio: ancho,
               ),
               const SizedBox(height: 20),
+              const TarjetaInstalar(),
               if (widget.primerUsoRepository != null)
                 FutureBuilder<PrimerUso?>(
                   future: _primerUso,

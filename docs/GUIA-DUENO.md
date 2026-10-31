@@ -4,9 +4,23 @@ Guía para el dueño de un negocio que trabaja con citas (barbería, salón,
 uñas, spa, consultorio u otro). Sigue los pasos en orden; al terminar, tus
 clientes ya pueden reservar solos desde el celular.
 
-Abre la app en **https://citabox.pages.dev**. En el celular puedes
-instalarla: en el navegador toca **Compartir → Agregar a inicio** (iPhone) o
-**⋮ → Instalar app** (Android).
+Abre la app en **https://citabox.pages.dev**.
+
+### Ponla en la pantalla de inicio de tu celular
+
+Al entrar, en **Inicio** verás la tarjeta **"Instala Citabox en tu celular"**:
+
+- **Android, computadora (Chrome, Edge o Brave):** toca **Instalar Citabox** y
+  confirma. Listo.
+- **iPhone (Safari o Brave):** la tarjeta te muestra los dos pasos: toca
+  **Compartir** (el cuadrito con la flecha hacia arriba) y elige **Agregar a
+  pantalla de inicio**.
+- **Otro navegador en Android:** menú **⋮** → **Instalar app** o **Agregar a
+  la pantalla de inicio**.
+
+Queda con el ícono de Citabox, se abre a pantalla completa y se actualiza
+sola. Si cerraste la tarjeta con la **X**, puedes hacerlo igual desde el menú
+del navegador.
 
 ---
 

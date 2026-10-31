@@ -47,6 +47,33 @@
 
   <link rel="manifest" href="manifest.json">
 
+  <!-- Instalar en la pantalla de inicio: Chrome, Edge y Brave avisan con
+       "beforeinstallprompt" apenas carga la página, antes que la app; se
+       guarda para que el botón "Instalar" de la app lo use después
+       (utils/navegador/navegador_web.dart). iPhone no tiene este aviso. -->
+  <script>
+    window.citabox = { aviso: null };
+    window.addEventListener("beforeinstallprompt", function (e) {
+      e.preventDefault();
+      window.citabox.aviso = e;
+      window.dispatchEvent(new Event("citabox-instalacion"));
+    });
+    window.addEventListener("appinstalled", function () {
+      window.citabox.aviso = null;
+      window.citabox.instalada = true;
+      window.dispatchEvent(new Event("citabox-instalacion"));
+    });
+    window.citaboxInstalar = function () {
+      var aviso = window.citabox.aviso;
+      if (!aviso) return Promise.resolve("no-disponible");
+      aviso.prompt();
+      return aviso.userChoice.then(function (r) {
+        window.citabox.aviso = null;
+        return r.outcome;
+      });
+    };
+  </script>
+
   <!-- Conectar antes con el motor gráfico de Flutter (gstatic) y con la base
        de datos: ahorra la espera de abrir la conexión en celulares lentos. -->
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>

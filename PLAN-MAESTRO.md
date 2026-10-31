@@ -147,13 +147,13 @@ La app React queda solo como referencia (`src/`).
 - ⬜ Probar la subida de fotos en el celular (cámara y galería).
 
 ### 13. Lanzamiento 🟡
-- ✅ Web publicada e instalable (PWA), datos demo disponibles (`supabase/seed/`).
+- ✅ Web publicada e instalable (PWA) con tarjeta "Instalar Citabox" en Inicio: botón en Chrome/Edge/Brave y pasos en iPhone. Datos demo en `supabase/seed/`.
 - ⬜ **Dominio propio** (p. ej. `reservas.tunegocio.com`) y pasar el correo a Resend.
 - ⬜ **Primer negocio real** usando la app una semana → observar → corregir.
 - ✅ Guía corta para el dueño: [docs/GUIA-DUENO.md](docs/GUIA-DUENO.md).
 - ✅ Procedimiento ante fallos (gravedad, arreglo, deshacer publicación, aviso a negocios): [docs/REPORTAR-FALLOS.md](docs/REPORTAR-FALLOS.md).
 - ⬜ Plan Pro de Supabase cuando haya clientes (el gratis pausa el proyecto si no se usa).
-- ⬜ Después de validar: Android (Google Play) e iOS (App Store).
+- ⬜ Después de validar: Android (Google Play) e iOS (App Store). Decisión (31-oct): por ahora solo web instalable; el APK se prepara más adelante (`com.citabox.app`).
 
 ---
 
