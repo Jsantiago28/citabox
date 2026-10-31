@@ -33,9 +33,14 @@ class _PantallaDesplazableState extends State<PantallaDesplazable> {
   Widget build(BuildContext context) {
     return SizedBox.expand(
       child: LayoutBuilder(
-        builder: (context, limites) => Scrollbar(
+        builder: (context, limites) => RawScrollbar(
           controller: _controlador,
           thumbVisibility: true,
+          // Gris medio: se ve sobre el fondo negro y sobre el claro.
+          thumbColor: const Color(0xFFA9A9A4),
+          thickness: 8,
+          radius: const Radius.circular(8),
+          crossAxisMargin: 3,
           child: SingleChildScrollView(
             controller: _controlador,
             padding: widget.padding,
