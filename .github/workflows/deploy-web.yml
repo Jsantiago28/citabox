@@ -124,24 +124,34 @@ jobs:
             -e "s#<meta property=\"og:type\" content=\"website\">#<meta property=\"og:type\" content=\"website\">\n  <meta property=\"og:url\" content=\"$base/\">#" \
             index.html
 
-      # Crea el proyecto "barberia-pro" la primera vez (rama de producción:
-      # master). Si ya existe, no hace nada.
-      - name: Crear proyecto de Pages si no existe
+      # Crea los proyectos la primera vez (rama de producción: master). Si ya
+      # existen, no hace nada. "citabox" es la app; "barberia-pro" (el nombre
+      # anterior) solo redirige a la dirección nueva.
+      - name: Crear proyectos de Pages si no existen
         run: |
           echo "Largo de CLOUDFLARE_ACCOUNT_ID: ${#CF_ACCOUNT} (debe ser 32). Largo del token: ${#CF_TOKEN}."
           api="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/pages/projects"
-          codigo=$(curl -s -o /dev/null -w '%{http_code}' \
-            -H "Authorization: Bearer $CF_TOKEN" "$api/barberia-pro")
-          if [ "$codigo" = "200" ]; then
-            echo "El proyecto barberia-pro ya existe."
-          elif [ "$codigo" = "404" ]; then
-            curl -sf -X POST "$api" \
-              -H "Authorization: Bearer $CF_TOKEN" \
-              -H "Content-Type: application/json" \
-              --data '{"name":"barberia-pro","production_branch":"master"}' > /dev/null
-            echo "Proyecto barberia-pro creado."
-          else
-            echo "::error::Cloudflare respondió $codigo. Revisa CLOUDFLARE_API_TOKEN y CLOUDFLARE_ACCOUNT_ID."
+          for proyecto in citabox barberia-pro; do
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Bearer $CF_TOKEN" "$api/$proyecto")
+            if [ "$codigo" = "200" ]; then
+              echo "El proyecto $proyecto ya existe."
+            elif [ "$codigo" = "404" ]; then
+              curl -sf -X POST "$api" \
+                -H "Authorization: Bearer $CF_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data "{\"name\":\"$proyecto\",\"production_branch\":\"master\"}" > /dev/null
+              echo "Proyecto $proyecto creado."
+            else
+              echo "::error::Cloudflare respondió $codigo. Revisa CLOUDFLARE_API_TOKEN y CLOUDFLARE_ACCOUNT_ID."
+              exit 1
+            fi
+          done
+          # Si el nombre estuviera tomado, Cloudflare daría otra dirección y la
+          # redirección mandaría a los clientes a un sitio ajeno: se detiene.
+          sub=$(curl -s -H "Authorization: Bearer $CF_TOKEN" "$api/citabox" | jq -r '.result.subdomain')
+          if [ "$sub" != "citabox.pages.dev" ]; then
+            echo "::error::El proyecto citabox quedó en '$sub', no en citabox.pages.dev. Revisa la redirección antes de publicar."
             exit 1
           fi
 
@@ -153,8 +163,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ env.CF_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_ACCOUNT }}
         run: |
-          printf '%s' "$SB_URL" | npx --yes wrangler@3 pages secret put SUPABASE_URL --project-name=barberia-pro
-          printf '%s' "$SB_KEY" | npx --yes wrangler@3 pages secret put SUPABASE_PUBLISHABLE_KEY --project-name=barberia-pro
+          printf '%s' "$SB_URL" | npx --yes wrangler@3 pages secret put SUPABASE_URL --project-name=citabox
+          printf '%s' "$SB_KEY" | npx --yes wrangler@3 pages secret put SUPABASE_PUBLISHABLE_KEY --project-name=citabox
 
       # workingDirectory: flutter_app → Pages toma ./functions de ahí.
       - name: Publicar en Cloudflare Pages
@@ -164,4 +174,20 @@ jobs:
           apiToken: ${{ env.CF_TOKEN }}
           accountId: ${{ env.CF_ACCOUNT }}
           workingDirectory: flutter_app
-          command: pages deploy build/web --project-name=barberia-pro --branch=master --commit-dirty=true
+          command: pages deploy build/web --project-name=citabox --branch=master --commit-dirty=true
+
+      # La dirección vieja (barberia-pro.pages.dev) manda todo a la nueva con
+      # la misma ruta: los enlaces de reserva ya compartidos siguen sirviendo.
+      # Se publica después de la app para no redirigir a una versión vacía.
+      - name: Redirección desde la dirección anterior
+        run: |
+          mkdir -p redireccion
+          printf '/* https://citabox.pages.dev/:splat 301\n' > redireccion/_redirects
+          printf '<!doctype html><meta charset="utf-8"><title>Citabox</title><script>location.replace("https://citabox.pages.dev"+location.pathname+location.search+location.hash)</script><a href="https://citabox.pages.dev">Citabox se mudó a citabox.pages.dev</a>\n' > redireccion/index.html
+
+      - name: Publicar la redirección
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ env.CF_TOKEN }}
+          accountId: ${{ env.CF_ACCOUNT }}
+          command: pages deploy redireccion --project-name=barberia-pro --branch=master --commit-dirty=true

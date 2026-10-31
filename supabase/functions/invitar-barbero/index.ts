@@ -12,7 +12,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
 const corsHeaders = {
   // Solo la app publicada; la función exige además el JWT del dueño.
-  'Access-Control-Allow-Origin': 'https://barberia-pro.pages.dev',
+  'Access-Control-Allow-Origin': 'https://citabox.pages.dev',
   Vary: 'Origin',
   'Access-Control-Allow-Headers':
     'authorization, x-client-info, apikey, content-type',

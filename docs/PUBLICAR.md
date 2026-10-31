@@ -1,7 +1,7 @@
 # Publicar Citabox en internet (Cloudflare Pages)
 
 Esta guía es para dejar la app en una dirección como
-`https://barberia-pro.pages.dev` o en tu propio dominio (por ejemplo
+`https://citabox.pages.dev` o en tu propio dominio (por ejemplo
 `https://reservas.tubarberia.com`). No hace falta saber programar: son
 pasos en páginas web. Calcula unos 30 minutos la primera vez.
 
@@ -74,8 +74,8 @@ El token es como una llave que solo sirve para publicar páginas.
    **Solo se muestra una vez.** Si lo pierdes, crea otro.
 
 > No hace falta crear el proyecto en Cloudflare a mano: la primera
-> publicación crea el proyecto `barberia-pro` sola. Si prefieres crearlo
-> tú, llámalo exactamente `barberia-pro` y pon `master` como rama de
+> publicación crea el proyecto `citabox` sola. Si prefieres crearlo
+> tú, llámalo exactamente `citabox` y pon `master` como rama de
 > producción (**Settings → Builds & deployments → Production branch**).
 
 ## Paso 4 — Guardar los 4 secretos en GitHub
@@ -97,20 +97,20 @@ el aviso *"Publicación omitida: faltan secretos"*) y no rompe nada.
 2. A la izquierda, elige **Publicar web (Cloudflare Pages)**.
 3. Pulsa **Run workflow** → rama `master` → **Run workflow**.
 4. Espera unos 5 minutos hasta que salga el círculo verde.
-5. Abre <https://barberia-pro.pages.dev>. ¡Ya está en internet!
+5. Abre <https://citabox.pages.dev>. ¡Ya está en internet!
 
 Desde ahora, cada cambio que llegue a `master` se publica solo.
 
 ## Paso 6 — Conectar tu propio dominio (opcional)
 
-1. En Cloudflare → **Workers & Pages** → proyecto **barberia-pro** →
+1. En Cloudflare → **Workers & Pages** → proyecto **citabox** →
    pestaña **Custom domains** → **Set up a custom domain**.
 2. Escribe tu dominio, por ejemplo `reservas.tubarberia.com`, y pulsa
    **Continue**.
 3. - Si tu dominio ya está en Cloudflare, pulsa **Activate domain** y listo.
    - Si está en otro proveedor (GoDaddy, Namecheap, etc.), Cloudflare te
      dirá que crees un registro **CNAME**: en tu proveedor crea
-     `reservas` → `barberia-pro.pages.dev`.
+     `reservas` → `citabox.pages.dev`.
 4. Espera a que el estado diga **Active** (de minutos a unas horas).
 
 **Recomendado:** para que la vista previa de WhatsApp muestre bien el logo,
@@ -130,11 +130,11 @@ web y no a `localhost`.
 1. Supabase → tu proyecto → **Authentication** → **URL Configuration**.
 2. **Site URL**: tu dirección principal, por ejemplo
    `https://reservas.tubarberia.com`
-   (o `https://barberia-pro.pages.dev` si no tienes dominio).
+   (o `https://citabox.pages.dev` si no tienes dominio).
    Pulsa **Save**.
 3. **Redirect URLs** → **Add URL** y agrega (una por una):
    - `https://reservas.tubarberia.com/**`
-   - `https://barberia-pro.pages.dev/**`
+   - `https://citabox.pages.dev/**`
    - `http://localhost:*/**` (solo si se prueba la app en una computadora)
 4. Guarda.
 
@@ -165,7 +165,7 @@ web y no a `localhost`.
 - Compila con `flutter build web --release` y los `--dart-define`
   `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`; publica
   `flutter_app/build/web` con `wrangler pages deploy` (proyecto
-  `barberia-pro`, rama `master`).
+  `citabox`, rama `master`).
 - `flutter_app/web/_headers`: cabeceras de seguridad (`nosniff`,
   `Referrer-Policy`, `frame-ancestors 'self'`) y caché (`no-cache` para
   `index.html`, `main.dart.js` y el service worker, que no llevan versión
@@ -193,3 +193,11 @@ Necesita un solo secreto en GitHub:
 ## Vista previa al compartir (WhatsApp/redes)
 
 El enlace que comparte el dueño es `<sitio>/r/<slug>`. La función de Pages `flutter_app/functions/r/[slug].js` lee el negocio con `reserva_catalogo` y devuelve las etiquetas Open Graph antes de redirigir a `/#/reservar/<slug>`. El workflow publica desde `flutter_app` (para que Pages tome `./functions`) y, antes de publicar, guarda `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` como secretos del proyecto Pages con `wrangler pages secret put`. No hace falta nada más. Copias de seguridad: ver `docs/RESPALDOS.md`.
+
+## Dirección anterior (`barberia-pro.pages.dev`)
+
+La app se llamó Barbería PRO hasta el 30-oct-2026. El proyecto de Pages
+`barberia-pro` ya no tiene la app: cada publicación le sube solo una
+redirección 301 a `https://citabox.pages.dev` con la misma ruta, para que
+los enlaces de reserva y de "Mi cita" ya compartidos sigan funcionando. No
+lo borres mientras haya enlaces viejos circulando.

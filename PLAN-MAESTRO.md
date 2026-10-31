@@ -6,7 +6,7 @@ El modelo visual de referencia está en [docs/modelo-visual.png](docs/modelo-vis
 
 **Objetivo de la V1:** organizar citas, reducir no-shows, cobrar un apartado y darle al dueño visibilidad del negocio.
 **Primer objetivo:** que una barbería o salón real use la V1.
-**Nombre (30-oct):** la app pasa a llamarse **Citabox** para servir a cualquier negocio con citas (barberías, salones, spas, consultorios…). Logo: calendario dorado con visto sobre negro. ✅ Nombre, logo e íconos en la app y la web. ⬜ Palabras generales según el tipo de negocio ("barbero" → profesional). ⬜ Dirección nueva `citabox.pages.dev` con la vieja redirigiendo. ⬜ Revisar la marca en ONAPI y el dominio `citabox.do` / `.app`.
+**Nombre (30-oct):** la app pasa a llamarse **Citabox** para servir a cualquier negocio con citas (barberías, salones, spas, consultorios…). Logo: calendario dorado con visto sobre negro. ✅ Nombre, logo e íconos en la app y la web. ⬜ Palabras generales según el tipo de negocio ("barbero" → profesional). ✅ Dirección nueva `citabox.pages.dev`; la vieja redirige con la misma ruta. ⬜ Revisar la marca en ONAPI y el dominio `citabox.do` / `.app`.
 
 | Símbolo | Significado |
 |---|---|
@@ -34,7 +34,7 @@ El modelo visual de referencia está en [docs/modelo-visual.png](docs/modelo-vis
 | 10 | Estados de la cita | ✅ | Transiciones validadas en el servidor; pagar confirma; cancelar libera el horario y el apartado |
 | 11 | Reportes | ✅ | Por período y por barbero; descarga en **Excel** |
 | 12 | QA | 🟡 | 143 pruebas Flutter + 6 archivos SQL en CI y revisión de seguridad. Falta probar en celulares reales |
-| 13 | Lanzamiento | 🟡 | Publicada en https://barberia-pro.pages.dev. Falta dominio propio y primer negocio real |
+| 13 | Lanzamiento | 🟡 | Publicada en https://citabox.pages.dev (la dirección anterior redirige). Falta dominio propio y primer negocio real |
 
 **Avance de la V1:** 11 fases completas y 3 parciales. Lo que falta de la V1 es sobre todo **probar con un negocio real**.
 
@@ -44,7 +44,7 @@ El modelo visual de referencia está en [docs/modelo-visual.png](docs/modelo-vis
 
 | Pieza | Dónde | Cómo se actualiza |
 |---|---|---|
-| App web (Flutter) | Cloudflare Pages: https://barberia-pro.pages.dev | Sola, tras cada push a `master` con CI en verde (`deploy-web.yml`) |
+| App web (Flutter) | Cloudflare Pages: https://citabox.pages.dev (barberia-pro.pages.dev redirige) | Sola, tras cada push a `master` con CI en verde (`deploy-web.yml`) |
 | Base de datos y Edge Functions | Supabase `ncieqndyjqwkgxrbqcee` | Sola, tras CI verde (`deploy-supabase.yml`: `db push` + `functions deploy`) |
 | Pruebas | GitHub Actions (`ci.yml`) | En cada push: SQL en PostgreSQL, `flutter analyze` + `flutter test`, React |
 | Correo (códigos e invitaciones) | SMTP de Gmail (contraseña de aplicación) | Configurado en Supabase → Emails |
@@ -191,7 +191,7 @@ La app React queda solo como referencia (`src/`).
 | Logo/portada aceptaban cualquier texto | ✅ Solo `https://` (015) |
 | `TRUNCATE` concedido a los roles de la API | ✅ Retirado (015) |
 | Web sin CSP, HSTS ni COOP | ✅ Publicadas en `_headers` |
-| Función de invitar aceptaba cualquier origen | ✅ Solo `barberia-pro.pages.dev` |
+| Función de invitar aceptaba cualquier origen | ✅ Solo `citabox.pages.dev` |
 | CI sin permisos mínimos ni versión fija de Flutter | ✅ Corregido |
 | Supabase aceptaba contraseñas de 6 | ✅ Mínimo 8 |
 | **Sin CAPTCHA** en registro y reserva pública | ⏸️ Pospuesto (30-oct): cubren los límites por teléfono y el vencimiento; Turnstile invisible si aparecen reservas falsas |
