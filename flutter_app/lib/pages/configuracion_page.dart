@@ -11,6 +11,7 @@ import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/colores.dart';
 import '../utils/enlace_publico.dart';
+import '../utils/fidelidad.dart';
 import '../utils/fotos.dart';
 import '../utils/vocabulario.dart';
 import '../widgets/reserva_publica.dart' show ImagenRed;
@@ -29,6 +30,7 @@ class ConfiguracionPage extends StatefulWidget {
     this.mfaRepository,
     this.historialRepository,
     this.onTipoCambiado,
+    this.onFidelidadCambiada,
   });
 
   final String negocioId;
@@ -51,6 +53,9 @@ class ConfiguracionPage extends StatefulWidget {
 
   /// Avisa el tipo de negocio guardado, para cambiar las palabras de la app.
   final ValueChanged<TipoNegocio>? onTipoCambiado;
+
+  /// Avisa el programa de fidelidad guardado (null = sin programa).
+  final ValueChanged<Fidelidad?>? onFidelidadCambiada;
 
   @override
   State<ConfiguracionPage> createState() => _ConfiguracionPageState();
@@ -105,6 +110,11 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
   int _recordatorioHoras = 24;
   TipoNegocio _tipo = TipoNegocio.barberia;
 
+  bool _fidelidadActiva = false;
+  final _fidelidadVisitas = TextEditingController(text: '10');
+  final _fidelidadPremio = TextEditingController(text: 'Servicio gratis');
+  final _fidelidadKey = GlobalKey<FormState>();
+
   /// Recordatorios automáticos (servicio adicional); null si no se pudo
   /// cargar, y entonces se trata como no contratado.
   UsoWhatsapp? _uso;
@@ -119,6 +129,8 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
 
   List<TextEditingController> get _controladores => [
     _nombre,
+    _fidelidadVisitas,
+    _fidelidadPremio,
     _telefono,
     _direccion,
     _logo,
@@ -194,6 +206,11 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     _intervalo.text = config.intervaloReservaMinutos.toString();
     _recordatorioHoras = config.recordatorioHoras;
     _tipo = TipoNegocio.desdeCodigo(config.tipo);
+    _fidelidadActiva = config.fidelidad != null;
+    if (config.fidelidad case final f?) {
+      _fidelidadVisitas.text = '${f.visitas}';
+      _fidelidadPremio.text = f.premio;
+    }
 
     for (final dia in _dias) {
       dia.dispose();
@@ -304,6 +321,30 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     );
   }
 
+  Future<void> _guardarFidelidad() async {
+    if (_fidelidadActiva && !_fidelidadKey.currentState!.validate()) return;
+    final visitas = int.tryParse(_fidelidadVisitas.text.trim());
+    final premio = _fidelidadPremio.text.trim().isEmpty
+        ? 'Servicio gratis'
+        : _fidelidadPremio.text.trim();
+    final guardado = await _guardar(
+      'fidelidad',
+      () => widget.repository.guardarNegocio(
+        negocioId: widget.negocioId,
+        datos: {
+          'fidelidad_visitas': _fidelidadActiva ? visitas : null,
+          'fidelidad_premio': premio,
+        },
+      ),
+      'Programa de fidelidad guardado.',
+    );
+    if (guardado) {
+      widget.onFidelidadCambiada?.call(
+        _fidelidadActiva ? Fidelidad(visitas: visitas!, premio: premio) : null,
+      );
+    }
+  }
+
   Future<void> _guardarRecordatorios() async {
     await _guardar(
       'recordatorios',
@@ -373,6 +414,8 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
                   const SizedBox(height: 16),
                   _reservasCard(isWide),
                   const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                  _fidelidadCard(),
                   _recordatoriosCard(),
                   if (_mfa case final mfa?) ...[
                     const SizedBox(height: 16),
@@ -960,6 +1003,61 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
   }
 
   /// Horas de anticipación que se pueden elegir.
+  Widget _fidelidadCard() {
+    return _Seccion(
+      titulo: 'Fidelización',
+      descripcion: 'Premia a tus clientes que vuelven: "la décima gratis".',
+      icono: Icons.card_giftcard_outlined,
+      children: [
+        Form(
+          key: _fidelidadKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SwitchListTile(
+                key: const Key('config-fidelidad'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Activar programa de fidelidad'),
+                subtitle: const Text(
+                  'Se cuentan las visitas atendidas de cada cliente. Lo ves en '
+                  'Clientes y tus clientes lo ven al reservar.',
+                ),
+                value: _fidelidadActiva,
+                onChanged: (valor) => setState(() => _fidelidadActiva = valor),
+              ),
+              if (_fidelidadActiva) ...[
+                const SizedBox(height: 8),
+                TextFormField(
+                  key: const Key('config-fidelidad-visitas'),
+                  controller: _fidelidadVisitas,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Premio en la visita número',
+                    helperText: 'Por ejemplo 10: la décima visita.',
+                  ),
+                  validator: (value) =>
+                      _validarEntero(value, 2, 50, 'Entre 2 y 50 visitas.'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  key: const Key('config-fidelidad-premio'),
+                  controller: _fidelidadPremio,
+                  maxLength: 80,
+                  decoration: const InputDecoration(
+                    labelText: 'Premio',
+                    hintText: 'Corte gratis, 50 % de descuento…',
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              _botonGuardar('fidelidad', 'Guardar programa', _guardarFidelidad),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   static const _opcionesHoras = [2, 3, 6, 12, 24, 48];
 
   Widget _recordatoriosCard() {

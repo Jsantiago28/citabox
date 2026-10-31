@@ -14,6 +14,7 @@ import '../utils/whatsapp.dart';
 import '../widgets/estado_cita_badge.dart';
 import '../widgets/etiqueta.dart';
 import '../utils/vocabulario.dart';
+import '../utils/fidelidad.dart';
 
 /// Abre un enlace externo (llamada, WhatsApp, correo).
 typedef AbrirEnlace = Future<bool> Function(Uri uri);
@@ -32,6 +33,7 @@ class ClienteFicha extends StatefulWidget {
     required this.abrirEnlace,
     this.moneda = 'DOP',
     this.ahora,
+    this.fidelidad,
   });
 
   final String negocioId;
@@ -47,6 +49,9 @@ class ClienteFicha extends StatefulWidget {
 
   /// Reloj inyectable para las pruebas.
   final DateTime Function()? ahora;
+
+  /// Programa "la décima gratis" del negocio; null si no tiene.
+  final Fidelidad? fidelidad;
 
   @override
   State<ClienteFicha> createState() => _ClienteFichaState();
@@ -523,6 +528,8 @@ class _ClienteFichaState extends State<ClienteFicha> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (widget.fidelidad case final f?)
+            _fila('Fidelidad', f.progreso(_ficha.visitas)),
           _fila(
             'Cumpleaños',
             widget.cliente.tieneCumple ? widget.cliente.textoCumple : '—',

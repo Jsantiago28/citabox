@@ -1,5 +1,6 @@
 // Modelos de la reserva pública (RPC de 007_reserva_publica.sql).
 
+import '../utils/fidelidad.dart';
 import 'cita.dart';
 
 String _texto(Object? valor) => valor?.toString() ?? '';
@@ -43,6 +44,7 @@ class NegocioPublico {
     this.cancelacionHorasMinimas = 24,
     this.tipo = 'barberia',
     this.colorPrincipal = '',
+    this.fidelidad,
   });
 
   final String nombre;
@@ -65,6 +67,9 @@ class NegocioPublico {
   /// '#RRGGBB' elegido por el negocio; vacío si no eligió.
   final String colorPrincipal;
 
+  /// Programa "la décima gratis"; null si el negocio no lo tiene.
+  final Fidelidad? fidelidad;
+
   /// Igual que reserva_crear: hay apartado si se exige y el monto es > 0.
   bool get conApartado => apartadoRequerido && apartadoMonto > 0;
 
@@ -73,6 +78,10 @@ class NegocioPublico {
     slug: _texto(map['slug']),
     tipo: _texto(map['tipo']).isEmpty ? 'barberia' : _texto(map['tipo']),
     colorPrincipal: _texto(map['color_principal']),
+    fidelidad: Fidelidad.desde(
+      map['fidelidad_visitas'],
+      map['fidelidad_premio'],
+    ),
     telefono: _texto(map['telefono']),
     direccion: _texto(map['direccion']),
     logo: _texto(map['logo']),

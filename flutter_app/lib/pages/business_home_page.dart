@@ -24,6 +24,7 @@ import '../utils/vocabulario.dart';
 import '../widgets/logo_marca.dart';
 import '../widgets/reportar_problema_dialog.dart';
 import '../widgets/ya_pague_dialog.dart';
+import '../utils/fidelidad.dart';
 import 'agenda_page.dart';
 import 'apartados_page.dart';
 import 'clientes_page.dart';
@@ -62,7 +63,8 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
         .from('perfiles')
         .select(
           'negocio_id, nombre, rol, activo, '
-          'negocios(id, nombre, slug, moneda, tipo)',
+          'negocios(id, nombre, slug, moneda, tipo, fidelidad_visitas, '
+          'fidelidad_premio)',
         )
         .eq('id', widget.userId)
         .maybeSingle();
@@ -151,6 +153,10 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
           moneda: business?['moneda']?.toString() ?? 'DOP',
           tipo: TipoNegocio.desdeCodigo(business?['tipo']),
           negocioSlug: business?['slug']?.toString() ?? '',
+          fidelidad: Fidelidad.desde(
+            business?['fidelidad_visitas'],
+            business?['fidelidad_premio'],
+          ),
           nombre: profile['nombre']?.toString() ?? widget.email,
           esOwner: profile['rol'] == 'OWNER',
           onSignOut: _signOut,
@@ -185,6 +191,7 @@ class BusinessWorkspace extends StatefulWidget {
     required this.moneda,
     this.tipo = TipoNegocio.barberia,
     this.negocioSlug = '',
+    this.fidelidad,
     required this.nombre,
     required this.esOwner,
     required this.onSignOut,
@@ -207,6 +214,9 @@ class BusinessWorkspace extends StatefulWidget {
 
   /// Para armar el enlace público de reservas.
   final String negocioSlug;
+
+  /// Programa "la décima gratis"; null si no está activo.
+  final Fidelidad? fidelidad;
   final String nombre;
   final bool esOwner;
   final VoidCallback onSignOut;
@@ -449,6 +459,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         negocioId: widget.negocioId,
         moneda: widget.moneda,
         repository: _clientes,
+        fidelidad: _fidelidad,
         negocioNombre: widget.negocioNombre,
         enlaceReservas: widget.negocioSlug.isEmpty
             ? ''
@@ -479,12 +490,16 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         negocioId: widget.negocioId,
         repository: SupabaseConfiguracionRepository(Supabase.instance.client),
         onTipoCambiado: (tipo) => setState(() => _tipo = tipo),
+        onFidelidadCambiada: (f) => setState(() => _fidelidad = f),
       ),
     };
   }
 
   /// Cambia al guardar el tipo en Configuración, sin recargar la app.
   late TipoNegocio _tipo = widget.tipo;
+
+  /// Cambia al guardar el programa en Configuración.
+  late Fidelidad? _fidelidad = widget.fidelidad;
 
   @override
   Widget build(BuildContext context) {

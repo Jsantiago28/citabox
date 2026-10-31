@@ -1,3 +1,5 @@
+import '../utils/fidelidad.dart';
+
 /// Datos editables del negocio (tabla `negocios`).
 class ConfiguracionNegocio {
   const ConfiguracionNegocio({
@@ -17,13 +19,15 @@ class ConfiguracionNegocio {
     this.intervaloReservaMinutos = 15,
     this.recordatorioHoras = 24,
     this.tipo = 'barberia',
+    this.fidelidad,
   });
 
   static const columnas =
       'id, nombre, slug, telefono, direccion, logo, imagen, color_principal, '
       'apartado_requerido, apartado_monto, apartado_politica, '
       'apartado_instrucciones, cancelacion_horas_minimas, '
-      'intervalo_reserva_minutos, recordatorio_horas, tipo';
+      'intervalo_reserva_minutos, recordatorio_horas, tipo, '
+      'fidelidad_visitas, fidelidad_premio';
 
   final String id;
   final String nombre;
@@ -47,6 +51,9 @@ class ConfiguracionNegocio {
   /// Código de `TipoNegocio` (barberia, salon, spa…).
   final String tipo;
 
+  /// Programa "la décima gratis"; null si no está activo.
+  final Fidelidad? fidelidad;
+
   factory ConfiguracionNegocio.fromMap(Map<String, dynamic> map) {
     String texto(String clave) => map[clave]?.toString() ?? '';
     int entero(String clave, int defecto) =>
@@ -69,6 +76,10 @@ class ConfiguracionNegocio {
       intervaloReservaMinutos: entero('intervalo_reserva_minutos', 15),
       recordatorioHoras: entero('recordatorio_horas', 24),
       tipo: texto('tipo').isEmpty ? 'barberia' : texto('tipo'),
+      fidelidad: Fidelidad.desde(
+        map['fidelidad_visitas'],
+        map['fidelidad_premio'],
+      ),
     );
   }
 }

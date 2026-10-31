@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../utils/formato.dart';
 import '../utils/whatsapp.dart';
 import '../widgets/estado_cita_badge.dart';
+import '../utils/fidelidad.dart';
 import 'cliente_ficha.dart';
 
 class ClientesPage extends StatefulWidget {
@@ -20,6 +21,7 @@ class ClientesPage extends StatefulWidget {
     this.negocioNombre = '',
     this.enlaceReservas = '',
     this.hoy,
+    this.fidelidad,
   });
 
   final String negocioId;
@@ -35,6 +37,9 @@ class ClientesPage extends StatefulWidget {
 
   /// Inyectable en pruebas; por defecto la fecha del dispositivo.
   final DateTime? hoy;
+
+  /// Programa "la décima gratis"; null si el negocio no lo tiene.
+  final Fidelidad? fidelidad;
 
   @override
   State<ClientesPage> createState() => _ClientesPageState();
@@ -230,6 +235,7 @@ class _ClientesPageState extends State<ClientesPage> {
         onVolver: () => setState(() => _seleccionadoId = null),
         onEditar: () => _abrirFormulario(seleccionado),
         onCambio: _cargarClientes,
+        fidelidad: widget.fidelidad,
       );
     }
 
@@ -419,6 +425,12 @@ class _ClientesPageState extends State<ClientesPage> {
             if (resumen.conFaltas) ...[
               const SizedBox(width: 8),
               const _Etiqueta(texto: 'Faltas', color: Marca.rojo),
+            ],
+            if (cliente.activo &&
+                (widget.fidelidad?.proximaEsPremio(resumen.visitas) ??
+                    false)) ...[
+              const SizedBox(width: 8),
+              const _Etiqueta(texto: 'Próxima gratis', color: Marca.verde),
             ],
             if (cliente.activo && cliente.cumpleEnMes(_hoy)) ...[
               const SizedBox(width: 8),

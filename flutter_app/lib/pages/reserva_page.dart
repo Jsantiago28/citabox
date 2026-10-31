@@ -294,6 +294,27 @@ class _ReservaPageState extends State<ReservaPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (negocio.fidelidad case final fidelidad?) ...[
+                  TarjetaPublica(
+                    key: const Key('reserva-fidelidad'),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.card_giftcard_outlined,
+                          color: acentoDe(context),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Programa de fidelidad. ${fidelidad.invitacion}',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 if (_citaGuardada != null) ...[
                   TarjetaPublica(
                     color: const Color(0xFFFFFBF2),
