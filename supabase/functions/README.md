@@ -61,7 +61,7 @@ nunca debe ir en la app.
 
   ```html
   <h2>Restablece tu contraseña</h2>
-  <p>Escribe este código en Barbería PRO:</p>
+  <p>Escribe este código en Citabox:</p>
   <p style="font-size:24px;font-weight:bold">{{ .Token }}</p>
   ```
 

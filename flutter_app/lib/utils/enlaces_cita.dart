@@ -84,7 +84,7 @@ String contenidoIcs(CitaPublica cita, {String? enlaceMiCita, DateTime? ahora}) {
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Barberia PRO//Reservas//ES',
+    'PRODID:-//Citabox//Reservas//ES',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',

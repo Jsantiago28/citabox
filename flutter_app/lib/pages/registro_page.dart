@@ -5,7 +5,7 @@ import '../services/registro_repository.dart';
 import '../theme.dart';
 import '../utils/slug.dart';
 import '../widgets/consentimiento_check.dart';
-import '../widgets/logo_barberia.dart';
+import '../widgets/logo_marca.dart';
 
 class RegistroPage extends StatefulWidget {
   /// Registro completo: crea la cuenta y deja los datos del negocio
@@ -245,7 +245,7 @@ class _RegistroPageState extends State<RegistroPage> {
           : AppBar(
               backgroundColor: Marca.negro,
               foregroundColor: Colors.white,
-              title: const LogoBarberia(tamano: 18),
+              title: const LogoCitabox(tamano: 18),
             ),
       body: SafeArea(
         child: Center(

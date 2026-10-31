@@ -22,7 +22,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const BarberiaApp(supabaseConfigured: false));
 
-    expect(find.text('Barbería PRO'), findsOneWidget);
+    expect(find.text('Citabox'), findsOneWidget);
     expect(find.textContaining('SUPABASE_URL'), findsOneWidget);
   });
 

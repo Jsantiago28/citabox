@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/password_repository.dart';
 import '../theme.dart';
-import '../widgets/logo_barberia.dart';
+import '../widgets/logo_marca.dart';
 
 enum _Paso { correo, codigo }
 
@@ -163,7 +163,7 @@ class _RecuperarPasswordPageState extends State<RecuperarPasswordPage> {
           : AppBar(
               backgroundColor: Marca.negro,
               foregroundColor: Colors.white,
-              title: const LogoBarberia(tamano: 18),
+              title: const LogoCitabox(tamano: 18),
             ),
       body: SafeArea(
         child: Center(

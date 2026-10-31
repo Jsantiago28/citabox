@@ -1,4 +1,4 @@
-# Plan Maestro — Barbería PRO (estado al 29-oct-2026)
+# Plan Maestro — Citabox (antes Barbería PRO; estado al 30-oct-2026)
 
 Este documento sigue el orden del **Plan Maestro** en PDF
 (`Plan_Maestro_Barberia_Salones_Agenda_Apartados.pdf`) y marca qué está hecho y qué falta.
@@ -6,6 +6,7 @@ El modelo visual de referencia está en [docs/modelo-visual.png](docs/modelo-vis
 
 **Objetivo de la V1:** organizar citas, reducir no-shows, cobrar un apartado y darle al dueño visibilidad del negocio.
 **Primer objetivo:** que una barbería o salón real use la V1.
+**Nombre (30-oct):** la app pasa a llamarse **Citabox** para servir a cualquier negocio con citas (barberías, salones, spas, consultorios…). Logo: calendario dorado con visto sobre negro. ✅ Nombre, logo e íconos en la app y la web. ⬜ Palabras generales según el tipo de negocio ("barbero" → profesional). ⬜ Dirección nueva `citabox.pages.dev` con la vieja redirigiendo. ⬜ Revisar la marca en ONAPI y el dominio `citabox.do` / `.app`.
 
 | Símbolo | Significado |
 |---|---|

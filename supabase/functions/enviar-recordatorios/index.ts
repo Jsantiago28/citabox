@@ -1,4 +1,4 @@
-// Barbería PRO — enviar recordatorios de citas por WhatsApp (API de Meta)
+// Citabox — enviar recordatorios de citas por WhatsApp (API de Meta)
 //
 // POST sin cuerpo, con el encabezado "x-cron-secret" igual al secreto
 // RECORDATORIOS_SECRETO. La llama cada 15 minutos el flujo

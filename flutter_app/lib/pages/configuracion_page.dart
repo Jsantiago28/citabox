@@ -949,7 +949,7 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
             'Envía el recordatorio desde la Agenda con el botón de WhatsApp '
             'de cada cita: el mensaje sale listo.\n\n'
             'Si prefieres que se envíen solos, el envío automático es un '
-            'servicio adicional: pídelo a Barbería PRO y te damos el precio.',
+            'servicio adicional: pídelo a Citabox y te damos el precio.',
             key: Key('config-recordatorio-manual'),
           ),
         ],
@@ -960,7 +960,7 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     return _Seccion(
       titulo: 'Recordatorios por WhatsApp',
       descripcion:
-          'Envío automático activo: Barbería PRO avisa a tus clientes con '
+          'Envío automático activo: Citabox avisa a tus clientes con '
           'teléfono antes de su cita.',
       icono: Icons.notifications_active_outlined,
       children: [

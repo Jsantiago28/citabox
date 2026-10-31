@@ -5,7 +5,7 @@ import '../services/plataforma_repository.dart';
 
 const versionApp = '1.0.0+1';
 
-/// Diálogo para reportar un problema al equipo de Barbería PRO.
+/// Diálogo para reportar un problema al equipo de Citabox.
 Future<void> mostrarReportarProblema(
   BuildContext context, {
   required SoporteRepository repository,

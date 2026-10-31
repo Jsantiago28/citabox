@@ -18,7 +18,7 @@ import '../services/servicios_repository.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../utils/fotos.dart';
-import '../widgets/logo_barberia.dart';
+import '../widgets/logo_marca.dart';
 import '../widgets/reportar_problema_dialog.dart';
 import '../widgets/ya_pague_dialog.dart';
 import 'agenda_page.dart';
@@ -70,7 +70,7 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
   Widget _conBarra(Widget body) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Barbería PRO'),
+        title: const Text('Citabox'),
         actions: [
           IconButton(
             tooltip: 'Cerrar sesión',
@@ -141,7 +141,7 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
           key: ValueKey(widget.userId),
           userId: widget.userId,
           negocioId: negocioId,
-          negocioNombre: business?['nombre']?.toString() ?? 'Barbería PRO',
+          negocioNombre: business?['nombre']?.toString() ?? 'Citabox',
           moneda: business?['moneda']?.toString() ?? 'DOP',
           nombre: profile['nombre']?.toString() ?? widget.email,
           esOwner: profile['rol'] == 'OWNER',
@@ -522,7 +522,7 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
               appBar: AppBar(
                 backgroundColor: Marca.negro,
                 foregroundColor: Colors.white,
-                title: const LogoBarberia(tamano: 18),
+                title: const LogoCitabox(tamano: 18),
               ),
               drawer: Drawer(
                 backgroundColor: Marca.lateral,
@@ -572,7 +572,7 @@ class _MenuLateral extends StatelessWidget {
           children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 24, 20, 20),
-              child: LogoBarberia(),
+              child: LogoCitabox(),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),

@@ -6,7 +6,7 @@ import '../services/plataforma_repository.dart';
 import '../utils/fotos.dart';
 import '../utils/whatsapp.dart';
 
-/// WhatsApp de Barbería PRO donde llegan los pagos de los planes.
+/// WhatsApp de Citabox donde llegan los pagos de los planes.
 /// Se define al compilar: --dart-define=WHATSAPP_PLATAFORMA=1809XXXXXXX
 const whatsappPlataforma = String.fromEnvironment('WHATSAPP_PLATAFORMA');
 
@@ -30,7 +30,7 @@ String mensajePago({
   String referencia = '',
   String reciboUrl = '',
 }) => [
-  'Hola, ya pagué Barbería PRO.',
+  'Hola, ya pagué Citabox.',
   'Negocio: $negocio',
   'Plan: $plan (RD\$$precio al mes)',
   if (referencia.trim().isNotEmpty) 'Referencia: ${referencia.trim()}',
@@ -246,7 +246,7 @@ class _YaPagueDialogState extends State<_YaPagueDialog> {
   }
 }
 
-/// "Transfiere a:" con las cuentas de Barbería PRO y botón para copiar.
+/// "Transfiere a:" con las cuentas de Citabox y botón para copiar.
 class _CuentasDePago extends StatefulWidget {
   const _CuentasDePago({required this.cargar});
 

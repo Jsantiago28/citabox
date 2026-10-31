@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/logo_marca.dart';
+
 class SetupRequiredPage extends StatelessWidget {
   const SetupRequiredPage({super.key});
 
@@ -15,10 +17,10 @@ class SetupRequiredPage extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.content_cut, size: 36),
+                const IconoCitabox(tamano: 48),
                 const SizedBox(height: 20),
                 Text(
-                  'Barbería PRO',
+                  'Citabox',
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 8),

@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/password_repository.dart';
 import '../services/registro_repository.dart';
 import '../theme.dart';
-import '../widgets/logo_barberia.dart';
+import '../widgets/logo_marca.dart';
 import 'recuperar_password_page.dart';
 import 'registro_page.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Paleta del modelo visual de Barbería PRO: negro, dorado y blanco.
+// Paleta del modelo visual de Citabox: negro, dorado y blanco.
 abstract final class Marca {
   static const negro = Color(0xFF141414);
   static const lateral = Color(0xFF1A1B1D);

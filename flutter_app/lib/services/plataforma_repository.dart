@@ -49,7 +49,7 @@ AvisoSuscripcion? avisoSuscripcion(Suscripcion s, DateTime ahora) {
   final hoy = DateTime(ahora.year, ahora.month, ahora.day);
   const pausado =
       'El servicio de tu barbería está pausado. '
-      'Contacta a Barbería PRO para pagar y reactivarlo.';
+      'Contacta a Citabox para pagar y reactivarlo.';
 
   if (s.estado == 'SUSPENDIDA' || s.estado == 'VENCIDA') {
     return const AvisoSuscripcion(pausado, urgente: true);
@@ -67,7 +67,7 @@ AvisoSuscripcion? avisoSuscripcion(Suscripcion s, DateTime ahora) {
     return AvisoSuscripcion(
       'Tu ${s.estado == 'ACTIVA' ? 'suscripción' : 'prueba'} venció. '
       'Paga en los próximos $quedan ${quedan == 1 ? 'día' : 'días'} '
-      'o el servicio se pausará. Contacta a Barbería PRO.',
+      'o el servicio se pausará. Contacta a Citabox.',
       urgente: true,
     );
   }

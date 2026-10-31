@@ -1,8 +1,8 @@
 {
     "id": ".",
-    "name": "Barbería PRO",
-    "short_name": "Barbería PRO",
-    "description": "Agenda, clientes y reservas en línea para tu barbería.",
+    "name": "Citabox",
+    "short_name": "Citabox",
+    "description": "Agenda, clientes y reservas en línea para tu negocio.",
     "lang": "es",
     "dir": "ltr",
     "start_url": ".",

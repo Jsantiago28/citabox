@@ -84,7 +84,7 @@ class SupabaseMfaRepository implements MfaRepository {
       }
       final respuesta = await _mfa.enroll(
         factorType: FactorType.totp,
-        issuer: 'Barbería PRO',
+        issuer: 'Citabox',
         friendlyName: 'App ${DateTime.now().millisecondsSinceEpoch}',
       );
       final totp = respuesta.totp;

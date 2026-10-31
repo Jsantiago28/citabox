@@ -17,7 +17,7 @@ const tituloTerminos = 'Términos de uso';
 const seccionesPrivacidad = <SeccionLegal>[
   SeccionLegal('Quién es responsable de tus datos', [
     'El negocio (barbería o salón) donde reservas tu cita es el responsable '
-        'del tratamiento de tus datos personales. Barbería PRO es la '
+        'del tratamiento de tus datos personales. Citabox es la '
         'plataforma que los almacena y procesa por cuenta del negocio '
         '(encargado del tratamiento).',
   ]),
@@ -63,7 +63,8 @@ const seccionesPrivacidad = <SeccionLegal>[
 
 const seccionesTerminos = <SeccionLegal>[
   SeccionLegal('El servicio', [
-    'Barbería PRO es una herramienta para que barberías y salones gestionen '
+    'Citabox es una herramienta para que negocios que trabajan con citas '
+        '(barberías, salones, spas, consultorios y otros) gestionen '
         'su agenda, clientes, servicios y reservas en línea. Al registrar '
         'un negocio aceptas estos términos y la política de privacidad.',
   ]),
@@ -77,11 +78,11 @@ const seccionesTerminos = <SeccionLegal>[
   SeccionLegal('Reservas y apartados entre cliente y negocio', [
     'Las reservas y los apartados (adelantos) son un acuerdo entre el '
         'cliente y el negocio. Las condiciones de cancelación, reprogramación '
-        'y reembolso del apartado las define el negocio. Barbería PRO no '
+        'y reembolso del apartado las define el negocio. Citabox no '
         'cobra ni retiene el apartado: solo registra la información.',
   ]),
   SeccionLegal('Limitación de responsabilidad', [
-    'Barbería PRO se ofrece "tal cual". No somos parte de la relación entre '
+    'Citabox se ofrece "tal cual". No somos parte de la relación entre '
         'cliente y negocio ni responsables por la calidad del servicio, por '
         'pagos acordados entre ellos, ni por interrupciones puntuales del '
         'servicio. Haremos esfuerzos razonables por mantener la plataforma '

@@ -1,4 +1,4 @@
-# Publicar Barbería PRO en internet (Cloudflare Pages)
+# Publicar Citabox en internet (Cloudflare Pages)
 
 Esta guía es para dejar la app en una dirección como
 `https://barberia-pro.pages.dev` o en tu propio dominio (por ejemplo
@@ -65,7 +65,7 @@ El token es como una llave que solo sirve para publicar páginas.
 2. Pulsa **Create Token**.
 3. Baja hasta **Custom token** y pulsa **Get started**.
 4. Rellena:
-   - **Token name**: `GitHub - Barbería PRO`
+   - **Token name**: `GitHub - Citabox`
    - **Permissions**: `Account` · `Cloudflare Pages` · `Edit`
    - **Account Resources**: `Include` · *(tu cuenta)*
    - Lo demás déjalo como está.
@@ -184,7 +184,7 @@ nuevas de `supabase/migrations/` y despliega las Edge Functions de
 Necesita un solo secreto en GitHub:
 
 1. En Supabase → **Account → Access Tokens** crea un token para el proyecto
-   Barberia PRO con acceso completo al proyecto. Ponle una caducidad larga
+   Citabox con acceso completo al proyecto. Ponle una caducidad larga
    (por ejemplo 1 año) y anota cuándo vence para renovarlo.
 2. En GitHub → **Settings → Secrets and variables → Actions** crea
    `SUPABASE_ACCESS_TOKEN` con ese token.

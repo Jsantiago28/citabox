@@ -117,7 +117,7 @@ class _VerificacionMfaPageState extends State<VerificacionMfaPage> {
                 const SizedBox(height: 8),
                 const Text(
                   'Abre Google Authenticator o Microsoft Authenticator y '
-                  'copia el código de 6 dígitos de Barbería PRO.',
+                  'copia el código de 6 dígitos de Citabox.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Marca.textoSuave),
                 ),

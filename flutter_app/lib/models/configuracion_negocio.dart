@@ -69,7 +69,7 @@ class ConfiguracionNegocio {
 }
 
 /// Recordatorios automáticos por WhatsApp (`uso_whatsapp_mes`): servicio
-/// adicional que activa Barbería PRO, y lo enviado en el mes.
+/// adicional que activa Citabox, y lo enviado en el mes.
 class UsoWhatsapp {
   const UsoWhatsapp({
     required this.activo,

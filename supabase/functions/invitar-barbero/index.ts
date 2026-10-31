@@ -1,4 +1,4 @@
-// Barbería PRO — invitar a un barbero
+// Citabox — invitar a un barbero
 //
 // POST { empleado_id, email } con el JWT del dueño en "Authorization".
 // 1. Comprueba, con los permisos del propio usuario (RLS), que es OWNER

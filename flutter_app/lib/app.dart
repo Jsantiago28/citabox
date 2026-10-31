@@ -110,7 +110,7 @@ class BarberiaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Barbería PRO',
+      title: 'Citabox',
       debugShowCheckedModeBanner: false,
       theme: temaBarberia(),
       initialRoute: rutaInicial,
