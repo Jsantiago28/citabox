@@ -50,8 +50,14 @@ class _ClientesPageState extends State<ClientesPage> {
   String? _changingStatusId;
   String? _seleccionadoId;
 
-  /// Solo los clientes que llevan tiempo sin venir (ver [ResumenCliente.noVuelve]).
+  /// Clientes que llevan tiempo sin venir (ver [ResumenCliente.noVuelve]).
   bool _soloNoVuelven = false;
+
+  /// Clientes que cumplen años este mes.
+  bool _soloCumple = false;
+
+  int get _cantidadCumple =>
+      _clientes.where((c) => c.activo && c.cumpleEnMes(_hoy)).length;
 
   DateTime get _hoy => widget.hoy ?? DateTime.now();
 
@@ -144,6 +150,20 @@ class _ClientesPageState extends State<ClientesPage> {
     }
   }
 
+  Future<void> _felicitar(Cliente cliente) async {
+    final mensaje = mensajeCumpleanos(
+      cliente: cliente.nombre,
+      negocio: widget.negocioNombre,
+    );
+    var abierto = false;
+    try {
+      abierto = await (widget.abrirEnlace ?? _abrirExterno)(
+        Uri.parse(enlaceWhatsApp(cliente.telefono, mensaje)),
+      );
+    } catch (_) {}
+    if (!abierto && mounted) _mostrarError('No se pudo abrir WhatsApp.');
+  }
+
   Future<void> _invitar(Cliente cliente) async {
     final mensaje = mensajeVuelve(
       cliente: cliente.nombre,
@@ -167,6 +187,10 @@ class _ClientesPageState extends State<ClientesPage> {
   List<Cliente> get _clientesFiltrados {
     final consulta = _searchController.text.trim().toLowerCase();
     var base = _clientes;
+    if (_soloCumple) {
+      base = _clientes.where((c) => c.activo && c.cumpleEnMes(_hoy)).toList()
+        ..sort((a, b) => a.cumpleDia!.compareTo(b.cumpleDia!));
+    }
     if (_soloNoVuelven) {
       // Los que llevan más tiempo sin venir, primero.
       base =
@@ -274,23 +298,40 @@ class _ClientesPageState extends State<ClientesPage> {
               ),
               if (!isWide) ...[const SizedBox(height: 16), buscador],
               const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Tooltip(
-                  message:
-                      'Más de ${ResumenCliente.diasNoVuelve} días sin venir y '
-                      'sin otra cita reservada.',
-                  child: FilterChip(
-                    key: const Key('filtro-no-vuelven'),
-                    avatar: const Icon(Icons.history, size: 18),
-                    label: Text('No vuelven ($_cantidadNoVuelven)'),
-                    selected: _soloNoVuelven,
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilterChip(
+                    key: const Key('filtro-cumple'),
+                    avatar: const Icon(Icons.cake_outlined, size: 18),
+                    label: Text('Cumpleaños del mes ($_cantidadCumple)'),
+                    selected: _soloCumple,
                     showCheckmark: false,
                     selectedColor: Marca.doradoClaro,
-                    onSelected: (valor) =>
-                        setState(() => _soloNoVuelven = valor),
+                    onSelected: (valor) => setState(() {
+                      _soloCumple = valor;
+                      if (valor) _soloNoVuelven = false;
+                    }),
                   ),
-                ),
+                  Tooltip(
+                    message:
+                        'Más de ${ResumenCliente.diasNoVuelve} días sin venir y '
+                        'sin otra cita reservada.',
+                    child: FilterChip(
+                      key: const Key('filtro-no-vuelven'),
+                      avatar: const Icon(Icons.history, size: 18),
+                      label: Text('No vuelven ($_cantidadNoVuelven)'),
+                      selected: _soloNoVuelven,
+                      showCheckmark: false,
+                      selectedColor: Marca.doradoClaro,
+                      onSelected: (valor) => setState(() {
+                        _soloNoVuelven = valor;
+                        if (valor) _soloCumple = false;
+                      }),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               Expanded(child: _buildContent(clientes, isWide)),
@@ -325,6 +366,9 @@ class _ClientesPageState extends State<ClientesPage> {
         child: Text(
           _clientes.isEmpty
               ? 'Todavía no hay clientes.'
+              : _soloCumple
+              ? 'Nadie cumple años este mes, o aún no anotas sus cumpleaños '
+                    '(Editar cliente).'
               : _soloNoVuelven
               ? 'Ningún cliente lleva más de ${ResumenCliente.diasNoVuelve} días '
                     'sin venir. ¡Bien!'
@@ -375,6 +419,15 @@ class _ClientesPageState extends State<ClientesPage> {
             if (resumen.conFaltas) ...[
               const SizedBox(width: 8),
               const _Etiqueta(texto: 'Faltas', color: Marca.rojo),
+            ],
+            if (cliente.activo && cliente.cumpleEnMes(_hoy)) ...[
+              const SizedBox(width: 8),
+              _Etiqueta(
+                texto: cliente.cumpleHoy(_hoy)
+                    ? 'Cumple hoy'
+                    : 'Cumple el ${cliente.cumpleDia}',
+                color: cliente.cumpleHoy(_hoy) ? Marca.dorado : Marca.azul,
+              ),
             ],
             if (cliente.activo && resumen.noVuelve(_hoy)) ...[
               const SizedBox(width: 8),
@@ -439,6 +492,13 @@ class _ClientesPageState extends State<ClientesPage> {
                     const _Etiqueta(texto: 'Frecuente', color: Marca.verde),
                   ],
                 ],
+              ),
+            if (_soloCumple && cliente.telefono.trim().isNotEmpty)
+              IconButton(
+                key: Key('felicitar-${cliente.id}'),
+                tooltip: 'Felicitar por WhatsApp',
+                onPressed: () => _felicitar(cliente),
+                icon: const Icon(Icons.cake_outlined, color: Marca.verde),
               ),
             if (_soloNoVuelven && cliente.telefono.trim().isNotEmpty)
               IconButton(
@@ -526,6 +586,15 @@ class _ClienteFormDialogState extends State<_ClienteFormDialog> {
   late final TextEditingController _telefonoController;
   late final TextEditingController _emailController;
   late final TextEditingController _notasController;
+  late int? _cumpleDia = widget.cliente?.cumpleDia;
+  late int? _cumpleMes = widget.cliente?.cumpleMes;
+
+  /// Días que tiene [_cumpleMes] (febrero con 29: sin año, puede ser bisiesto).
+  int get _diasDelMes => switch (_cumpleMes) {
+    2 => 29,
+    4 || 6 || 9 || 11 => 30,
+    _ => 31,
+  };
 
   @override
   void initState() {
@@ -562,6 +631,8 @@ class _ClienteFormDialogState extends State<_ClienteFormDialog> {
       'notas': _notasController.text.trim().isEmpty
           ? null
           : _notasController.text.trim(),
+      'cumple_mes': _cumpleMes,
+      'cumple_dia': _cumpleMes == null ? null : _cumpleDia,
     });
   }
 
@@ -608,6 +679,56 @@ class _ClienteFormDialogState extends State<_ClienteFormDialog> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<int?>(
+                        key: const Key('cliente-cumple-dia'),
+                        initialValue: _cumpleDia,
+                        decoration: const InputDecoration(
+                          labelText: 'Cumpleaños: día',
+                        ),
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text('—')),
+                          for (var d = 1; d <= 31; d++)
+                            DropdownMenuItem(value: d, child: Text('$d')),
+                        ],
+                        onChanged: (d) => setState(() => _cumpleDia = d),
+                        validator: (d) {
+                          if (_cumpleMes != null && d == null) {
+                            return 'Elige el día.';
+                          }
+                          if (d != null && _cumpleMes == null) {
+                            return 'Elige el mes.';
+                          }
+                          if (d != null && d > _diasDelMes) {
+                            return 'Ese mes no tiene $d días.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<int?>(
+                        key: const Key('cliente-cumple-mes'),
+                        initialValue: _cumpleMes,
+                        decoration: const InputDecoration(labelText: 'Mes'),
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text('—')),
+                          for (var m = 1; m <= 12; m++)
+                            DropdownMenuItem(
+                              value: m,
+                              child: Text(nombresMeses[m - 1]),
+                            ),
+                        ],
+                        onChanged: (m) => setState(() => _cumpleMes = m),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 TextFormField(

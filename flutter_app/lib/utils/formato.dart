@@ -10,6 +10,9 @@ const _dias = [
   'Domingo',
 ];
 
+/// Meses en minúscula, para frases ("25 de diciembre").
+const nombresMeses = _meses;
+
 const _meses = [
   'enero',
   'febrero',

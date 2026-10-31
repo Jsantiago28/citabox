@@ -137,6 +137,7 @@ class _ClienteFichaState extends State<ClienteFicha> {
         'email': cliente.email,
         'notas': cliente.notas,
         'activo': cliente.activo,
+        'cumpleanos': cliente.textoCumple,
       },
       'citas': [
         for (final c in _historial)
@@ -522,6 +523,10 @@ class _ClienteFichaState extends State<ClienteFicha> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _fila(
+            'Cumpleaños',
+            widget.cliente.tieneCumple ? widget.cliente.textoCumple : '—',
+          ),
           _fila('Servicio favorito', _ficha.servicioFavorito ?? '—'),
           const SizedBox(height: 6),
           _fila(

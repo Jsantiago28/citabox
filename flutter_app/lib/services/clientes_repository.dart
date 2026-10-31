@@ -47,7 +47,9 @@ class SupabaseClientesRepository implements ClientesRepository {
     final rows = await leerTodasLasPaginas(
       (desde, hasta) => _client
           .from('clientes')
-          .select('id, nombre, telefono, email, notas, activo')
+          .select(
+            'id, nombre, telefono, email, notas, activo, cumple_mes, cumple_dia',
+          )
           .eq('negocio_id', negocioId)
           .order('nombre')
           .order('id')

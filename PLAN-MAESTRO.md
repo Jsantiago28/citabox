@@ -240,7 +240,7 @@ La app React queda solo como referencia (`src/`).
 15. ✅ Métricas de uso en `#/admin` (resumen de la plataforma; por negocio: último acceso, citas en línea, clientes y última cita) (026). ⬜ Transferir el negocio a otro dueño; correos de bienvenida y fin de prueba (requieren dominio).
 
 **C. Diferenciadores después**
-16. Reseñas, lista de espera, fidelización ("la décima gratis") y cumpleaños. ✅ Clientes que no vuelven (45 días sin venir y sin cita): filtro en Clientes con invitación por WhatsApp y enlace de reservas.
+16. Reseñas, lista de espera y fidelización ("la décima gratis"). ✅ Cumpleaños del cliente: día y mes en su ficha, filtro "Cumpleaños del mes" y felicitación por WhatsApp (027). ✅ Clientes que no vuelven (45 días sin venir y sin cita): filtro en Clientes con invitación por WhatsApp y enlace de reservas.
 17. ✅ Vista de semana, foto del equipo como archivo y color del negocio en la reserva.
 18. Pago con tarjeta del apartado (Azul/CardNET); comprobantes e-CF vía proveedor certificado.
 

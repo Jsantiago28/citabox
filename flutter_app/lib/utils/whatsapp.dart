@@ -53,3 +53,10 @@ String mensajeVuelve({
   return 'Hola $nombre, ¡hace tiempo que no te vemos en ${negocio.trim()}! '
       '$reserva';
 }
+
+/// Felicitación de cumpleaños de parte del negocio.
+String mensajeCumpleanos({required String cliente, required String negocio}) {
+  final nombre = cliente.trim().split(RegExp(r'\s+')).first;
+  return '¡Feliz cumpleaños, $nombre! Todo el equipo de ${negocio.trim()} '
+      'te desea un gran día. ¡Te esperamos pronto!';
+}

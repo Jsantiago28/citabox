@@ -1,3 +1,5 @@
+import '../utils/formato.dart';
+
 class Cliente {
   const Cliente({
     required this.id,
@@ -6,6 +8,8 @@ class Cliente {
     this.email = '',
     this.notas = '',
     this.activo = true,
+    this.cumpleMes,
+    this.cumpleDia,
   });
 
   final String id;
@@ -15,6 +19,20 @@ class Cliente {
   final String notas;
   final bool activo;
 
+  /// Cumpleaños (día y mes, sin año); null si no se sabe.
+  final int? cumpleMes;
+  final int? cumpleDia;
+
+  bool get tieneCumple => cumpleMes != null && cumpleDia != null;
+
+  bool cumpleEnMes(DateTime hoy) => tieneCumple && cumpleMes == hoy.month;
+
+  bool cumpleHoy(DateTime hoy) => cumpleEnMes(hoy) && cumpleDia == hoy.day;
+
+  /// '25 de diciembre'; vacío si no se sabe.
+  String get textoCumple =>
+      tieneCumple ? '$cumpleDia de ${nombresMeses[cumpleMes! - 1]}' : '';
+
   factory Cliente.fromMap(Map<String, dynamic> map) {
     return Cliente(
       id: map['id'].toString(),
@@ -23,6 +41,8 @@ class Cliente {
       email: map['email']?.toString() ?? '',
       notas: map['notas']?.toString() ?? '',
       activo: map['activo'] == true,
+      cumpleMes: (map['cumple_mes'] as num?)?.toInt(),
+      cumpleDia: (map['cumple_dia'] as num?)?.toInt(),
     );
   }
 }
