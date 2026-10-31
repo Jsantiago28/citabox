@@ -229,7 +229,7 @@ La app React queda solo como referencia (`src/`).
 6. 🟡 ✅ 2FA para dueños. ⏸️ CAPTCHA pospuesto: solo si aparecen reservas falsas.
 7. ✅ Botón "Reportar un problema" y monitoreo de errores con **Sentry** (org `barberia-pro`, sin datos personales).
 8. ✅ Enlace `/r/<slug>` con vista previa (nombre y portada) en WhatsApp.
-9. **Rendimiento** en celulares de gama baja (primera carga de Flutter web).
+9. 🟡 **Rendimiento** en celulares de gama baja: ✅ pantalla de carga al instante (con aviso si tarda más de 30 s), conexión anticipada a gstatic y Supabase, Excel diferido (−210 KB en la primera carga). ⬜ Medir en un celular real.
 10. ✅ Tarjeta "Configura tu negocio" con los primeros pasos en Inicio.
 
 **B. Primeros 3 meses (lo que más pagan los dueños)**

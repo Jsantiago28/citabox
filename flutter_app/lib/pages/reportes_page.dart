@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/cita.dart';
-import '../services/exportar_excel.dart';
+// Diferido: el paquete de Excel pesa y solo se usa al descargar.
+import '../services/exportar_excel.dart' deferred as excel;
 import '../services/reportes.dart';
 import '../services/reportes_repository.dart';
 import '../services/resumen_whatsapp.dart';
@@ -85,14 +86,15 @@ class _ReportesPageState extends State<ReportesPage> {
     final mensajero = ScaffoldMessenger.of(context);
     try {
       final reporte = await _reporte;
-      final bytes = generarExcelReporte(
+      await excel.loadLibrary();
+      final bytes = excel.generarExcelReporte(
         reporte: reporte,
         citas: _citas,
         negocio: widget.negocioNombre,
         incluirBarberos: widget.mostrarBarberos,
       );
       final ok = widget.descargar(
-        nombreArchivoReporte(reporte.periodo),
+        excel.nombreArchivoReporte(reporte.periodo),
         bytes,
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       );

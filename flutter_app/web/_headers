@@ -26,6 +26,9 @@
   Cache-Control: no-cache
 /main.dart.js
   Cache-Control: no-cache
+# Partes que se cargan después (diferidas), como el generador de Excel.
+/main.dart.js_1.part.js
+  Cache-Control: no-cache
 /manifest.json
   Cache-Control: no-cache
 /version.json
