@@ -93,7 +93,7 @@ La app React queda solo como referencia (`src/`).
 ### 3. Negocio ✅
 - ✅ Perfil, horario semanal, apartado (monto, política, datos de transferencia), anticipación para cancelar, intervalo de reservas.
 - ✅ Enlace público para copiar.
-- ⬜ Subir el **logo** del negocio como archivo (hoy es una dirección web).
+- ✅ Logo y portada del negocio se suben como archivo (Configuración → Cambiar).
 - ⬜ Usar el **color principal** del negocio en la reserva pública.
 
 ### 4. Servicios ✅
@@ -261,7 +261,7 @@ Referencias: Booksy, Fresha, Vagaro, Square Appointments, AgendaPro, Setmore.
 | Clientes sin cita (walk-in) | ✅ | ✅ "Atender ahora" |
 | Ficha del cliente, faltas | ✅ | ✅ |
 | Método de pago y propina | ✅ | ✅ |
-| Catálogo de servicios con fotos | ✅ | ✅ (salón; barbería ⬜) |
+| Catálogo de servicios con fotos | ✅ | ✅ foto por servicio (013) e íconos en los catálogos sugeridos |
 | Exportar reportes | ✅ | ✅ Excel |
 | App instalable | ✅ nativas | ✅ PWA (nativas ⬜) |
 | Agenda en tiempo real | ✅ | ✅ avisos en vivo (021) |
