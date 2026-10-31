@@ -78,6 +78,12 @@ class _AgendaPageState extends State<AgendaPage> {
   String? _filtroId;
   String _filtroNombre = '';
 
+  /// Vista de semana (lunes a domingo de la semana de [_fecha]).
+  bool _semana = false;
+
+  DateTime get _lunes =>
+      DateTime(_fecha.year, _fecha.month, _fecha.day - (_fecha.weekday - 1));
+
   // Se crea solo cuando hace falta, para no exigir Supabase en pruebas.
   AgendaRepository get _agenda =>
       widget.agendaRepository ??
@@ -107,11 +113,21 @@ class _AgendaPageState extends State<AgendaPage> {
       _error = null;
     });
     try {
-      final citas = await widget.repository.listarDelDia(
-        negocioId: widget.negocioId,
-        fecha: _fecha,
-        empleadoId: widget.empleadoId,
-      );
+      final dias = _semana
+          ? [
+              for (var i = 0; i < 7; i++)
+                DateTime(_lunes.year, _lunes.month, _lunes.day + i),
+            ]
+          : [_fecha];
+      final porDia = await Future.wait([
+        for (final dia in dias)
+          widget.repository.listarDelDia(
+            negocioId: widget.negocioId,
+            fecha: dia,
+            empleadoId: widget.empleadoId,
+          ),
+      ]);
+      final citas = [for (final lista in porDia) ...lista];
       if (mounted && peticion == _peticion) setState(() => _citas = citas);
     } catch (_) {
       if (mounted && peticion == _peticion) {
@@ -129,6 +145,21 @@ class _AgendaPageState extends State<AgendaPage> {
     setState(
       () => _fecha = DateTime(_fecha.year, _fecha.month, _fecha.day + dias),
     );
+    _cargar();
+  }
+
+  void _cambiarVista(bool semana) {
+    if (semana == _semana) return;
+    setState(() => _semana = semana);
+    _cargar();
+  }
+
+  /// Desde la semana: abre ese día con todas sus acciones.
+  void _abrirDia(DateTime dia) {
+    setState(() {
+      _semana = false;
+      _fecha = DateTime(dia.year, dia.month, dia.day);
+    });
     _cargar();
   }
 
@@ -340,7 +371,7 @@ class _AgendaPageState extends State<AgendaPage> {
                           ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
-                  if (_viendoHoy) ...[
+                  if (_viendoHoy && !_semana) ...[
                     OutlinedButton.icon(
                       onPressed: _cargando ? null : _atenderAhora,
                       style: OutlinedButton.styleFrom(
@@ -362,10 +393,25 @@ class _AgendaPageState extends State<AgendaPage> {
                 ],
               ),
               const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SegmentedButton<bool>(
+                  key: const Key('vista-agenda'),
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(value: false, label: Text('Día')),
+                    ButtonSegment(value: true, label: Text('Semana')),
+                  ],
+                  selected: {_semana},
+                  onSelectionChanged: (valor) => _cambiarVista(valor.first),
+                ),
+              ),
+              const SizedBox(height: 8),
               _SelectorDia(
                 fecha: _fecha,
-                onAnterior: () => _moverDia(-1),
-                onSiguiente: () => _moverDia(1),
+                semana: _semana ? _lunes : null,
+                onAnterior: () => _moverDia(_semana ? -7 : -1),
+                onSiguiente: () => _moverDia(_semana ? 7 : 1),
                 onHoy: _irAHoy,
               ),
               if (widget.empleadoId == null &&
@@ -384,6 +430,37 @@ class _AgendaPageState extends State<AgendaPage> {
           ),
         );
       },
+    );
+  }
+
+  /// Lunes a domingo, cada día con sus citas. Tocar un día o una cita abre
+  /// ese día en la vista normal.
+  Widget _contenidoSemana(List<Cita> citas) {
+    final porDia = <String, List<Cita>>{};
+    for (final cita in citas) {
+      porDia.putIfAbsent(cita.fecha, () => []).add(cita);
+    }
+    final ahora = _ahora;
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    final dias = [
+      for (var i = 0; i < 7; i++)
+        DateTime(_lunes.year, _lunes.month, _lunes.day + i),
+    ];
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ListView(
+        children: [
+          for (final dia in dias)
+            _DiaSemana(
+              dia: dia,
+              citas: [...?porDia[formatoFechaIso(dia)]]
+                ..sort((a, b) => a.horaInicio.compareTo(b.horaInicio)),
+              hoy: hoy,
+              mostrarBarbero: widget.empleadoId == null,
+              onAbrir: _abrirDia,
+            ),
+        ],
+      ),
     );
   }
 
@@ -426,6 +503,7 @@ class _AgendaPageState extends State<AgendaPage> {
     final visibles = filtro == null
         ? _citas
         : _citas.where((c) => c.empleadoId == filtro).toList();
+    if (_semana) return _contenidoSemana(visibles);
     if (visibles.isEmpty) {
       return Center(
         child: Text(
@@ -504,12 +582,16 @@ class _FiltroBarberos extends StatelessWidget {
 class _SelectorDia extends StatelessWidget {
   const _SelectorDia({
     required this.fecha,
+    this.semana,
     required this.onAnterior,
     required this.onSiguiente,
     required this.onHoy,
   });
 
   final DateTime fecha;
+
+  /// Lunes de la semana mostrada, o null en la vista de día.
+  final DateTime? semana;
   final VoidCallback onAnterior;
   final VoidCallback onSiguiente;
   final VoidCallback onHoy;
@@ -522,19 +604,25 @@ class _SelectorDia extends StatelessWidget {
         child: Row(
           children: [
             IconButton(
-              tooltip: 'Día anterior',
+              tooltip: semana == null ? 'Día anterior' : 'Semana anterior',
               onPressed: onAnterior,
               icon: const Icon(Icons.chevron_left),
             ),
             Expanded(
               child: Text(
-                formatoFechaLarga(fecha),
+                switch (semana) {
+                  null => formatoFechaLarga(fecha),
+                  final lunes => formatoRangoFechas(
+                    lunes,
+                    DateTime(lunes.year, lunes.month, lunes.day + 6),
+                  ),
+                },
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
             IconButton(
-              tooltip: 'Día siguiente',
+              tooltip: semana == null ? 'Día siguiente' : 'Semana siguiente',
               onPressed: onSiguiente,
               icon: const Icon(Icons.chevron_right),
             ),
@@ -978,6 +1066,100 @@ class _Dato extends StatelessWidget {
           Expanded(child: Text(valor)),
         ],
       ),
+    );
+  }
+}
+
+/// Un día de la vista de semana: encabezado con el total y sus citas.
+class _DiaSemana extends StatelessWidget {
+  const _DiaSemana({
+    required this.dia,
+    required this.citas,
+    required this.hoy,
+    required this.mostrarBarbero,
+    required this.onAbrir,
+  });
+
+  final DateTime dia;
+  final List<Cita> citas;
+  final DateTime hoy;
+  final bool mostrarBarbero;
+  final ValueChanged<DateTime> onAbrir;
+
+  @override
+  Widget build(BuildContext context) {
+    final esHoy = dia == hoy;
+    final activas = citas.where((c) => c.estado != EstadoCita.cancelada).length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          key: Key('dia-${formatoFechaIso(dia)}'),
+          onTap: () => onAbrir(dia),
+          child: Container(
+            color: esHoy
+                ? Marca.doradoClaro.withValues(alpha: 0.35)
+                : Marca.fondo,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${formatoFechaLarga(dia)}${esHoy ? ' · Hoy' : ''}',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Text(
+                  activas == 0
+                      ? 'Sin citas'
+                      : '$activas ${activas == 1 ? 'cita' : 'citas'}',
+                  style: const TextStyle(color: Marca.textoSuave, fontSize: 13),
+                ),
+                const Icon(Icons.chevron_right, color: Marca.textoSuave),
+              ],
+            ),
+          ),
+        ),
+        for (final cita in citas)
+          InkWell(
+            onTap: () => onAbrir(dia),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 72,
+                    child: Text(
+                      formatoHora(cita.horaInicio),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      [
+                        cita.clienteNombre,
+                        cita.servicioNombre,
+                        if (mostrarBarbero) cita.empleadoNombre,
+                      ].where((t) => t.isNotEmpty).join(' · '),
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: cita.estado == EstadoCita.cancelada
+                            ? Marca.textoSuave
+                            : Marca.texto,
+                        decoration: cita.estado == EstadoCita.cancelada
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  EstadoCitaBadge(estado: cita.estado),
+                ],
+              ),
+            ),
+          ),
+        const Divider(height: 1),
+      ],
     );
   }
 }

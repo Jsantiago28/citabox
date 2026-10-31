@@ -243,6 +243,45 @@ void main() {
     expect(find.text('Cita creada.'), findsOneWidget);
   });
 
+  testWidgets('week view lists each day and opens a day on tap', (
+    tester,
+  ) async {
+    final citas = _FakeCitas([
+      _cita('c1', EstadoCita.pendiente),
+      _cita('c2', EstadoCita.cancelada, inicio: '09:00:00', cliente: 'Pedro'),
+    ]);
+    await _abrirAgenda(tester, citas, _FakeAgenda());
+
+    await tester.tap(find.text('Semana'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('14 – 20 de septiembre de 2026'), findsOneWidget);
+    expect(find.text('Lunes 14 de septiembre'), findsOneWidget);
+    expect(find.text('Domingo 20 de septiembre'), findsOneWidget);
+    // La cancelada se ve tachada pero no cuenta.
+    expect(find.text('1 cita'), findsOneWidget);
+    expect(find.text('Sin citas'), findsNWidgets(6));
+    expect(find.text('Atender ahora'), findsNothing);
+    // Ordenadas por hora: la de las 9 antes que la de las 10.
+    expect(
+      tester.getTopLeft(find.text('9:00 AM')).dy,
+      lessThan(tester.getTopLeft(find.text('10:00 AM')).dy),
+    );
+
+    await tester.tap(find.byTooltip('Semana siguiente'));
+    await tester.pumpAndSettle();
+    expect(find.text('21 – 27 de septiembre de 2026'), findsOneWidget);
+    await tester.tap(find.byTooltip('Semana anterior'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('dia-2026-09-18')));
+    await tester.pumpAndSettle();
+    expect(find.text('Viernes 18 de septiembre'), findsOneWidget);
+    // Vista de día: ya no está la lista de la semana.
+    expect(find.text('Sin citas'), findsNothing);
+    expect(find.text('Ana López'), findsOneWidget);
+  });
+
   testWidgets('warns when the appointment is outside working hours', (
     tester,
   ) async {
