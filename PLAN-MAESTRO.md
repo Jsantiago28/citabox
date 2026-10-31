@@ -56,7 +56,7 @@ Secretos en GitHub: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_ACCESS
 
 ---
 
-## Decisión de arquitectura (a validar con el arquitecto)
+## Decisión de arquitectura (aprobada)
 
 El PDF propone **React + Supabase** como web app y deja la **app móvil nativa fuera de la V1**.
 Se decidió usar **Flutter** para web, Android e iOS desde un solo código, manteniendo Supabase.
@@ -64,7 +64,7 @@ La app React queda solo como referencia (`src/`).
 
 - La V1 es **web responsive e instalable (PWA)**: Flutter web cubre lo que pide el PDF.
 - Android e iOS se publican después de validar con el primer negocio.
-- Según la regla del PDF, **este cambio debe quedar aprobado por el arquitecto**. ⬜
+- ✅ Aprobado por el dueño del proyecto (31-oct-2026), que actúa como arquitecto: la regla del PDF queda cumplida.
 
 ---
 
