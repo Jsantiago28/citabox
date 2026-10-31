@@ -94,7 +94,7 @@ La app React queda solo como referencia (`src/`).
 - ✅ Perfil, horario semanal, apartado (monto, política, datos de transferencia), anticipación para cancelar, intervalo de reservas.
 - ✅ Enlace público para copiar.
 - ✅ Logo y portada del negocio se suben como archivo (Configuración → Cambiar).
-- ⬜ Usar el **color principal** del negocio en la reserva pública.
+- ✅ El **color principal** del negocio se usa en su página de reservas (dorado si no eligió o si es demasiado claro).
 
 ### 4. Servicios ✅
 - ✅ CRUD, "Visible en reservas", catálogo de 20 servicios de salón con precio del dueño.
@@ -241,7 +241,7 @@ La app React queda solo como referencia (`src/`).
 
 **C. Diferenciadores después**
 16. Reseñas, lista de espera, fidelización ("la décima gratis") y cumpleaños. ✅ Clientes que no vuelven (45 días sin venir y sin cita): filtro en Clientes con invitación por WhatsApp y enlace de reservas.
-17. ✅ Vista de semana. Foto del equipo como archivo, color del negocio en la reserva.
+17. ✅ Vista de semana, foto del equipo como archivo y color del negocio en la reserva.
 18. Pago con tarjeta del apartado (Azul/CardNET); comprobantes e-CF vía proveedor certificado.
 
 **D. Más adelante**

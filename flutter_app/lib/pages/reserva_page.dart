@@ -248,6 +248,14 @@ class _ReservaPageState extends State<ReservaPage> {
       );
     }
 
+    // El color que eligió el negocio en Configuración (dorado si ninguno).
+    return AcentoNegocio(
+      color: AcentoNegocio.desdeHex(_catalogo!.negocio.colorPrincipal),
+      child: _pasos(),
+    );
+  }
+
+  Widget _pasos() {
     return PopScope(
       canPop: _paso == _Paso.portada || _paso == _Paso.listo,
       onPopInvokedWithResult: (hecho, _) {
@@ -291,7 +299,7 @@ class _ReservaPageState extends State<ReservaPage> {
                     color: const Color(0xFFFFFBF2),
                     child: Row(
                       children: [
-                        const Icon(Icons.event_note, color: Marca.dorado),
+                        Icon(Icons.event_note, color: acentoDe(context)),
                         const SizedBox(width: 10),
                         const Expanded(
                           child: Text('Ya tienes una cita reservada aquí.'),
@@ -885,7 +893,7 @@ class _DatoClaro extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icono, color: Marca.doradoClaro, size: 16),
+        Icon(icono, color: acentoClaroDe(context), size: 16),
         const SizedBox(width: 4),
         Flexible(
           child: Text(texto, style: const TextStyle(color: Colors.white)),
@@ -961,7 +969,7 @@ class _IndicadorPasos extends StatelessWidget {
                       duration: const Duration(milliseconds: 200),
                       height: 5,
                       decoration: BoxDecoration(
-                        color: i <= actual ? Marca.dorado : Marca.borde,
+                        color: i <= actual ? acentoDe(context) : Marca.borde,
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
@@ -1007,11 +1015,11 @@ class _Opcion extends StatelessWidget {
       radius: 24,
       backgroundColor: Marca.negro,
       child: icono != null
-          ? Icon(icono, color: Marca.doradoClaro)
+          ? Icon(icono, color: acentoClaroDe(context))
           : Text(
               iniciales(titulo),
-              style: const TextStyle(
-                color: Marca.doradoClaro,
+              style: TextStyle(
+                color: acentoClaroDe(context),
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1021,7 +1029,7 @@ class _Opcion extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: elegida ? Marca.dorado : Marca.borde,
+          color: elegida ? acentoDe(context) : Marca.borde,
           width: elegida ? 2 : 1,
         ),
       ),
@@ -1086,7 +1094,7 @@ class _ResumenCorto extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.content_cut, size: 18, color: Marca.dorado),
+          Icon(Icons.content_cut, size: 18, color: acentoDe(context)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

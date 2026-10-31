@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/reserva.dart';
 import '../services/reserva_repository.dart';
 import '../theme.dart';
+import '../utils/colores.dart';
 import '../utils/enlaces_cita.dart';
 import '../utils/formato.dart';
 import '../utils/navegador.dart';
@@ -23,6 +24,38 @@ const avisoVencimientoApartado =
 const anchoMaximoPublico = 520.0;
 
 /// Pantalla pública: fondo claro y contenido centrado de máx. 520 px.
+/// Color principal del negocio en su página de reservas (Configuración →
+/// Color principal). Sin él, o si es tan claro que no se vería sobre
+/// blanco, se usa el dorado de Citabox.
+class AcentoNegocio extends InheritedWidget {
+  const AcentoNegocio({super.key, required this.color, required super.child});
+
+  final Color color;
+
+  /// [hex] como '#1E88E5'; vacío o inválido → dorado.
+  static Color desdeHex(String hex) {
+    final color = colorDesdeHex(hex);
+    if (color == null || color.computeLuminance() > 0.8) return Marca.dorado;
+    return color;
+  }
+
+  @override
+  bool updateShouldNotify(AcentoNegocio oldWidget) => oldWidget.color != color;
+}
+
+/// Acento de la página de reservas (dorado si no hay [AcentoNegocio]).
+Color acentoDe(BuildContext context) =>
+    context.dependOnInheritedWidgetOfExactType<AcentoNegocio>()?.color ??
+    Marca.dorado;
+
+/// Versión más clara del acento, para íconos sobre fondo oscuro.
+Color acentoClaroDe(BuildContext context) {
+  final acento = acentoDe(context);
+  return acento == Marca.dorado
+      ? Marca.doradoClaro
+      : Color.lerp(acento, Colors.white, 0.35)!;
+}
+
 class MarcoPublico extends StatelessWidget {
   const MarcoPublico({
     super.key,
@@ -108,7 +141,7 @@ class BotonPrincipal extends StatelessWidget {
       height: 54,
       child: FilledButton(
         style: FilledButton.styleFrom(
-          backgroundColor: Marca.dorado,
+          backgroundColor: acentoDe(context),
           foregroundColor: Marca.negro,
           disabledBackgroundColor: Marca.borde,
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -209,7 +242,7 @@ class LogoNegocio extends StatelessWidget {
       child: Text(
         iniciales(negocio.nombre),
         style: TextStyle(
-          color: Marca.doradoClaro,
+          color: acentoClaroDe(context),
           fontWeight: FontWeight.w800,
           fontSize: radio * 0.7,
         ),
@@ -220,7 +253,7 @@ class LogoNegocio extends StatelessWidget {
       height: radio * 2,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Marca.dorado, width: 2),
+        border: Border.all(color: acentoDe(context), width: 2),
       ),
       child: ClipOval(
         child: ImagenRed(url: negocio.logo, respaldo: respaldo),
@@ -432,7 +465,7 @@ class _SeccionApartadoState extends State<SeccionApartado> {
         children: [
           Row(
             children: [
-              const Icon(Icons.savings_outlined, color: Marca.dorado),
+              Icon(Icons.savings_outlined, color: acentoDe(context)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -990,7 +1023,7 @@ class _ChipHora extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
         side: BorderSide(
-          color: elegido ? Marca.dorado : Marca.borde,
+          color: elegido ? acentoDe(context) : Marca.borde,
           width: elegido ? 2 : 1,
         ),
       ),

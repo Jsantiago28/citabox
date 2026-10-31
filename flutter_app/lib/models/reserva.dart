@@ -42,6 +42,7 @@ class NegocioPublico {
     this.apartadoInstrucciones = '',
     this.cancelacionHorasMinimas = 24,
     this.tipo = 'barberia',
+    this.colorPrincipal = '',
   });
 
   final String nombre;
@@ -61,6 +62,9 @@ class NegocioPublico {
   /// Código de `TipoNegocio`: decide si dice barbero, estilista…
   final String tipo;
 
+  /// '#RRGGBB' elegido por el negocio; vacío si no eligió.
+  final String colorPrincipal;
+
   /// Igual que reserva_crear: hay apartado si se exige y el monto es > 0.
   bool get conApartado => apartadoRequerido && apartadoMonto > 0;
 
@@ -68,6 +72,7 @@ class NegocioPublico {
     nombre: _texto(map['nombre']),
     slug: _texto(map['slug']),
     tipo: _texto(map['tipo']).isEmpty ? 'barberia' : _texto(map['tipo']),
+    colorPrincipal: _texto(map['color_principal']),
     telefono: _texto(map['telefono']),
     direccion: _texto(map['direccion']),
     logo: _texto(map['logo']),
