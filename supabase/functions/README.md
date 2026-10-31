@@ -66,7 +66,7 @@ nunca debe ir en la app.
   ```
 
 - **Invite user:** también con **código** `{{ .Token }}`. El barbero entra en
-  la app por "Soy barbero: tengo un código de invitación", escribe su correo
+  la app por "Me invitaron: tengo un código", escribe su correo
   y el código (`verifyOTP` tipo `invite`) y crea su contraseña. Si el código
   venció, usa "¿Olvidaste tu contraseña?" con el mismo correo.
 

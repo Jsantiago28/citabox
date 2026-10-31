@@ -192,7 +192,7 @@ class _LoginPageState extends State<LoginPage> {
               TextButton(
                 key: const Key('login-invitacion'),
                 onPressed: _submitting ? null : _abrirInvitacion,
-                child: const Text('Soy barbero: tengo un código de invitación'),
+                child: const Text('Me invitaron: tengo un código'),
               ),
               const SizedBox(height: 8),
               TextButton(
