@@ -121,7 +121,7 @@ La app React queda solo como referencia (`src/`).
 - ✅ Pasos: servicio (con foto o ícono) → barbero → fecha y hora → datos → apartado → confirmación.
 - ✅ "Mi cita": consultar, reprogramar, cancelar, reportar la transferencia, calendario y WhatsApp.
 - ⬜ **Prueba de oro del PDF:** una persona que nunca usó el sistema reserva desde su celular sin ayuda.
-- ⬜ Protección extra contra spam (captcha) si aparecen reservas falsas.
+- ⏸️ Captcha: decisión (30-oct) de no ponerlo por ahora para no frenar al cliente; basta con los límites (3 citas por teléfono, freno de reservas en masa, vencimiento de apartados). Turnstile invisible solo si aparecen reservas falsas.
 
 ### 9. Apartado ✅ / ⏸️ cobro en línea
 - ✅ Validar o rechazar pagos (solo el dueño); la cita pasa a Confirmada al validar.
@@ -193,7 +193,7 @@ La app React queda solo como referencia (`src/`).
 | Función de invitar aceptaba cualquier origen | ✅ Solo `barberia-pro.pages.dev` |
 | CI sin permisos mínimos ni versión fija de Flutter | ✅ Corregido |
 | Supabase aceptaba contraseñas de 6 | ✅ Mínimo 8 |
-| **Sin CAPTCHA** en registro y reserva pública | ⬜ Cloudflare Turnstile (requiere crear la clave en Cloudflare) |
+| **Sin CAPTCHA** en registro y reserva pública | ⏸️ Pospuesto (30-oct): cubren los límites por teléfono y el vencimiento; Turnstile invisible si aparecen reservas falsas |
 | Sin 2FA para dueños | ✅ Verificación en dos pasos opcional (Configuración → Seguridad) |
 | **Sin copias de seguridad utilizables** (plan gratis) | 🟡 Workflow semanal cifrado listo (`respaldo-db.yml`, falta crear 2 secretos); falta Supabase Pro y ensayo de restauración |
 | Contraseñas filtradas (HaveIBeenPwned), caducidad de sesión | ⬜ Requieren Supabase Pro |
@@ -225,7 +225,7 @@ La app React queda solo como referencia (`src/`).
 3. ✅ **Cobro del servicio:** planes (Solo RD$400, Barbería RD$900, Pro RD$1,600), prueba de 30 días, pausa con 7 días de gracia, límite de barberos, panel `#/admin` (admin: humanogestion@gmail.com), cuentas para cobrar, botón "Ya pagué" con recibo y aviso por WhatsApp (017–019). Sin pasarela por ahora (no hay RNC): transferencia.
 4. ⬜ **Supabase Pro** (copias diarias de 7 días, no se pausa). Decisión (29-oct): el respaldo semanal externo queda listo pero sin activar; se activa creando sus 2 secretos si hiciera falta (`docs/RESPALDOS.md`).
 5. **Dominio propio** + correo con **Resend** (SPF/DKIM).
-6. 🟡 ✅ 2FA para dueños. ⬜ CAPTCHA (Turnstile, requiere clave de Cloudflare).
+6. 🟡 ✅ 2FA para dueños. ⏸️ CAPTCHA pospuesto: solo si aparecen reservas falsas.
 7. ✅ Botón "Reportar un problema" y monitoreo de errores con **Sentry** (org `barberia-pro`, sin datos personales).
 8. ✅ Enlace `/r/<slug>` con vista previa (nombre y portada) en WhatsApp.
 9. **Rendimiento** en celulares de gama baja (primera carga de Flutter web).
