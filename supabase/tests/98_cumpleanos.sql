@@ -28,6 +28,12 @@ do $$ begin
 exception when check_violation then null;
 end $$;
 do $$ begin
+  update clientes set cumple_mes = null, cumple_dia = 3
+   where id = 'a5000000-0000-0000-0000-0000000000c1';
+  raise exception 'FALLO: aceptó un cumpleaños sin mes';
+exception when check_violation then null;
+end $$;
+do $$ begin
   update clientes set cumple_mes = 13, cumple_dia = 1
    where id = 'a5000000-0000-0000-0000-0000000000c1';
   raise exception 'FALLO: aceptó el mes 13';

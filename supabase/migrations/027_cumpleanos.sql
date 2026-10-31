@@ -10,9 +10,12 @@
 alter table clientes
   add column if not exists cumple_mes smallint,
   add column if not exists cumple_dia smallint,
+  -- Con "is not null" explícito: una comparación con null da null y el
+  -- check lo dejaría pasar (mes sin día).
   add constraint clientes_cumple_valido check (
     (cumple_mes is null and cumple_dia is null)
-    or (cumple_mes between 1 and 12
+    or (cumple_mes is not null and cumple_dia is not null
+        and cumple_mes between 1 and 12
         and cumple_dia between 1 and
           case when cumple_mes = 2 then 29
                when cumple_mes in (4, 6, 9, 11) then 30
