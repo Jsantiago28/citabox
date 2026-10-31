@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:barberiapro/widgets/pantalla_desplazable.dart';
+import 'package:barberiapro/pages/login_page.dart';
 
 void main() {
   testWidgets('la rueda sobre el fondo (fuera de la tarjeta) desplaza', (
@@ -59,5 +60,22 @@ void main() {
     final centro = tester.getCenter(find.text('Entrar'));
     expect(centro.dx, closeTo(600, 1));
     expect(centro.dy, closeTo(400, 1));
+  });
+
+  testWidgets('el inicio de sesión cabe en un celular de 360 px', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const MaterialApp(home: LoginPage()));
+    await tester.pumpAndSettle();
+
+    // Sin desbordes (fallarían la prueba) y la tarjeta dentro de la pantalla.
+    final ingresar = tester.getRect(find.text('Ingresar'));
+    expect(ingresar.left, greaterThanOrEqualTo(0));
+    expect(ingresar.right, lessThanOrEqualTo(360));
+    expect(tester.takeException(), isNull);
   });
 }
