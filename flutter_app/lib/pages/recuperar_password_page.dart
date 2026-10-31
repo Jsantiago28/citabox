@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/password_repository.dart';
 import '../theme.dart';
 import '../widgets/logo_marca.dart';
+import '../widgets/pantalla_desplazable.dart';
 
 enum _Paso { correo, codigo }
 
@@ -166,8 +167,9 @@ class _RecuperarPasswordPageState extends State<RecuperarPasswordPage> {
               title: const LogoCitabox(tamano: 18),
             ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
+        child: PantallaDesplazable(
+          padding: EdgeInsets.zero,
+          child: Padding(
             padding: const EdgeInsets.all(20),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),

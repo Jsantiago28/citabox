@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/mfa_repository.dart';
 import '../theme.dart';
+import '../widgets/pantalla_desplazable.dart';
 
 /// Muestra [child] solo cuando la sesión ya pasó la verificación en dos
 /// pasos; si la cuenta la tiene activa y falta el código, lo pide antes.
@@ -94,8 +95,9 @@ class _VerificacionMfaPageState extends State<VerificacionMfaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
+      body: PantallaDesplazable(
+        padding: EdgeInsets.zero,
+        child: Padding(
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),

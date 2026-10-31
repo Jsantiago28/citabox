@@ -5,6 +5,7 @@ import '../services/password_repository.dart';
 import '../services/registro_repository.dart';
 import '../theme.dart';
 import '../widgets/logo_marca.dart';
+import '../widgets/pantalla_desplazable.dart';
 import 'recuperar_password_page.dart';
 import 'registro_page.dart';
 
@@ -106,8 +107,9 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: Marca.negro,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
+        child: PantallaDesplazable(
+          padding: EdgeInsets.zero,
+          child: Padding(
             padding: const EdgeInsets.all(20),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),

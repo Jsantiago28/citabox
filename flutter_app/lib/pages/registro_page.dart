@@ -7,6 +7,7 @@ import '../utils/slug.dart';
 import '../utils/vocabulario.dart';
 import '../widgets/consentimiento_check.dart';
 import '../widgets/logo_marca.dart';
+import '../widgets/pantalla_desplazable.dart';
 
 class RegistroPage extends StatefulWidget {
   /// Registro completo: crea la cuenta y deja los datos del negocio
@@ -253,19 +254,16 @@ class _RegistroPageState extends State<RegistroPage> {
               title: const LogoCitabox(tamano: 18),
             ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Card(
-                color: Colors.white,
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: _esperandoConfirmacion
-                      ? _confirmacion(context)
-                      : _formulario(context),
-                ),
+        child: PantallaDesplazable(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Card(
+              color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: _esperandoConfirmacion
+                    ? _confirmacion(context)
+                    : _formulario(context),
               ),
             ),
           ),
