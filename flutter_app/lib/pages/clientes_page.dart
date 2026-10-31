@@ -6,6 +6,7 @@ import '../services/clientes_repository.dart';
 import '../services/sin_permiso.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
+import '../utils/whatsapp.dart';
 import '../widgets/estado_cita_badge.dart';
 import 'cliente_ficha.dart';
 
@@ -16,6 +17,9 @@ class ClientesPage extends StatefulWidget {
     required this.repository,
     this.moneda = 'DOP',
     this.abrirEnlace,
+    this.negocioNombre = '',
+    this.enlaceReservas = '',
+    this.hoy,
   });
 
   final String negocioId;
@@ -24,6 +28,13 @@ class ClientesPage extends StatefulWidget {
 
   /// Abre enlaces de llamada, WhatsApp o correo; por defecto, url_launcher.
   final AbrirEnlace? abrirEnlace;
+
+  /// Para el mensaje a los clientes que no vuelven.
+  final String negocioNombre;
+  final String enlaceReservas;
+
+  /// Inyectable en pruebas; por defecto la fecha del dispositivo.
+  final DateTime? hoy;
 
   @override
   State<ClientesPage> createState() => _ClientesPageState();
@@ -38,6 +49,17 @@ class _ClientesPageState extends State<ClientesPage> {
   String? _error;
   String? _changingStatusId;
   String? _seleccionadoId;
+
+  /// Solo los clientes que llevan tiempo sin venir (ver [ResumenCliente.noVuelve]).
+  bool _soloNoVuelven = false;
+
+  DateTime get _hoy => widget.hoy ?? DateTime.now();
+
+  ResumenCliente _resumenDe(Cliente cliente) =>
+      _resumen[cliente.id] ?? const ResumenCliente();
+
+  int get _cantidadNoVuelven =>
+      _clientes.where((c) => c.activo && _resumenDe(c).noVuelve(_hoy)).length;
 
   static Future<bool> _abrirExterno(Uri uri) =>
       launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -122,6 +144,21 @@ class _ClientesPageState extends State<ClientesPage> {
     }
   }
 
+  Future<void> _invitar(Cliente cliente) async {
+    final mensaje = mensajeVuelve(
+      cliente: cliente.nombre,
+      negocio: widget.negocioNombre,
+      enlace: widget.enlaceReservas,
+    );
+    var abierto = false;
+    try {
+      abierto = await (widget.abrirEnlace ?? _abrirExterno)(
+        Uri.parse(enlaceWhatsApp(cliente.telefono, mensaje)),
+      );
+    } catch (_) {}
+    if (!abierto && mounted) _mostrarError('No se pudo abrir WhatsApp.');
+  }
+
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(mensaje)));
@@ -129,9 +166,22 @@ class _ClientesPageState extends State<ClientesPage> {
 
   List<Cliente> get _clientesFiltrados {
     final consulta = _searchController.text.trim().toLowerCase();
-    if (consulta.isEmpty) return _clientes;
+    var base = _clientes;
+    if (_soloNoVuelven) {
+      // Los que llevan más tiempo sin venir, primero.
+      base =
+          _clientes
+              .where((c) => c.activo && _resumenDe(c).noVuelve(_hoy))
+              .toList()
+            ..sort(
+              (a, b) => (_resumenDe(b).diasSinVenir(_hoy) ?? 0).compareTo(
+                _resumenDe(a).diasSinVenir(_hoy) ?? 0,
+              ),
+            );
+    }
+    if (consulta.isEmpty) return base;
 
-    return _clientes
+    return base
         .where((cliente) {
           return cliente.nombre.toLowerCase().contains(consulta) ||
               cliente.telefono.toLowerCase().contains(consulta) ||
@@ -223,7 +273,26 @@ class _ClientesPageState extends State<ClientesPage> {
                 ],
               ),
               if (!isWide) ...[const SizedBox(height: 16), buscador],
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Tooltip(
+                  message:
+                      'Más de ${ResumenCliente.diasNoVuelve} días sin venir y '
+                      'sin otra cita reservada.',
+                  child: FilterChip(
+                    key: const Key('filtro-no-vuelven'),
+                    avatar: const Icon(Icons.history, size: 18),
+                    label: Text('No vuelven ($_cantidadNoVuelven)'),
+                    selected: _soloNoVuelven,
+                    showCheckmark: false,
+                    selectedColor: Marca.doradoClaro,
+                    onSelected: (valor) =>
+                        setState(() => _soloNoVuelven = valor),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               Expanded(child: _buildContent(clientes, isWide)),
             ],
           ),
@@ -256,6 +325,9 @@ class _ClientesPageState extends State<ClientesPage> {
         child: Text(
           _clientes.isEmpty
               ? 'Todavía no hay clientes.'
+              : _soloNoVuelven
+              ? 'Ningún cliente lleva más de ${ResumenCliente.diasNoVuelve} días '
+                    'sin venir. ¡Bien!'
               : 'No hay coincidencias.',
           textAlign: TextAlign.center,
         ),
@@ -303,6 +375,13 @@ class _ClientesPageState extends State<ClientesPage> {
             if (resumen.conFaltas) ...[
               const SizedBox(width: 8),
               const _Etiqueta(texto: 'Faltas', color: Marca.rojo),
+            ],
+            if (cliente.activo && resumen.noVuelve(_hoy)) ...[
+              const SizedBox(width: 8),
+              _Etiqueta(
+                texto: 'Hace ${resumen.diasSinVenir(_hoy)} días',
+                color: Marca.naranja,
+              ),
             ],
           ],
         ),
@@ -360,6 +439,13 @@ class _ClientesPageState extends State<ClientesPage> {
                     const _Etiqueta(texto: 'Frecuente', color: Marca.verde),
                   ],
                 ],
+              ),
+            if (_soloNoVuelven && cliente.telefono.trim().isNotEmpty)
+              IconButton(
+                key: Key('invitar-${cliente.id}'),
+                tooltip: 'Invitar a volver por WhatsApp',
+                onPressed: () => _invitar(cliente),
+                icon: const Icon(Icons.chat_outlined, color: Marca.verde),
               ),
             _acciones(cliente),
           ],

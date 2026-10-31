@@ -63,37 +63,60 @@ class SupabaseClientesRepository implements ClientesRepository {
     final visitas = <String, int>{};
     final gastado = <String, num>{};
     final faltas = <String, int>{};
+    final ultima = <String, DateTime>{};
+    final conProxima = <String>{};
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
 
     // PostgREST limita las filas por respuesta; se pagina para no
     // truncar los totales de negocios con mucho historial.
     for (var desde = 0; ; desde += _pagina) {
       final rows = await _client
           .from('citas')
-          .select('cliente_id, precio, estado')
+          .select('cliente_id, precio, estado, fecha')
           .eq('negocio_id', negocioId)
-          .inFilter('estado', ['LLEGO', 'COMPLETADA', 'NO_VINO'])
+          .inFilter('estado', [
+            'LLEGO',
+            'COMPLETADA',
+            'NO_VINO',
+            'PENDIENTE',
+            'CONFIRMADA',
+          ])
           .order('id')
           .range(desde, desde + _pagina - 1);
 
       for (final row in rows) {
         final clienteId = row['cliente_id'].toString();
-        if (row['estado'] == 'NO_VINO') {
-          faltas[clienteId] = (faltas[clienteId] ?? 0) + 1;
-          continue;
+        final fecha = DateTime.tryParse(row['fecha']?.toString() ?? '');
+        switch (row['estado']) {
+          case 'NO_VINO':
+            faltas[clienteId] = (faltas[clienteId] ?? 0) + 1;
+          case 'PENDIENTE' || 'CONFIRMADA':
+            if (fecha != null && !fecha.isBefore(hoy)) {
+              conProxima.add(clienteId);
+            }
+          default:
+            final precio = num.tryParse(row['precio']?.toString() ?? '') ?? 0;
+            visitas[clienteId] = (visitas[clienteId] ?? 0) + 1;
+            gastado[clienteId] = (gastado[clienteId] ?? 0) + precio;
+            if (fecha != null &&
+                (ultima[clienteId] == null ||
+                    fecha.isAfter(ultima[clienteId]!))) {
+              ultima[clienteId] = fecha;
+            }
         }
-        final precio = num.tryParse(row['precio']?.toString() ?? '') ?? 0;
-        visitas[clienteId] = (visitas[clienteId] ?? 0) + 1;
-        gastado[clienteId] = (gastado[clienteId] ?? 0) + precio;
       }
       if (rows.length < _pagina) break;
     }
 
     return {
-      for (final clienteId in {...visitas.keys, ...faltas.keys})
+      for (final clienteId in {...visitas.keys, ...faltas.keys, ...conProxima})
         clienteId: ResumenCliente(
           visitas: visitas[clienteId] ?? 0,
           gastado: gastado[clienteId] ?? 0,
           faltas: faltas[clienteId] ?? 0,
+          ultimaVisita: ultima[clienteId],
+          tieneProxima: conProxima.contains(clienteId),
         ),
     };
   }

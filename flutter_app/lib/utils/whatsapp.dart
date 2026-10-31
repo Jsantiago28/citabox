@@ -37,3 +37,19 @@ String mensajeRecordatorio({
       'el $diaMinuscula a las ${formatoHora(hora)} para ${servicio.trim()}'
       '$conBarbero. ¡Te esperamos!';
 }
+
+/// Mensaje para invitar a volver a un cliente que lleva tiempo sin venir.
+///
+/// [enlace] es el enlace público de reservas; si está vacío, no se incluye.
+String mensajeVuelve({
+  required String cliente,
+  required String negocio,
+  String enlace = '',
+}) {
+  final nombre = cliente.trim().split(RegExp(r'\s+')).first;
+  final reserva = enlace.trim().isEmpty
+      ? '¿Te apartamos un turno?'
+      : 'Reserva cuando quieras aquí: ${enlace.trim()}';
+  return 'Hola $nombre, ¡hace tiempo que no te vemos en ${negocio.trim()}! '
+      '$reserva';
+}

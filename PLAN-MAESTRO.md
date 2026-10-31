@@ -240,7 +240,7 @@ La app React queda solo como referencia (`src/`).
 15. Transferir el negocio a otro dueño; correos de bienvenida y fin de prueba; métricas de uso.
 
 **C. Diferenciadores después**
-16. Reseñas, lista de espera, fidelización ("la décima gratis"), cumpleaños y clientes que no vuelven.
+16. Reseñas, lista de espera, fidelización ("la décima gratis") y cumpleaños. ✅ Clientes que no vuelven (45 días sin venir y sin cita): filtro en Clientes con invitación por WhatsApp y enlace de reservas.
 17. Vista de semana, foto de barberos como archivo, color del negocio en la reserva.
 18. Pago con tarjeta del apartado (Azul/CardNET); comprobantes e-CF vía proveedor certificado.
 

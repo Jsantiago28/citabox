@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -16,6 +17,7 @@ import '../services/reportes_repository.dart';
 import '../services/plataforma_repository.dart';
 import '../services/servicios_repository.dart';
 import '../theme.dart';
+import '../utils/enlace_publico.dart';
 import '../utils/formato.dart';
 import '../utils/fotos.dart';
 import '../utils/vocabulario.dart';
@@ -59,7 +61,8 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
     final result = await Supabase.instance.client
         .from('perfiles')
         .select(
-          'negocio_id, nombre, rol, activo, negocios(id, nombre, moneda, tipo)',
+          'negocio_id, nombre, rol, activo, '
+          'negocios(id, nombre, slug, moneda, tipo)',
         )
         .eq('id', widget.userId)
         .maybeSingle();
@@ -147,6 +150,7 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
           negocioNombre: business?['nombre']?.toString() ?? 'Citabox',
           moneda: business?['moneda']?.toString() ?? 'DOP',
           tipo: TipoNegocio.desdeCodigo(business?['tipo']),
+          negocioSlug: business?['slug']?.toString() ?? '',
           nombre: profile['nombre']?.toString() ?? widget.email,
           esOwner: profile['rol'] == 'OWNER',
           onSignOut: _signOut,
@@ -180,6 +184,7 @@ class BusinessWorkspace extends StatefulWidget {
     required this.negocioNombre,
     required this.moneda,
     this.tipo = TipoNegocio.barberia,
+    this.negocioSlug = '',
     required this.nombre,
     required this.esOwner,
     required this.onSignOut,
@@ -199,6 +204,9 @@ class BusinessWorkspace extends StatefulWidget {
 
   /// Tipo de negocio: decide las palabras de la app (barbero, estilista…).
   final TipoNegocio tipo;
+
+  /// Para armar el enlace público de reservas.
+  final String negocioSlug;
   final String nombre;
   final bool esOwner;
   final VoidCallback onSignOut;
@@ -441,6 +449,10 @@ class _BusinessWorkspaceState extends State<BusinessWorkspace> {
         negocioId: widget.negocioId,
         moneda: widget.moneda,
         repository: _clientes,
+        negocioNombre: widget.negocioNombre,
+        enlaceReservas: widget.negocioSlug.isEmpty
+            ? ''
+            : enlaceReserva(widget.negocioSlug, base: kIsWeb ? Uri.base : null),
       ),
       _Seccion.servicios => ServiciosPage(
         negocioId: widget.negocioId,
