@@ -1,14 +1,17 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/cita.dart';
 import '../services/exportar_excel.dart';
 import '../services/reportes.dart';
 import '../services/reportes_repository.dart';
+import '../services/resumen_whatsapp.dart';
 import '../theme.dart';
 import '../utils/formato.dart';
 import '../utils/navegador.dart';
+import '../utils/whatsapp.dart';
 import '../widgets/estado_cita_badge.dart';
 import '../utils/vocabulario.dart';
 
@@ -23,6 +26,7 @@ class ReportesPage extends StatefulWidget {
     this.hoy,
     this.negocioNombre = '',
     this.descargar = descargarBytes,
+    this.abrirEnlace = _abrirEnlaceExterno,
   });
 
   final String negocioId;
@@ -43,6 +47,9 @@ class ReportesPage extends StatefulWidget {
 
   /// Inyectable en pruebas; en web descarga el archivo.
   final bool Function(String nombre, Uint8List bytes, String tipo) descargar;
+
+  /// Inyectable en pruebas; por defecto abre WhatsApp.
+  final Future<bool> Function(Uri enlace) abrirEnlace;
 
   @override
   State<ReportesPage> createState() => _ReportesPageState();
@@ -101,6 +108,33 @@ class _ReportesPageState extends State<ReportesPage> {
     } catch (_) {
       mensajero.showSnackBar(
         const SnackBar(content: Text('No se pudo generar el Excel.')),
+      );
+    }
+  }
+
+  Future<void> _compartirWhatsApp() async {
+    final mensajero = ScaffoldMessenger.of(context);
+    final profesionales = Vocabulario.of(context).profesionales;
+    try {
+      final reporte = await _reporte;
+      final mensaje = mensajeResumenReporte(
+        reporte,
+        negocio: widget.negocioNombre,
+        moneda: widget.moneda,
+        incluirEquipo: widget.mostrarBarberos,
+        profesionales: profesionales,
+      );
+      final abierto = await widget.abrirEnlace(
+        Uri.parse(enlaceWhatsApp('', mensaje)),
+      );
+      if (!abierto) {
+        mensajero.showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir WhatsApp.')),
+        );
+      }
+    } catch (_) {
+      mensajero.showSnackBar(
+        const SnackBar(content: Text('No se pudo preparar el resumen.')),
       );
     }
   }
@@ -181,14 +215,23 @@ class _ReportesPageState extends State<ReportesPage> {
                 ],
               ),
               const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  key: const Key('descargar-excel'),
-                  onPressed: _descargarExcel,
-                  icon: const Icon(Icons.download, size: 18),
-                  label: const Text('Descargar Excel'),
-                ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    key: const Key('descargar-excel'),
+                    onPressed: _descargarExcel,
+                    icon: const Icon(Icons.download, size: 18),
+                    label: const Text('Descargar Excel'),
+                  ),
+                  OutlinedButton.icon(
+                    key: const Key('compartir-whatsapp'),
+                    onPressed: _compartirWhatsApp,
+                    icon: const Icon(Icons.share_outlined, size: 18),
+                    label: const Text('Compartir por WhatsApp'),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               FutureBuilder<Reporte>(
@@ -753,3 +796,6 @@ class _Mensaje extends StatelessWidget {
     );
   }
 }
+
+Future<bool> _abrirEnlaceExterno(Uri enlace) =>
+    launchUrl(enlace, mode: LaunchMode.externalApplication);

@@ -136,7 +136,7 @@ La app React queda solo como referencia (`src/`).
 - ✅ Hoy, semana, mes, mes anterior y rango; por barbero, servicio, método de pago y clientes frecuentes.
 - ✅ **Descarga en Excel** (.xlsx con 5 hojas). Los totales coinciden con la pantalla (prueba automática).
 - ✅ Tarjeta **"Hoy por barbero"** en Inicio (cierre de caja rápido).
-- ⬜ **Compartir resumen por WhatsApp** (día/semana/mes).
+- ✅ **Compartir resumen por WhatsApp** del período elegido (ingresos, citas, métodos de pago, equipo y servicio más pedido).
 - ⬜ Resumen automático por correo (requiere dominio y un servicio como Resend).
 
 ### 12. QA 🟡
