@@ -150,8 +150,8 @@ La app React queda solo como referencia (`src/`).
 - ✅ Web publicada e instalable (PWA), datos demo disponibles (`supabase/seed/`).
 - ⬜ **Dominio propio** (p. ej. `reservas.tunegocio.com`) y pasar el correo a Resend.
 - ⬜ **Primer negocio real** usando la app una semana → observar → corregir.
-- ⬜ Guía corta para el dueño: configurar el negocio en minutos.
-- ⬜ Procedimiento para reportar fallos.
+- ✅ Guía corta para el dueño: [docs/GUIA-DUENO.md](docs/GUIA-DUENO.md).
+- ✅ Procedimiento ante fallos (gravedad, arreglo, deshacer publicación, aviso a negocios): [docs/REPORTAR-FALLOS.md](docs/REPORTAR-FALLOS.md).
 - ⬜ Plan Pro de Supabase cuando haya clientes (el gratis pausa el proyecto si no se usa).
 - ⬜ Después de validar: Android (Google Play) e iOS (App Store).
 
