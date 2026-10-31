@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/empleado.dart';
 import '../utils/formato.dart';
+import '../utils/fotos.dart';
 import 'sin_permiso.dart';
 
 /// Error de la invitación con un mensaje listo para mostrar.
@@ -76,6 +79,15 @@ abstract interface class EmpleadosRepository {
 
   /// Envía la invitación a la app. Lanza [InvitacionException] si falla.
   Future<void> invitar({required String empleadoId, required String email});
+
+  /// Sube la foto de la persona, la guarda en su ficha y devuelve la
+  /// dirección. Para quitarla: [guardar] con `foto: null`.
+  Future<String> subirFoto({
+    required String negocioId,
+    required String empleadoId,
+    required Uint8List bytes,
+    required String tipo,
+  });
 }
 
 class SupabaseEmpleadosRepository implements EmpleadosRepository {
@@ -84,10 +96,32 @@ class SupabaseEmpleadosRepository implements EmpleadosRepository {
   final SupabaseClient _client;
 
   @override
+  Future<String> subirFoto({
+    required String negocioId,
+    required String empleadoId,
+    required Uint8List bytes,
+    required String tipo,
+  }) async {
+    final url = await subirFotoDelNegocio(
+      _client,
+      negocioId: negocioId,
+      nombre: 'empleado-$empleadoId',
+      bytes: bytes,
+      tipo: tipo,
+    );
+    await guardar(
+      negocioId: negocioId,
+      empleadoId: empleadoId,
+      datos: {'foto': url},
+    );
+    return url;
+  }
+
+  @override
   Future<List<Empleado>> listar(String negocioId) async {
     final rows = await _client
         .from('empleados')
-        .select('id, nombre, telefono, activo, perfil_id, comision_pct')
+        .select('id, nombre, telefono, activo, perfil_id, comision_pct, foto')
         .eq('negocio_id', negocioId)
         .order('nombre');
 

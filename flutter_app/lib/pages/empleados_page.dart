@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../utils/formato.dart';
 import '../widgets/estado_cita_badge.dart';
 import '../widgets/etiqueta.dart';
+import '../utils/fotos.dart';
 
 class EmpleadosPage extends StatefulWidget {
   const EmpleadosPage({
@@ -16,11 +17,15 @@ class EmpleadosPage extends StatefulWidget {
     required this.negocioId,
     required this.repository,
     required this.serviciosRepository,
+    this.elegirFoto = elegirFotoDelDispositivo,
   });
 
   final String negocioId;
   final EmpleadosRepository repository;
   final ServiciosRepository serviciosRepository;
+
+  /// Inyectable en pruebas; por defecto la galería o cámara del dispositivo.
+  final ElegirFoto elegirFoto;
 
   @override
   State<EmpleadosPage> createState() => _EmpleadosPageState();
@@ -145,6 +150,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
         serviciosRepository: widget.serviciosRepository,
         onVolver: () => setState(() => _seleccionadoId = null),
         onEditar: () => _abrirFormulario(seleccionado),
+        elegirFoto: widget.elegirFoto,
         onCambio: _cargarEmpleados,
       );
     }
@@ -274,7 +280,10 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
         padding: const EdgeInsets.fromLTRB(16, 10, 4, 10),
         child: Row(
           children: [
-            AvatarIniciales(texto: iniciales(empleado.nombre)),
+            AvatarIniciales(
+              texto: iniciales(empleado.nombre),
+              foto: empleado.foto,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -369,8 +378,10 @@ class _EmpleadoDetalle extends StatefulWidget {
     required this.onVolver,
     required this.onEditar,
     required this.onCambio,
+    required this.elegirFoto,
   });
 
+  final ElegirFoto elegirFoto;
   final String negocioId;
   final Empleado empleado;
   final EmpleadosRepository repository;
@@ -446,6 +457,71 @@ class _EmpleadoDetalleState extends State<_EmpleadoDetalle> {
     } finally {
       if (mounted) setState(() => _ocupado = false);
     }
+  }
+
+  Future<void> _subirFoto() async {
+    final foto = await widget.elegirFoto();
+    if (foto == null || !mounted) return;
+    final ok = await _ejecutar(
+      () => widget.repository.subirFoto(
+        negocioId: widget.negocioId,
+        empleadoId: _empleadoId,
+        bytes: foto.bytes,
+        tipo: foto.tipo,
+      ),
+      'No se pudo subir la foto.',
+    );
+    if (ok) await widget.onCambio();
+  }
+
+  Future<void> _quitarFoto() async {
+    final ok = await _ejecutar(
+      () => widget.repository.guardar(
+        negocioId: widget.negocioId,
+        empleadoId: _empleadoId,
+        datos: {'foto': null},
+      ),
+      'No se pudo quitar la foto.',
+    );
+    if (ok) await widget.onCambio();
+  }
+
+  /// Avatar con cámara: subir, cambiar o quitar la foto (la ve el cliente
+  /// al reservar).
+  Widget _fotoEditable(Empleado empleado) {
+    return PopupMenuButton<String>(
+      key: const Key('empleado-foto'),
+      tooltip: 'Foto',
+      enabled: !_ocupado,
+      onSelected: (accion) => accion == 'quitar' ? _quitarFoto() : _subirFoto(),
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'subir',
+          child: Text(empleado.foto.isEmpty ? 'Subir foto' : 'Cambiar foto'),
+        ),
+        if (empleado.foto.isNotEmpty)
+          const PopupMenuItem(value: 'quitar', child: Text('Quitar foto')),
+      ],
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AvatarIniciales(
+            texto: iniciales(empleado.nombre),
+            radio: 22,
+            foto: empleado.foto,
+          ),
+          const Positioned(
+            right: -4,
+            bottom: -4,
+            child: CircleAvatar(
+              radius: 10,
+              backgroundColor: Marca.dorado,
+              child: Icon(Icons.photo_camera, size: 12, color: Marca.negro),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _mostrarMensaje(String mensaje) {
@@ -570,7 +646,7 @@ class _EmpleadoDetalleState extends State<_EmpleadoDetalle> {
               icon: const Icon(Icons.arrow_back),
             ),
             const SizedBox(width: 4),
-            AvatarIniciales(texto: iniciales(empleado.nombre), radio: 22),
+            _fotoEditable(empleado),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

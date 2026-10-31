@@ -6,6 +6,7 @@ class Empleado {
     this.activo = true,
     this.perfilId,
     this.comisionPct = 0,
+    this.foto = '',
   });
 
   final String id;
@@ -19,6 +20,9 @@ class Empleado {
   /// Comisión del barbero en porcentaje (0 a 100).
   final num comisionPct;
 
+  /// Dirección pública de la foto (Storage); vacía si no tiene.
+  final String foto;
+
   bool get tieneCuenta => perfilId != null && perfilId!.isNotEmpty;
 
   factory Empleado.fromMap(Map<String, dynamic> map) {
@@ -29,6 +33,7 @@ class Empleado {
       activo: map['activo'] == true,
       perfilId: map['perfil_id']?.toString(),
       comisionPct: num.tryParse(map['comision_pct']?.toString() ?? '') ?? 0,
+      foto: map['foto']?.toString() ?? '',
     );
   }
 }

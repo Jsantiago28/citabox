@@ -39,16 +39,26 @@ class EstadoCitaBadge extends StatelessWidget {
 }
 
 class AvatarIniciales extends StatelessWidget {
-  const AvatarIniciales({super.key, required this.texto, this.radio = 18});
+  const AvatarIniciales({
+    super.key,
+    required this.texto,
+    this.radio = 18,
+    this.foto = '',
+  });
 
   final String texto;
   final double radio;
+
+  /// Dirección de una foto; si no hay o no carga, se ven las iniciales.
+  final String foto;
 
   @override
   Widget build(BuildContext context) {
     return CircleAvatar(
       radius: radio,
       backgroundColor: Marca.negro,
+      foregroundImage: foto.isEmpty ? null : NetworkImage(foto),
+      onForegroundImageError: foto.isEmpty ? null : (_, _) {},
       child: Text(
         texto,
         style: TextStyle(

@@ -20,6 +20,41 @@ void _pantallaAncha(WidgetTester tester) {
 }
 
 void main() {
+  testWidgets('sube y quita la foto de una persona del equipo', (tester) async {
+    final repository = _FakeEmpleadosRepository([
+      const Empleado(id: 'e1', nombre: 'Pedro Gómez'),
+    ]);
+    _pantallaAncha(tester);
+    await tester.pumpWidget(
+      _app(
+        EmpleadosPage(
+          negocioId: 'negocio-1',
+          repository: repository,
+          serviciosRepository: _FakeServiciosRepository([]),
+          elegirFoto: () async => FotoElegida(Uint8List(4), 'image/png'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pedro Gómez'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('empleado-foto')));
+    await tester.pumpAndSettle();
+    expect(find.text('Quitar foto'), findsNothing);
+    await tester.tap(find.text('Subir foto'));
+    await tester.pumpAndSettle();
+    expect(repository.fotosSubidas, ['e1|image/png']);
+    expect(repository.empleados.single.foto, 'https://ejemplo.com/e1.png');
+
+    await tester.tap(find.byKey(const Key('empleado-foto')));
+    await tester.pumpAndSettle();
+    expect(find.text('Cambiar foto'), findsOneWidget);
+    await tester.tap(find.text('Quitar foto'));
+    await tester.pumpAndSettle();
+    expect(repository.empleados.single.foto, '');
+  });
+
   group('Servicios', () {
     testWidgets('crea un servicio en el negocio activo', (tester) async {
       final repository = _FakeServiciosRepository([]);
@@ -614,6 +649,25 @@ class _FakeServiciosRepository implements ServiciosRepository {
 class _FakeEmpleadosRepository implements EmpleadosRepository {
   _FakeEmpleadosRepository(this.empleados);
 
+  final fotosSubidas = <String>[];
+
+  @override
+  Future<String> subirFoto({
+    required String negocioId,
+    required String empleadoId,
+    required Uint8List bytes,
+    required String tipo,
+  }) async {
+    fotosSubidas.add('$empleadoId|$tipo');
+    final url = 'https://ejemplo.com/$empleadoId.png';
+    await guardar(
+      negocioId: negocioId,
+      empleadoId: empleadoId,
+      datos: {'foto': url},
+    );
+    return url;
+  }
+
   final List<Empleado> empleados;
   final Map<String, Set<String>> servicios = {};
   final Map<String, List<HorarioDia>> horarios = {};
@@ -633,6 +687,19 @@ class _FakeEmpleadosRepository implements EmpleadosRepository {
     String? empleadoId,
   }) async {
     ultimoNegocio = negocioId;
+    if (datos.keys.join() == 'foto') {
+      final i = empleados.indexWhere((item) => item.id == empleadoId);
+      final e = empleados[i];
+      empleados[i] = Empleado(
+        id: e.id,
+        nombre: e.nombre,
+        telefono: e.telefono,
+        activo: e.activo,
+        comisionPct: e.comisionPct,
+        foto: datos['foto']?.toString() ?? '',
+      );
+      return;
+    }
     final empleado = Empleado(
       id: empleadoId ?? 'nuevo-${empleados.length}',
       nombre: datos['nombre']?.toString() ?? '',

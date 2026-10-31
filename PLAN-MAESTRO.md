@@ -105,7 +105,7 @@ La app React queda solo como referencia (`src/`).
 ### 5. Empleados ✅
 - ✅ CRUD, servicios por barbero, horario, días libres, invitación a la app.
 - ✅ "Atiendo yo": el dueño se registra como barbero si trabaja solo.
-- ⬜ Foto del barbero subida como archivo (la reserva ya la muestra si existe).
+- ✅ Foto de cada persona del equipo subida como archivo (ficha en Empleados); se ve en la lista y en la reserva.
 
 ### 6. Clientes ✅
 - ✅ Ficha con historial, preferencias, faltas (aviso a partir de 2) y favoritos.
