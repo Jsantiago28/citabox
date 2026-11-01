@@ -148,6 +148,7 @@ La app React queda solo como referencia (`src/`).
 
 ### 13. Lanzamiento 🟡
 - ✅ Web publicada e instalable (PWA) con tarjeta "Instalar Citabox" en Inicio: botón en Chrome/Edge/Brave y pasos en iPhone. Datos demo en `supabase/seed/`.
+- ✅ Vista previa al compartir (31-oct): la app dice "tus clientes reservan solos, las 24 horas" y prueba gratis 30 días; el enlace de reservas dice "<Dueño> te invita a reservar en <Negocio>" (029 `reserva_vista_previa`: solo nombre, tipo, imagen y primer nombre del dueño). Botón "Enviar por WhatsApp" con mensaje listo en Configuración.
 - ⬜ **Dominio propio** (p. ej. `reservas.tunegocio.com`) y pasar el correo a Resend.
 - ⬜ **Primer negocio real** usando la app una semana → observar → corregir.
 - ✅ Guía corta para el dueño: [docs/GUIA-DUENO.md](docs/GUIA-DUENO.md).

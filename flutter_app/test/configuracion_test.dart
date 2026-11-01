@@ -97,6 +97,30 @@ void main() {
     expect(find.text('Enlace copiado.'), findsOneWidget);
   });
 
+  testWidgets('sends the link by WhatsApp with a ready message', (
+    tester,
+  ) async {
+    final abiertos = <Uri>[];
+    await _abrir(
+      tester,
+      _FakeConfiguracionRepository(),
+      base: Uri.parse('https://app.barberia.pro/'),
+      abrirEnlace: (uri) async {
+        abiertos.add(uri);
+        return true;
+      },
+    );
+
+    await tester.tap(find.byKey(const Key('config-enlace-whatsapp')));
+    await tester.pumpAndSettle();
+
+    expect(abiertos, hasLength(1));
+    expect(abiertos.single.host, 'wa.me');
+    final texto = abiertos.single.queryParameters['text']!;
+    expect(texto, startsWith('¡Ya puedes reservar tu cita en '));
+    expect(texto, endsWith('https://app.barberia.pro/r/el-jefe'));
+  });
+
   testWidgets('uploads the logo and removes the cover', (tester) async {
     final repository = _FakeConfiguracionRepository();
     await _abrir(tester, repository);
@@ -306,6 +330,7 @@ Future<void> _abrir(
   ConfiguracionRepository repository, {
   Uri? base,
   ElegirFoto? elegirFoto,
+  Future<bool> Function(Uri enlace)? abrirEnlace,
 }) async {
   tester.view.physicalSize = const Size(1200, 3000);
   tester.view.devicePixelRatio = 1;
@@ -319,6 +344,7 @@ Future<void> _abrir(
           baseEnlace: base,
           elegirFoto:
               elegirFoto ?? () async => FotoElegida(Uint8List(4), 'image/png'),
+          abrirEnlace: abrirEnlace,
         ),
       ),
     ),

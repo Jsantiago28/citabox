@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show StorageException;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/configuracion_negocio.dart';
 import '../services/configuracion_repository.dart';
@@ -14,6 +15,7 @@ import '../utils/enlace_publico.dart';
 import '../utils/fidelidad.dart';
 import '../utils/fotos.dart';
 import '../utils/vocabulario.dart';
+import '../utils/whatsapp.dart';
 import '../widgets/reserva_publica.dart' show ImagenRed;
 import 'historial_page.dart';
 import '../widgets/seguridad_cuenta_card.dart';
@@ -31,6 +33,7 @@ class ConfiguracionPage extends StatefulWidget {
     this.historialRepository,
     this.onTipoCambiado,
     this.onFidelidadCambiada,
+    this.abrirEnlace,
   });
 
   final String negocioId;
@@ -56,6 +59,9 @@ class ConfiguracionPage extends StatefulWidget {
 
   /// Avisa el programa de fidelidad guardado (null = sin programa).
   final ValueChanged<Fidelidad?>? onFidelidadCambiada;
+
+  /// Abre WhatsApp (inyectable en pruebas); por defecto, el navegador.
+  final Future<bool> Function(Uri enlace)? abrirEnlace;
 
   @override
   State<ConfiguracionPage> createState() => _ConfiguracionPageState();
@@ -366,6 +372,25 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
     if (mounted) _mensaje('Enlace copiado.');
   }
 
+  Future<void> _compartirWhatsApp() async {
+    final mensaje = mensajeInvitarReservar(
+      negocio: _nombre.text.trim().isEmpty
+          ? (_config?.nombre ?? '')
+          : _nombre.text,
+      enlace: _enlace,
+    );
+    var abierto = false;
+    try {
+      abierto = await (widget.abrirEnlace ?? _abrirExterno)(
+        Uri.parse(enlaceWhatsApp('', mensaje)),
+      );
+    } catch (_) {}
+    if (!abierto && mounted) _mensaje('No se pudo abrir WhatsApp.');
+  }
+
+  static Future<bool> _abrirExterno(Uri uri) =>
+      launchUrl(uri, mode: LaunchMode.externalApplication);
+
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
@@ -414,8 +439,8 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
                   const SizedBox(height: 16),
                   _reservasCard(isWide),
                   const SizedBox(height: 16),
-                  const SizedBox(height: 16),
                   _fidelidadCard(),
+                  const SizedBox(height: 16),
                   _recordatoriosCard(),
                   if (_mfa case final mfa?) ...[
                     const SizedBox(height: 16),
@@ -529,6 +554,16 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
                 label: const Text('Copiar'),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.icon(
+            key: const Key('config-enlace-whatsapp'),
+            onPressed: _compartirWhatsApp,
+            icon: const Icon(Icons.send, size: 18),
+            label: const Text('Enviar por WhatsApp'),
           ),
         ),
       ],

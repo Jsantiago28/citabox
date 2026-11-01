@@ -84,7 +84,12 @@ En **Inicio** toca **Comparte tu enlace de reservas**, o cópialo en
 - La **bio de Instagram** y Facebook.
 - Un **código QR** en el mostrador.
 
-Al compartirlo por WhatsApp se ve con el nombre y la portada de tu negocio.
+En **Configuración → Enviar por WhatsApp** sale un mensaje ya escrito
+invitando a reservar; solo eliges el contacto, el grupo o tu estado.
+
+Al compartirlo por WhatsApp, la vista previa dice **"(tu nombre) te invita a
+reservar en (tu negocio)"**, con la portada de tu negocio (o el logo de Citabox
+si no tienes portada).
 
 ## 5. Invita a tu equipo (opcional)
 

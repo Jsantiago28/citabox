@@ -31,6 +31,19 @@ void main() {
       expect(enlaceWhatsApp('', 'Hola'), 'https://wa.me/?text=Hola');
     });
 
+    test('invitation to book names the business and the link', () {
+      expect(
+        mensajeInvitarReservar(
+          negocio: ' Salón Brillo ',
+          enlace: 'https://citabox.pages.dev/r/salon-brillo',
+        ),
+        '¡Ya puedes reservar tu cita en Salón Brillo desde tu celular! '
+        'Escoge el servicio, con quién y la hora que te convenga, en menos de '
+        'un minuto y sin esperar respuesta: '
+        'https://citabox.pages.dev/r/salon-brillo',
+      );
+    });
+
     test('reminder message reads naturally', () {
       expect(
         mensajeRecordatorio(

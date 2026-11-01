@@ -60,3 +60,14 @@ String mensajeCumpleanos({required String cliente, required String negocio}) {
   return '¡Feliz cumpleaños, $nombre! Todo el equipo de ${negocio.trim()} '
       'te desea un gran día. ¡Te esperamos pronto!';
 }
+
+/// Mensaje para compartir el enlace de reservas con los clientes (a un
+/// contacto, un grupo o el estado de WhatsApp).
+String mensajeInvitarReservar({
+  required String negocio,
+  required String enlace,
+}) {
+  return '¡Ya puedes reservar tu cita en ${negocio.trim()} desde tu celular! '
+      'Escoge el servicio, con quién y la hora que te convenga, en menos de '
+      'un minuto y sin esperar respuesta: ${enlace.trim()}';
+}
