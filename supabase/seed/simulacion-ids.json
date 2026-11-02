@@ -1,0 +1,14 @@
+{
+  "negocio": "01a78c16-3a61-430c-a437-1e45775ef195",
+  "empleados": [
+    "86ae745b-df34-44c4-ad59-e13b260eaf07",
+    "97aff37a-1b0c-4c5d-9cbf-17083a7d2ae0"
+  ],
+  "bloqueos": [
+    "f73971e5-cf2c-474b-9dd9-94bf1852b2fa"
+  ],
+  "fidelidad_antes": {
+    "fidelidad_visitas": null,
+    "fidelidad_premio": "Servicio gratis"
+  }
+}

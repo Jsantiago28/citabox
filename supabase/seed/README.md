@@ -66,3 +66,27 @@ citas. El horario no se toca.
 El CI (`.github/workflows/ci.yml`) aplica las migraciones, ejecuta
 `demo.sql` dos veces, luego `borrar_demo.sql` y otra vez `demo.sql`, para
 comprobar que no falla y que respeta las reglas de la base.
+
+## Simulación completa (`simulacion.mjs`)
+
+Entra con la cuenta del dueño (sus mismos permisos; no toca otros negocios)
+y llena **su** negocio con unos 2 meses de movimiento usando sus servicios y
+su horario:
+
+- **30 clientes**: 4 que dejaron de venir ("No vuelven"), 4 nuevos por
+  reserva en línea, cumpleaños en el mes y uno fijo con 9 visitas (su
+  próxima es la gratis: activa "la décima gratis", cada 10, "Corte gratis").
+- **2 profesionales** con comisión (Rafael Núñez 40 %, Kelvin Abreu 35 %) y
+  unas vacaciones de Kelvin dentro de la semana que viene.
+- **Citas** desde hace ~70 días hasta dentro de 7: cobradas (efectivo,
+  transferencia, tarjeta y propinas), "no vino", canceladas, reservas en
+  línea con apartado pagado y 2 apartados por validar (vencen en 24 h).
+
+```
+CB_EMAIL=correo CB_PASS=clave node supabase/seed/simulacion.mjs
+CB_EMAIL=correo CB_PASS=clave node supabase/seed/simulacion.mjs --borrar
+```
+
+La clave va solo en la línea de comandos. `simulacion-ids.json` anota lo
+creado (profesionales, vacaciones y la fidelidad anterior) para que
+`--borrar` lo deshaga; clientes y citas se reconocen por "[demo]".
